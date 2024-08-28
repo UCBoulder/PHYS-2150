@@ -3,6 +3,7 @@ from tkinter import ttk, messagebox, filedialog
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import numpy as np
+import pandas as pd
 import time
 import sys
 import warnings
@@ -36,6 +37,20 @@ tlPM.findRsrc(byref(deviceCount))
 resourceName = create_string_buffer(1024)
 tlPM.getRsrcName(0, resourceName)
 tlPM.open(resourceName, c_bool(True), c_bool(True))
+
+# Use the correct resource string for the Keithley 2110
+resources = rm.list_resources()
+keithley_resource = None
+for resource in resources:
+    if '2110' in resource:
+        keithley_resource = resource
+        break
+
+if keithley_resource is None:
+    print("Keithley 2110 not found. Please check the connection.")
+    sys.exit()
+
+keithley = rm.open_resource(keithley_resource)
 
 # Initilize Monochromator
 usb_mono = Cornerstone_Mono(rm, rem_ifc="usb", timeout_msec=29000)
@@ -196,6 +211,23 @@ def adjust_phase():
 
     return best_phase, min_output
 
+def send_command_to_lockin(command):
+    ser.write(f"{command}\r".encode())
+    return read_response()
+
+def parse_sensitivity_response(response):
+    sensitivity_map = {
+        1: 10e-9, 2: 20e-9, 3: 50e-9, 4: 100e-9, 5: 200e-9, 6: 500e-9,
+        7: 1e-6, 8: 2e-6, 9: 5e-6, 10: 10e-6, 11: 20e-6, 12: 50e-6,
+        13: 100e-6, 14: 200e-6, 15: 500e-6, 16: 1e-3, 17: 2e-3, 18: 5e-3,
+        19: 10e-3, 20: 20e-3, 21: 50e-3, 22: 100e-3, 23: 200e-3, 24: 500e-3
+    }
+    sensitivity_index = int(response.strip())
+    return sensitivity_map.get(sensitivity_index, 1)  # Default to 1 if not found
+
+def parse_voltage_response(response):
+    return float(response.strip())
+
 def read_lockin_status_and_output():
     try:
         if not ser.is_open:
@@ -204,6 +236,7 @@ def read_lockin_status_and_output():
             ser.flushInput()
             ser.write('Y\r'.encode())
             time.sleep(1)
+            
             response = ser.read(ser.in_waiting or 1).decode().strip()
             if response:
                 try:
@@ -212,14 +245,41 @@ def read_lockin_status_and_output():
                     has_reference = not (status_byte & (1 << 2))
                     is_overloaded = status_byte & (1 << 4)
                     if is_locked and has_reference and not is_overloaded:
-                        ser.write('Q\r'.encode())
-                        time.sleep(1)
-                        output_response = ser.read(ser.in_waiting or 1).decode().strip()
-                        if output_response:
-                            return float(output_response.split('\r')[0].strip())
+
+                        # Query the sensitivity
+                        sensitivity_response = send_command_to_lockin("G")
+                        sensitivity_value = parse_sensitivity_response(sensitivity_response)
+
+                        # Read the DC voltage from the Keithley 2110 and calculate the current
+                        keithley.write(":SENS:FUNC 'VOLT:DC'")
+                        voltage_readings = []
+                        for _ in range(50):
+                            voltage = float(keithley.query(":READ?"))
+                            voltage_readings.append(voltage)
+                        average_voltage = sum(voltage_readings) / len(voltage_readings)
+                        #unamplified_voltage = average_amplified_voltage / 200  # Calculate the unamplified voltage
+                        #print(f"Average Voltage: {average_voltage}")
+                        adjusted_voltage = average_voltage / sensitivity_value
+                        print(f"Adjusted Voltage: {adjusted_voltage}")
+                        current = adjusted_voltage
+
+                        
+                        
+                        #output_response = ser.read(ser.in_waiting or 1).decode().strip()
+                        if current:
+                            return current
                         else:
                             print("No output response received.")
                             continue
+
+                        # ser.write('Q\r'.encode())
+                        # time.sleep(1)
+                        # output_response = ser.read(ser.in_waiting or 1).decode().strip()
+                        # if output_response:
+                        #     return float(output_response.split('\r')[0].strip())
+                        # else:
+                        #     print("No output response received.")
+                        #     continue
                     else:
                         print("Device not ready or overloaded.")
                         continue
@@ -250,34 +310,45 @@ def start_power_measurement():
     step_size = float(step_size_var.get())
 
     # Check if the start wavelength is less than 400 nm and prompt the user
-    if start_wavelength <= 400:
+    if start_wavelength <= 420:
         messagebox.showinfo("Check Filters", "Please ensure no filters are installed.")
     
     global power_x_values, power_y_values
     power_x_values = []
     power_y_values = []
 
-    # First loop: Measure background light with shutter closed
-    print("Measuring background light...")
-    background_y_values = []
+    # # First loop: Measure background light with shutter closed
+    # print("Measuring background light...")
+    # background_y_values = []
+    # wavelengths = []
 
-    current_wavelength = start_wavelength
-    usb_mono.SendCommand("shutter c", False)
-    while current_wavelength <= end_wavelength:
-        tlPM.setWavelength(c_double(current_wavelength), TLPM_DEFAULT_CHANNEL)
-        time.sleep(0.2)  # Wait for the power reading to stabilize
+    # current_wavelength = start_wavelength
+    # usb_mono.SendCommand("shutter c", False)
+    # while current_wavelength <= end_wavelength:
+    #     tlPM.setWavelength(c_double(current_wavelength), TLPM_DEFAULT_CHANNEL)
+    #     time.sleep(0.2)  # Wait for the power reading to stabilize
 
-        # Measure power 50 times and calculate the average
-        power_values = []
-        for _ in range(50):
-            power = c_double()
-            tlPM.measPower(byref(power), TLPM_DEFAULT_CHANNEL)
-            power_values.append(power.value)
-        average_power = sum(power_values) / len(power_values)
+    #     # Measure power 50 times and calculate the average
+    #     power_values = []
+    #     for _ in range(50):
+    #         power = c_double()
+    #         tlPM.measPower(byref(power), TLPM_DEFAULT_CHANNEL)
+    #         power_values.append(power.value)
+    #     average_power = sum(power_values) / len(power_values)
 
-        background_y_values.append(average_power)
-        print(f"Background Light at {current_wavelength} nm: {average_power} W")
-        current_wavelength += step_size
+    #     background_y_values.append(average_power)
+    #     wavelengths.append(current_wavelength)
+    #     print(f"Background Light at {current_wavelength} nm: {average_power} W")
+    #     current_wavelength += step_size
+
+    # # Create a DataFrame and write to CSV
+    # background_data = pd.DataFrame({
+    #     'Wavelength (nm)': wavelengths,
+    #     'Background Light (W)': background_y_values
+    # })
+
+    # background_data.to_csv('background_light_measurements.csv', index=False)
+    # print("Background light measurements saved to 'background_light_measurements.csv'")
 
     # Second loop: Measure actual signal with shutter open
     print("Measuring actual signal...")
@@ -312,14 +383,14 @@ def start_power_measurement():
 
         # Measure power 50 times and calculate the average
         power_values = []
-        for _ in range(50):
+        for _ in range(200):
             power = c_double()
             tlPM.measPower(byref(power), TLPM_DEFAULT_CHANNEL)
             power_values.append(power.value)
         average_power = sum(power_values) / len(power_values)
 
         power_x_values.append(confirmed_mono_wavelength_float)
-        power_y_values.append(average_power - background_y_values[len(power_x_values) - 1])  # Subtract background light
+        power_y_values.append(average_power )  # Subtract background light
 
         ax_power.plot(power_x_values, power_y_values, 'bo-', label='Power Measurement')
 
@@ -446,7 +517,7 @@ plot_frame_current = tk.Frame(root)
 plot_frame_current.grid(row=4, column=1, padx=10, pady=10)
 
 # Create and grid the input fields
-start_wavelength_var = tk.StringVar(value="375")
+start_wavelength_var = tk.StringVar(value="325")
 end_wavelength_var = tk.StringVar(value="850")
 step_size_var = tk.StringVar(value="10")
 

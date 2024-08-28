@@ -118,7 +118,7 @@ def perform_measurement():
     backward_currents_plot = []
 
     # Create line object for forward sweep
-    forward_line, = ax.plot([], [], '.', label="Forward Bias", color='#0077BB')
+    forward_line, = ax.plot([], [], '.', label="Forward Scan", color='#0077BB')
     ax.legend()
 
     device.write(f"SOUR:VOLT {start_voltage}") # Set the initial voltage
@@ -157,7 +157,7 @@ def perform_measurement():
     time.sleep(2)  # Short delay between sweeps
 
     # Create line object for backward sweep
-    backward_line, = ax.plot([], [], '.', label="Reverse Bias", color='#EE7733')
+    backward_line, = ax.plot([], [], '.', label="Reverse Scan", color='#EE7733')
     ax.legend()
 
     # Backward sweep
@@ -190,17 +190,17 @@ def perform_measurement():
                 canvas.draw()
                 root.update()
 
-    # Combine forward and reverse bias data
+    # Combine forward and reverse Scan data
     combined_data = pd.DataFrame({
         "Voltage (V)": np.concatenate((forward_voltages_plot, backward_voltages_plot)),
-        "Forward Bias (mA)": np.concatenate((forward_currents_plot, [None] * len(backward_currents_plot))),
-        "Reverse Bias (mA)": np.concatenate(([None] * len(forward_currents_plot), backward_currents_plot))
+        "Forward Scan (mA)": np.concatenate((forward_currents_plot, [None] * len(backward_currents_plot))),
+        "Reverse Scan (mA)": np.concatenate(([None] * len(forward_currents_plot), backward_currents_plot))
     })
 
-    # Group by voltage and aggregate forward and reverse bias currents
+    # Group by voltage and aggregate forward and reverse Scan currents
     combined_data = combined_data.groupby("Voltage (V)").agg({
-        "Forward Bias (mA)": "first",
-        "Reverse Bias (mA)": "first"
+        "Forward Scan (mA)": "first",
+        "Reverse Scan (mA)": "first"
     }).reset_index()
 
     try:

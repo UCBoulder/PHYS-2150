@@ -48,7 +48,7 @@ def start_measurement():
     step_size = float(step_size_var.get())
 
     # Check if the start wavelength is less than 400 nm and prompt the user
-    if start_wavelength <= 400:
+    if start_wavelength <= 420:
         messagebox.showinfo("Check Filters", "Please ensure no filters are installed.")
     
     global x_values, y_values
@@ -72,22 +72,26 @@ def start_measurement():
 
         # Prompt the user to install the 400 nm filter
         print(f"Current Wavelength: {current_wavelength}")
-        if current_wavelength > 400 and current_wavelength <= 400 + step_size:
+        if current_wavelength > 420 and current_wavelength <= 420 + step_size:
             messagebox.showinfo("Install Filter", "Please install the 400 nm filter and click OK to proceed.")
         
         # Prompt the user to install the 780 nm filter
-        if current_wavelength > 780 and current_wavelength <= 780 + step_size:
+        if current_wavelength > 800 and current_wavelength <= 800 + step_size:
             messagebox.showinfo("Install Filter", "Please install the 780 nm filter and click OK to proceed.")
 
         confirmed_mono_wavelength = usb_mono.GetQueryResponse("wave?")
         confirmed_mono_wavelength_float = float(confirmed_mono_wavelength)
 
-        # Read the DC current from the Keithley 2110
-        keithley.write(":SENS:FUNC 'CURR:DC'")
-        current = float(keithley.query(":READ?"))* 10**6
+        # Measure current 50 times and calculate the average
+        current_values = []
+        for _ in range(150):
+            keithley.write(":SENS:FUNC 'CURR:DC'")
+            current = float(keithley.query(":READ?")) * 10**6
+            current_values.append(current)
+        average_current = sum(current_values) / len(current_values)
 
         x_values.append(confirmed_mono_wavelength_float)
-        y_values.append(current)
+        y_values.append(average_current)
 
         ax.plot(x_values, y_values, 'bo-')
 
@@ -98,7 +102,7 @@ def start_measurement():
         root.update()
 
     usb_mono.SendCommand("shutter c", False)
-    usb_mono.WaitForIdle() 
+    usb_mono.WaitForIdle()
 
 # Function to save the data to a CSV file
 def save_data():

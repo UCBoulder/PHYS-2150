@@ -85,7 +85,7 @@ def start_measurement():
 
         confirmed_mono_wavelength = usb_mono.GetQueryResponse("wave?")
         confirmed_mono_wavelength_float = float(confirmed_mono_wavelength)
-        time.sleep(2)
+        time.sleep(3)
 
         # Read the DC voltage from the Keithley 2110 and calculate the current
         keithley.write(":SENS:FUNC 'VOLT:DC'")

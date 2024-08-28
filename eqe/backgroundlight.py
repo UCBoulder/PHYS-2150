@@ -149,7 +149,7 @@ def save_data():
 
 # Create the main window
 root = tk.Tk()
-root.title("Wavelength Measurement")
+root.title("PHYS 2150 EQE Measurement")
 
 # Create and grid the input fields
 start_wavelength_var = tk.StringVar(value="375")
