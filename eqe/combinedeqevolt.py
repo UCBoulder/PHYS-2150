@@ -233,53 +233,63 @@ def read_lockin_status_and_output():
         if not ser.is_open:
             ser.open()
         while True:
+            print("Flushing input buffer and sending 'Y' command...")
             ser.flushInput()
             ser.write('Y\r'.encode())
             time.sleep(1)
             
             response = ser.read(ser.in_waiting or 1).decode().strip()
+            print(f"Received response: {response}")
             if response:
                 try:
                     status_byte = int(response.split('\r')[0].strip())
+                    print(f"Parsed status byte: {status_byte}")
                     is_locked = not (status_byte & (1 << 3))
                     has_reference = not (status_byte & (1 << 2))
                     is_overloaded = status_byte & (1 << 4)
+                    print(f"Lock status: {is_locked}, Reference status: {has_reference}, Overload status: {is_overloaded}")
                     if is_locked and has_reference and not is_overloaded:
 
-                        # Query the sensitivity
-                        sensitivity_response = send_command_to_lockin("G")
-                        sensitivity_value = parse_sensitivity_response(sensitivity_response)
+                        while True:
+                            print("Querying sensitivity...")
+                            sensitivity_response = send_command_to_lockin("G")
+                            sensitivity_value = parse_sensitivity_response(sensitivity_response)
+                            print(f"Sensitivity value: {sensitivity_value}")
 
-                        # Read the DC voltage from the Keithley 2110 and calculate the current
-                        keithley.write(":SENS:FUNC 'VOLT:DC'")
-                        voltage_readings = []
-                        for _ in range(50):
-                            voltage = float(keithley.query(":READ?"))
-                            voltage_readings.append(voltage)
-                        average_voltage = sum(voltage_readings) / len(voltage_readings)
-                        #unamplified_voltage = average_amplified_voltage / 200  # Calculate the unamplified voltage
-                        #print(f"Average Voltage: {average_voltage}")
-                        adjusted_voltage = average_voltage / sensitivity_value
-                        print(f"Adjusted Voltage: {adjusted_voltage}")
-                        current = adjusted_voltage
+                            print("Reading DC voltage from Keithley 2110...")
+                            keithley.write(":SENS:FUNC 'VOLT:DC'")
+                            voltage_readings = []
+                            for _ in range(50):
+                                voltage = float(keithley.query(":READ?"))
+                                voltage_readings.append(voltage)
+                            average_voltage = sum(voltage_readings) / len(voltage_readings)
+                            print(f"Average voltage: {average_voltage}")
+                            
+                            if average_voltage > 8:
+                                print("Average voltage > 10, increasing sensitivity...")
+                                ser.write('K 22\r'.encode())
+                                print("Sent command to increase sensitivity.")
+                                print("Waiting 5 seconds after increasing sensitivity.")
+                                time.sleep(5)  # Wait for the sensitivity change to take effect
+                                break  # Break out of the inner while loop to re-read the status
+                            # elif average_voltage < 2:
+                            #     print("Average voltage < 2, decreasing sensitivity...")
+                            #     ser.write('K 23\r'.encode())
+                            #     print("Sent command to decrease sensitivity.")
+                            #     time.sleep(1)  # Wait for the sensitivity change to take effect
+                            #     print("Waited 1 second after decreasing sensitivity.")
+                            #     break  # Break out of the inner while loop to re-read the status
+                            
+                            adjusted_voltage = average_voltage * sensitivity_value
+                            print(f"Adjusted Voltage: {adjusted_voltage}")
+                            current = adjusted_voltage
 
-                        
-                        
-                        #output_response = ser.read(ser.in_waiting or 1).decode().strip()
-                        if current:
-                            return current
-                        else:
-                            print("No output response received.")
-                            continue
-
-                        # ser.write('Q\r'.encode())
-                        # time.sleep(1)
-                        # output_response = ser.read(ser.in_waiting or 1).decode().strip()
-                        # if output_response:
-                        #     return float(output_response.split('\r')[0].strip())
-                        # else:
-                        #     print("No output response received.")
-                        #     continue
+                            if current:
+                                print(f"Returning current: {current}")
+                                return current
+                            else:
+                                print("No output response received.")
+                                continue
                     else:
                         print("Device not ready or overloaded.")
                         continue
@@ -293,6 +303,7 @@ def read_lockin_status_and_output():
         print(f"Error: {e}")
     finally:
         ser.close()
+        print("Serial connection closed.")
     return None
 
 def align_monochromator():
@@ -420,6 +431,9 @@ def start_photocell_measurement():
     usb_mono.WaitForIdle()
 
     current_wavelength = start_wavelength
+    usb_mono.SendCommand(f"gowave {current_wavelength}", False)
+    usb_mono.WaitForIdle()
+    time.sleep(1)
     while current_wavelength <= end_wavelength:
 
         if current_wavelength < 685:
@@ -517,7 +531,7 @@ plot_frame_current = tk.Frame(root)
 plot_frame_current.grid(row=4, column=1, padx=10, pady=10)
 
 # Create and grid the input fields
-start_wavelength_var = tk.StringVar(value="325")
+start_wavelength_var = tk.StringVar(value="350")
 end_wavelength_var = tk.StringVar(value="850")
 step_size_var = tk.StringVar(value="10")
 

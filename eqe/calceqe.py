@@ -8,12 +8,16 @@ c = 3.0e8  # Speed of light (meters per second)
 e = 1.602176634e-19  # Elementary charge (Coulombs)
 
 # Read the power data from the CSV file
-power_data = pd.read_csv('c:/Users/krist/Documents/GitHub/PHYS-2150/eqe/data/20240828/pm1.csv')
+power_data = pd.read_csv('c:/Users/krist/Documents/GitHub/PHYS-2150/eqe/data/20240828/update/p1.csv')
 
 # List of current data files
 current_files = [
-    'c:/Users/krist/Documents/GitHub/PHYS-2150/eqe/data/20240828/c6.csv',
-    'c:/Users/krist/Documents/GitHub/PHYS-2150/eqe/data/20240828/c6-100.csv'
+    'c:/Users/krist/Documents/GitHub/PHYS-2150/eqe/data/20240828/update/c6.csv',
+   # 'c:/Users/krist/Documents/GitHub/PHYS-2150/eqe/data/20240828/c6-100.csv',
+   # 'c:/Users/krist/Documents/GitHub/PHYS-2150/eqe/data/20240828/c6sens.csv',
+   # 'c:/Users/krist/Documents/GitHub/PHYS-2150/eqe/data/20240828/c6sens2.csv'
+
+
 ]
 
 # Plot the results
