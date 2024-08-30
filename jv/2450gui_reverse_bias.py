@@ -5,6 +5,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 from matplotlib.figure import Figure
 from decimal import Decimal, ROUND_HALF_UP
 import threading
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import time
@@ -50,9 +51,10 @@ def export_to_csv(voltages_plot, all_measurements):
 
 # Function to configure the plot
 def configure_plot():
-    ax.set_xlabel('Voltage (V)')
-    ax.set_ylabel('Current (mA)')
-    ax.set_title('J-V Characterization')
+    ax.set_xlabel('Voltage (V)', fontsize=14)
+    ax.set_ylabel('Current (mA)', fontsize=14)
+    ax.set_title('J-V Characterization', fontsize=14)
+    ax.tick_params(axis='both', which='major', labelsize=14)
 
 # Function to clean up and close the application
 def on_close():
@@ -119,7 +121,7 @@ def perform_measurement():
 
     # Create line object for forward sweep
     forward_line, = ax.plot([], [], '.', label="Forward Scan", color='#0077BB')
-    ax.legend()
+    ax.legend(fontsize=14) 
 
     device.write(f"SOUR:VOLT {start_voltage}") # Set the initial voltage
     time.sleep(2) # Stabilization time
@@ -158,7 +160,7 @@ def perform_measurement():
 
     # Create line object for backward sweep
     backward_line, = ax.plot([], [], '.', label="Reverse Scan", color='#EE7733')
-    ax.legend()
+    ax.legend(fontsize=14) 
 
     # Backward sweep
     for i, voltage in enumerate(backward_voltages):
@@ -238,7 +240,7 @@ def toggle_measurement():
     else:
         stop_measurement()
         measure_button.config(text="Start Measurement", bg="#CCDDAA", command=toggle_measurement)
-        
+
 # Function to clear the plot
 def clear_plot():
     voltages_plot.clear()
@@ -257,30 +259,31 @@ stop_voltage_entry = tk.StringVar(value="1.1") # Default stop voltage
 step_voltage_entry = tk.StringVar(value=".01") # Default step voltage
 
 # Create and place voltage range input fields
-tk.Label(root, text="Start Voltage:", font=("Helvetica", 12)).grid(row=0, column=0)
-tk.Entry(root, textvariable=start_voltage_entry, font=("Helvetica", 12)).grid(row=0, column=1)
+tk.Label(root, text="Start Voltage:", font=("Helvetica", 14)).grid(row=0, column=0)
+tk.Entry(root, textvariable=start_voltage_entry, font=("Helvetica", 14)).grid(row=0, column=1)
 
-tk.Label(root, text="Stop Voltage:", font=("Helvetica", 12)).grid(row=1, column=0)
-tk.Entry(root, textvariable=stop_voltage_entry, font=("Helvetica", 12)).grid(row=1, column=1)
+tk.Label(root, text="Stop Voltage:", font=("Helvetica", 14)).grid(row=1, column=0)
+tk.Entry(root, textvariable=stop_voltage_entry, font=("Helvetica", 14)).grid(row=1, column=1)
 
-tk.Label(root, text="Step Voltage:", font=("Helvetica", 12)).grid(row=2, column=0)
-tk.Entry(root, textvariable=step_voltage_entry, font=("Helvetica", 12)).grid(row=2, column=1)
+tk.Label(root, text="Step Voltage:", font=("Helvetica", 14)).grid(row=2, column=0)
+tk.Entry(root, textvariable=step_voltage_entry, font=("Helvetica", 14)).grid(row=2, column=1)
 
 # Button widget to clear the plot
-clear_button = tk.Button(root, text="Clear Plot", command=clear_plot)
+clear_button = tk.Button(root, text="Clear Plot", font=("Helvetica", 14), command=clear_plot)
 clear_button.grid(row=5, column=0, columnspan=1, padx=5, pady=5)
 
 # Button widget to export the data to a CSV file
-export_button = tk.Button(root, text="Export to CSV", command=lambda: export_to_csv(voltages_plot, all_measurements))
+export_button = tk.Button(root, text="Export to CSV", font=("Helvetica", 14), command=lambda: export_to_csv(voltages_plot, all_measurements))
 export_button.grid(row=5, column=1, columnspan=1, padx=5, pady=5)
 
 # Button widget to start/stop the measurement
-measure_button = tk.Button(root, text="Start Measurement", font=("Helvetica", 12), bg="#CCDDAA", command=toggle_measurement)
+measure_button = tk.Button(root, text="Start Measurement", font=("Helvetica", 14), bg="#CCDDAA", command=toggle_measurement)
 measure_button.grid(column=0, row=4, columnspan=2, padx=5, pady=5)
 
 # Create a figure for the plot
-fig = Figure(figsize=(5, 4), dpi=100)
-ax = fig.add_subplot(111)
+#fig = Figure(figsize=(5, 4), dpi=100)
+#ax = fig.add_subplot(111)
+fig, ax = plt.subplots()
 
 # Initial configuration of the plot
 configure_plot()  

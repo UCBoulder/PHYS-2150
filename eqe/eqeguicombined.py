@@ -14,7 +14,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 import serial
 import serial.tools.list_ports
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 
 # Initialize the VISA resource manager
 rm = visa.ResourceManager()
@@ -123,7 +123,18 @@ def wait_for_lockin_ready():
 
 # Function to set the lock-in amplifier parameters
 def set_lockin_parameters():
-    ser.write('G 23\r'.encode())
+    ser.write('G 23\r'.encode())  # Set sensitivity to 200 mV
+    ser.write('B 0\r'.encode())   # Bandpass: OUT
+    ser.write('L 1,0\r'.encode()) # Line: OUT
+    ser.write('L 2,0\r'.encode()) # LINE x2: OUT
+    ser.write('D 0\r'.encode())   # DYN RES: LOW
+    ser.write('S 0\r'.encode())   # DISPLAY: X
+    ser.write('E 0\r'.encode())   # Expand: X1 (OFF)
+    ser.write('O 0\r'.encode())   # Offset: OFF
+    ser.write('T 1,5\r'.encode()) # Pre Time constant: 100ms
+    ser.write('T 2,1\r'.encode()) # Post Time constant: 0.1s
+    ser.write('M 0\r'.encode())   # Reference frequency: f
+    ser.write('R 1\r'.encode())   # Input: Square wave
     wait_for_lockin_ready()
 
 # Function to adjust the lock-in amplifier phase
@@ -174,6 +185,8 @@ def adjust_lockin_phase():
     usb_mono.WaitForIdle()
     usb_mono.SendCommand("shutter o", False)
     usb_mono.WaitForIdle()
+
+    set_lockin_parameters()
 
     ser.write('P\r'.encode())
     current_phase = float(read_lockin_response())
@@ -396,6 +409,8 @@ def start_current_measurement():
     usb_mono.SendCommand("shutter o", False)
     usb_mono.WaitForIdle()
 
+    set_lockin_parameters()
+
     current_wavelength = start_wavelength
     usb_mono.SendCommand(f"gowave {current_wavelength}", False)
     usb_mono.WaitForIdle()
@@ -611,23 +626,44 @@ root.title("PHYS 2150 EQE Measurement")
 
 # Create frames for the plots
 plot_frame_power = tk.Frame(root)
-plot_frame_power.grid(row=4, column=0, padx=10, pady=10)
+plot_frame_power.grid(row=4, column=0, padx=20, pady=10, sticky="nsew")
 plot_frame_current = tk.Frame(root)
-plot_frame_current.grid(row=4, column=1, padx=10, pady=10)
+plot_frame_current.grid(row=4, column=1, padx=20, pady=10, sticky="nsew")
 
 # Create the matplotlib figure and axes for power measurements
 fig_power, ax_power = plt.subplots()
 configure_power_plot()
 canvas_power = FigureCanvasTkAgg(fig_power, master=plot_frame_power)
 canvas_power.draw()
-canvas_power.get_tk_widget().pack(padx=10, pady=10)
+canvas_power.get_tk_widget().grid(row=0, column=0, sticky="nsew")
 
 # Create the matplotlib figure and axes for current measurements
 fig_current, ax_current = plt.subplots()
 configure_current_plot()
 canvas_current = FigureCanvasTkAgg(fig_current, master=plot_frame_current)
 canvas_current.draw()
-canvas_current.get_tk_widget().pack(padx=10, pady=10)
+canvas_current.get_tk_widget().grid(row=0, column=0, sticky="nsew")
+
+# Create a toolbar for the plot
+toolbar_frame_power = tk.Frame(root)
+toolbar_frame_current = tk.Frame(root)
+toolbar_frame_power.grid(row=5, column=0, columnspan=2, sticky="ew", padx=20)
+toolbar_frame_current.grid(row=5, column=1, columnspan=2, sticky="ew", padx=20)
+toolbar_current = NavigationToolbar2Tk(canvas_current, toolbar_frame_current)
+toolbar_power = NavigationToolbar2Tk(canvas_power, toolbar_frame_power)
+toolbar_current.update()
+toolbar_power.update()
+
+# Make the canvas and toolbar_frame expand and fill the space
+plot_frame_power.grid_rowconfigure(0, weight=1)
+plot_frame_power.grid_columnconfigure(0, weight=1)
+plot_frame_current.grid_rowconfigure(0, weight=1)
+plot_frame_current.grid_columnconfigure(0, weight=1)
+
+root.grid_rowconfigure(4, weight=1)
+root.grid_rowconfigure(5, weight=0)
+root.grid_columnconfigure(0, weight=1)
+root.grid_columnconfigure(1, weight=1)
 
 # Create the input fields
 start_wavelength_var = tk.StringVar(value="350")
@@ -639,43 +675,43 @@ input_frame = tk.Frame(root)
 input_frame.grid(row=1, column=0, padx=10, pady=10)
 
 # Place the labels and entries inside the frame
-tk.Label(input_frame, text="Start Wavelength (nm):", font=("Helvetica", 12)).grid(row=0, column=0, sticky='w')
-tk.Entry(input_frame, textvariable=start_wavelength_var, font=("Helvetica", 12)).grid(row=0, column=1, sticky='w')
+tk.Label(input_frame, text="Start Wavelength (nm):", font=("Helvetica", 14)).grid(row=0, column=0, sticky='w')
+tk.Entry(input_frame, textvariable=start_wavelength_var, font=("Helvetica", 14)).grid(row=0, column=1, sticky='w')
 
-tk.Label(input_frame, text="End Wavelength (nm):", font=("Helvetica", 12)).grid(row=1, column=0, sticky='w')
-tk.Entry(input_frame, textvariable=end_wavelength_var, font=("Helvetica", 12)).grid(row=1, column=1, sticky='w')
+tk.Label(input_frame, text="End Wavelength (nm):", font=("Helvetica", 14)).grid(row=1, column=0, sticky='w')
+tk.Entry(input_frame, textvariable=end_wavelength_var, font=("Helvetica", 14)).grid(row=1, column=1, sticky='w')
 
-tk.Label(input_frame, text="Step Size (nm):", font=("Helvetica", 12)).grid(row=2, column=0, sticky='w')
-tk.Entry(input_frame, textvariable=step_size_var, font=("Helvetica", 12)).grid(row=2, column=1, sticky='w')
+tk.Label(input_frame, text="Step Size (nm):", font=("Helvetica", 14)).grid(row=2, column=0, sticky='w')
+tk.Entry(input_frame, textvariable=step_size_var, font=("Helvetica", 14)).grid(row=2, column=1, sticky='w')
 
 # Add the start and save buttons for the power measurements in the left column below the power plot
-start_power_button = tk.Button(root, text="Start Power Measurement", font=("Helvetica", 12), bg="#CCDDAA", command=toggle_power_measurement)
-start_power_button.grid(row=5, column=0, padx=10, pady=10)      
+start_power_button = tk.Button(root, text="Start Power Measurement", font=("Helvetica", 14), bg="#CCDDAA", command=toggle_power_measurement)
+start_power_button.grid(row=5, column=0, padx=20, sticky='e')      
 
-save_power_button = tk.Button(root, text="Save Power Data", font=("Helvetica", 12), command=save_power_data)
-save_power_button.grid(row=6, column=0, padx=10, pady=10)
+save_power_button = tk.Button(root, text="Save Power Data", font=("Helvetica", 14), command=save_power_data)
+save_power_button.grid(row=6, column=0, padx=20, pady=10, sticky='e')
 
 # Add the clear button for the power measurements plot
-clear_power_button = tk.Button(root, text="Clear Power Data", font=("Helvetica", 12), command=clear_power_plot)
-clear_power_button.grid(row=7, column=0, padx=10, pady=10)
+clear_power_button = tk.Button(root, text="Clear Power Data", font=("Helvetica", 14), command=clear_power_plot)
+clear_power_button.grid(row=6, column=0, padx=20, pady=10, sticky='w')
 
 # Add the align and phase buttons in the right column above the current plot
-align_button = tk.Button(root, text="Enable Green Alignment Dot", font=("Helvetica", 12), command=align_monochromator)
-align_button.grid(row=0, column=1, padx=10, pady=10)
+align_button = tk.Button(root, text="Enable Green Alignment Dot", font=("Helvetica", 14), command=align_monochromator)
+align_button.grid(row=1, column=1, padx=20, pady=10, sticky='e')
 
-adjust_lockin_phase_button = tk.Button(root, text="Adjust Phase", font=("Helvetica", 12), command=adjust_lockin_phase)
-adjust_lockin_phase_button.grid(row=1, column=1, padx=10, pady=10)
+adjust_lockin_phase_button = tk.Button(root, text="Adjust Lock-in Phase", font=("Helvetica", 14), command=adjust_lockin_phase)
+adjust_lockin_phase_button.grid(row=1, column=1, padx=20, pady=10, sticky='w')
 
 # Add the start and save buttons for the current measurements in the right column below the current plot
-start_current_button = tk.Button(root, text="Start Current Measurement", font=("Helvetica", 12), bg="#CCDDAA", command=toggle_current_measurement)
-start_current_button.grid(row=5, column=1, padx=10, pady=10)
+start_current_button = tk.Button(root, text="Start Current Measurement", font=("Helvetica", 14), bg="#CCDDAA", command=toggle_current_measurement)
+start_current_button.grid(row=5, column=1, padx=20, sticky='e')
 
-save_current_button = tk.Button(root, text="Save Current Data", font=("Helvetica", 12), command=save_current_data)
-save_current_button.grid(row=6, column=1, padx=10, pady=10)
+save_current_button = tk.Button(root, text="Save Current Data", font=("Helvetica", 14), command=save_current_data)
+save_current_button.grid(row=6, column=1, padx=20, pady=10, sticky='e')
 
 # Add the clear button for the current measurements plot
-clear_current_button = tk.Button(root, text="Clear Current Data", font=("Helvetica", 12), command=clear_current_plot)
-clear_current_button.grid(row=7, column=1, padx=10, pady=10)
+clear_current_button = tk.Button(root, text="Clear Current Data", font=("Helvetica", 14), command=clear_current_plot)
+clear_current_button.grid(row=6, column=1, padx=20, pady=10, sticky='w')
 
 # Bind the on_close function to the window's close event
 root.protocol("WM_DELETE_WINDOW", on_close)
