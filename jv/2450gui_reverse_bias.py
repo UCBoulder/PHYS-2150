@@ -219,7 +219,6 @@ def perform_measurement():
     # Stop and print elapsed time for performance debugging
     #print(f"Time taken: {time.time() - t:.2f} seconds") 
 
-
 # Function to start the measurement in a separate thread
 def start_measurement_thread():
     stop_thread.clear()
@@ -231,6 +230,15 @@ def start_measurement_thread():
 def stop_measurement():
     stop_thread.set()
 
+# Function to toggle measurement state
+def toggle_measurement():
+    if measure_button.config('text')[-1] == 'Start Measurement':
+        start_measurement_thread()
+        measure_button.config(text="Stop Measurement", bg="#FFCCCC", command=stop_measurement)
+    else:
+        stop_measurement()
+        measure_button.config(text="Start Measurement", bg="#CCDDAA", command=toggle_measurement)
+        
 # Function to clear the plot
 def clear_plot():
     voltages_plot.clear()
@@ -265,15 +273,6 @@ clear_button.grid(row=5, column=0, columnspan=1, padx=5, pady=5)
 # Button widget to export the data to a CSV file
 export_button = tk.Button(root, text="Export to CSV", command=lambda: export_to_csv(voltages_plot, all_measurements))
 export_button.grid(row=5, column=1, columnspan=1, padx=5, pady=5)
-
-# Function to toggle measurement state
-def toggle_measurement():
-    if measure_button.config('text')[-1] == 'Start Measurement':
-        start_measurement_thread()
-        measure_button.config(text="Stop Measurement", bg="#FFCCCC", command=stop_measurement)
-    else:
-        stop_measurement()
-        measure_button.config(text="Start Measurement", bg="#CCDDAA", command=toggle_measurement)
 
 # Button widget to start/stop the measurement
 measure_button = tk.Button(root, text="Start Measurement", font=("Helvetica", 12), bg="#CCDDAA", command=toggle_measurement)
