@@ -123,7 +123,7 @@ def wait_for_lockin_ready():
 
 # Function to set the lock-in amplifier parameters
 def set_lockin_parameters():
-    ser.write('G 23\r'.encode())  # Set sensitivity to 200 mV
+    ser.write('G 24\r'.encode())  # Set sensitivity to 500 mV
     ser.write('B 0\r'.encode())   # Bandpass: OUT
     ser.write('L 1,0\r'.encode()) # Line: OUT
     ser.write('L 2,0\r'.encode()) # LINE x2: OUT
@@ -134,7 +134,7 @@ def set_lockin_parameters():
     ser.write('T 1,5\r'.encode()) # Pre Time constant: 100ms
     ser.write('T 2,1\r'.encode()) # Post Time constant: 0.1s
     ser.write('M 0\r'.encode())   # Reference frequency: f
-    ser.write('R 1\r'.encode())   # Input: Square wave
+    ser.write('R 0\r'.encode())   # Input: Square wave
     wait_for_lockin_ready()
 
 # Function to adjust the lock-in amplifier phase
@@ -272,13 +272,13 @@ def read_lockin_status_and_keithley_output():
                             print("Reading DC voltage from Keithley 2110...")
                             keithley.write(":SENS:FUNC 'VOLT:DC'")
                             voltage_readings = []
-                            for _ in range(50):
+                            for _ in range(100):
                                 voltage = float(keithley.query(":READ?"))
                                 voltage_readings.append(voltage)
                             average_voltage = sum(voltage_readings) / len(voltage_readings)
                             print(f"Average voltage: {average_voltage}")
                             
-                            if average_voltage > 8:
+                            if average_voltage > 10:
                                 print("Average voltage > 10, increasing sensitivity...")
                                 ser.write('K 22\r'.encode())
                                 print("Sent command to increase sensitivity.")
@@ -286,9 +286,9 @@ def read_lockin_status_and_keithley_output():
                                 time.sleep(5)  # Wait for the sensitivity change to take effect
                                 break  # Break out of the inner while loop to re-read the status
                             
-                            adjusted_voltage = average_voltage * sensitivity_value
+                            adjusted_voltage = average_voltage * sensitivity_value / 10
                             print(f"Adjusted Voltage: {adjusted_voltage}")
-                            current = adjusted_voltage
+                            current = adjusted_voltage * 10 ** -6  # Accounts for transimpedance amplifier gain
 
                             if current:
                                 print(f"Returning current: {current}")
@@ -307,9 +307,9 @@ def read_lockin_status_and_keithley_output():
                 continue
     except Exception as e:
         print(f"Error: {e}")
-    finally:
-        ser.close()
-        print("Serial connection closed.")
+    # finally:
+    #     ser.close()
+    #     print("Serial connection closed.")
     return None
 
 # Function to set the monochromator to 532 nm for alignment

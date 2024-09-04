@@ -8,11 +8,11 @@ c = 3.0e8  # Speed of light (meters per second)
 e = 1.602176634e-19  # Elementary charge (Coulombs)
 
 # Read the power data from the CSV file
-power_data = pd.read_csv('c:/Users/krist/Documents/GitHub/PHYS-2150/eqe/data/20240828/update/p1.csv')
+power_data = pd.read_csv('c:/Users/krist/Documents/GitHub/PHYS-2150/eqe/data/20240904/pm2.csv')
 
 # List of current data files
 current_files = [
-    'c:/Users/krist/Documents/GitHub/PHYS-2150/eqe/data/20240828/update/c6.csv',
+    'c:/Users/krist/Documents/GitHub/PHYS-2150/eqe/data/20240904/cm3.csv',
    # 'c:/Users/krist/Documents/GitHub/PHYS-2150/eqe/data/20240828/c6-100.csv',
    # 'c:/Users/krist/Documents/GitHub/PHYS-2150/eqe/data/20240828/c6sens.csv',
    # 'c:/Users/krist/Documents/GitHub/PHYS-2150/eqe/data/20240828/c6sens2.csv'
@@ -24,7 +24,7 @@ current_files = [
 fig, axs = plt.subplots(3, 1, figsize=(10, 15))
 
 # Plot Power Measurements
-axs[0].plot(power_data['Wavelength (nm)'], power_data['Power Measurements (W)'], 'b.-')
+axs[0].plot(power_data['Wavelength (nm)'], power_data['Power (W)'], 'b.-')
 axs[0].set_title('Power Measurements')
 axs[0].set_xlabel('Wavelength (nm)')
 axs[0].set_ylabel('Power (W)')
@@ -37,11 +37,11 @@ for i, current_file in enumerate(current_files):
     current_data = pd.read_csv(current_file)
     
     # Normalize current measurements
-    current_data['Current (A)'] = current_data['Current (A)'] / current_data['Current (A)'].max()
+    #current_data['Current (A)'] = current_data['Current (A)'] / current_data['Current (A)'].max()
     
     # Calculate the EQE
     wavelength_meters = current_data['Wavelength (nm)'] * 1e-9  # Convert nm to meters
-    eqe = (current_data['Current (A)'] / power_data['Power Measurements (W)']) * (h * c / (e * wavelength_meters))
+    eqe = (current_data['Current (A)'] / power_data['Power (W)']) * (h * c / (e * wavelength_meters))
     
     # Plot Current Measurements
     axs[1].plot(current_data['Wavelength (nm)'], current_data['Current (A)'], label=f'Current {i+1}')
@@ -52,7 +52,7 @@ for i, current_file in enumerate(current_files):
 # Set titles and labels for Current Measurements plot
 axs[1].set_title('Current Measurements')
 axs[1].set_xlabel('Wavelength (nm)')
-axs[1].set_ylabel('Normalized Current (A)')
+axs[1].set_ylabel('Current (A)')
 axs[1].legend()
 axs[1].grid(True)
 axs[1].set_xticks(np.arange(min(current_data['Wavelength (nm)']), max(current_data['Wavelength (nm)']) + 1, 20))
