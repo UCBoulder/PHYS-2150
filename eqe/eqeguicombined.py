@@ -377,7 +377,7 @@ def start_power_measurement():
         power_x_values.append(confirmed_mono_wavelength_float)
         power_y_values.append(average_power )  # Subtract background light
 
-        ax_power.plot(power_x_values, power_y_values, 'bo-', label='Power Measurement')
+        ax_power.plot(power_x_values, power_y_values, '.-', color='#0077BB', label='Power Measurement')
 
         fig_power.tight_layout()
         canvas_power.draw()
@@ -445,7 +445,7 @@ def start_current_measurement():
         current_x_values.append(confirmed_mono_wavelength_float)
         current_y_values.append(output)
 
-        ax_current.plot(current_x_values, current_y_values, 'bo-')
+        ax_current.plot(current_x_values, current_y_values, '.-', color='#0077BB')
 
         fig_current.tight_layout()
         canvas_current.draw()
