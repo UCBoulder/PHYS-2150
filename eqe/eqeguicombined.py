@@ -376,8 +376,9 @@ def start_power_measurement():
 
         power_x_values.append(confirmed_mono_wavelength_float)
         power_y_values.append(average_power )  # Subtract background light
+        power_y_values_microwatts = [average_power * 1e6 for average_power in power_y_values] # Plot in microwatts
 
-        ax_power.plot(power_x_values, power_y_values, '.-', color='#0077BB', label='Power Measurement')
+        ax_power.plot(power_x_values, power_y_values_microwatts, '.-', color='#0077BB', label='Power Measurement')
 
         fig_power.tight_layout()
         canvas_power.draw()
@@ -444,8 +445,10 @@ def start_current_measurement():
 
         current_x_values.append(confirmed_mono_wavelength_float)
         current_y_values.append(output)
+        current_y_values_nanoamps = [output * 1e9 for output in current_y_values] # Plot in nanoamps
 
-        ax_current.plot(current_x_values, current_y_values, '.-', color='#0077BB')
+
+        ax_current.plot(current_x_values, current_y_values_nanoamps, '.-', color='#0077BB')
 
         fig_current.tight_layout()
         canvas_current.draw()
@@ -593,14 +596,14 @@ def on_close():
 # Function to configure the power plot
 def configure_power_plot():
     ax_power.set_xlabel('Wavelength (nm)', fontsize=12)
-    ax_power.set_ylabel('Power (W)', fontsize=12)
+    ax_power.set_ylabel('Power ($\mu$W)', fontsize=12)
     ax_power.set_title('Incident Light Power Measurements', fontsize=12)
     ax_power.tick_params(axis='both', which='major', labelsize=12)
 
 # Function to configure the current plot
 def configure_current_plot():
     ax_current.set_xlabel('Wavelength (nm)', fontsize=12)
-    ax_current.set_ylabel('Current (A)', fontsize=12)
+    ax_current.set_ylabel('Current (nA)', fontsize=12)
     ax_current.set_title('PV Current Measurements', fontsize=12)
     ax_current.tick_params(axis='both', which='major', labelsize=12)
 
