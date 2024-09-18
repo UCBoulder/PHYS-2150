@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import os
 
 # Directory containing the CSV files
-directory = './data/temp'
+directory = './temperature/data/'
 
 # Initialize a plot
 plt.figure(figsize=(10, 6))
