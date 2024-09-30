@@ -286,7 +286,7 @@ def read_lockin_status_and_keithley_output():
                                 time.sleep(5)  # Wait for the sensitivity change to take effect
                                 break  # Break out of the inner while loop to re-read the status
                             
-                            adjusted_voltage = average_voltage * sensitivity_value / 10
+                            adjusted_voltage = (average_voltage * sensitivity_value / 10) / 0.45
                             print(f"Adjusted Voltage: {adjusted_voltage}")
                             current = adjusted_voltage * 10 ** -6  # Accounts for transimpedance amplifier gain
 
