@@ -73,21 +73,8 @@ keithley = initialize_keithley()
 # Initialize Oriel Cornerstone Monochromator
 try:
     usb_mono = Cornerstone_Mono(rm, rem_ifc="usb", timeout_msec=29000)
-    monochromator_serial_number = usb_mono.serial_number
-    print(f"Monochromator Serial Number: {monochromator_serial_number}")
 except Exception as e:
     show_error(f"Failed to initialize Monochromator: {e}")
-
-# Define the correction factors for each serial number
-correction_factors = {
-    "130B5203": 0.37, # EQE2
-    "130B5201": 0.44, # EQE3
-    "130B5202": 0.45 # EQE1
-}
-
-# Get the correction factor based on the monochromator serial number
-correction_factor = correction_factors.get(monochromator_serial_number, 0)  # Default to 0 if not found
-print(f"Correction Factor: {correction_factor}")
 
 # Find the COM port for the SR510 lock-in amplifier (connected with a USB to serial adaptor) and initialize the serial connection
 def initialize_serial_connection():
@@ -298,16 +285,14 @@ def read_lockin_status_and_keithley_output():
                                 print("Waiting 5 seconds after increasing sensitivity.")
                                 time.sleep(5)  # Wait for the sensitivity change to take effect
                                 break  # Break out of the inner while loop to re-read the status
-
-
                             
-                            adjusted_voltage = (average_voltage * sensitivity_value / 10) / correction_factor
+                            adjusted_voltage = (average_voltage * sensitivity_value / 10) / 0.45
                             print(f"Adjusted Voltage: {adjusted_voltage}")
                             current = adjusted_voltage * 10 ** -6  # Accounts for transimpedance amplifier gain
 
                             if current:
                                 print(f"Returning current: {current}")
-                                return current
+                                return average_voltage
                             else:
                                 print("No output response received.")
                                 continue
@@ -381,16 +366,16 @@ def start_power_measurement():
         tlPM.setWavelength(c_double(confirmed_mono_wavelength_float), TLPM_DEFAULT_CHANNEL)
         time.sleep(0.2)  # Wait for the power reading to stabilize
 
-        # Measure power 200 times and calculate the average
+        # Measure power 50 times and calculate the average
         power_values = []
         for _ in range(200):
             power = c_double()
             tlPM.measPower(byref(power), TLPM_DEFAULT_CHANNEL)
             power_values.append(power.value)
-        average_power = (sum(power_values) / len(power_values)) * 2  # Multiply by 2 to account for the 50% duty cycle of the chopper
+        average_power = sum(power_values) / len(power_values)
 
         power_x_values.append(confirmed_mono_wavelength_float)
-        power_y_values.append(average_power )  
+        power_y_values.append(average_power )  # Subtract background light
         power_y_values_microwatts = [average_power * 1e6 for average_power in power_y_values] # Plot in microwatts
 
         ax_power.plot(power_x_values, power_y_values_microwatts, '.-', color='#0077BB', label='Power Measurement')
