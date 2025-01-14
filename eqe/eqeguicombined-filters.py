@@ -330,11 +330,12 @@ def read_lockin_status_and_keithley_output():
 # Function to set the monochromator to 532 nm for alignment
 def align_monochromator():
     print("Aligning monochromator...")
+    usb_mono.SendCommand("filter 1", False)
     usb_mono.SendCommand("grating 1", False)
     usb_mono.SendCommand("gowave 532", False)
     usb_mono.SendCommand("shutter o", False)
     usb_mono.WaitForIdle()
-    messagebox.showinfo("Alignment", "Monochromator aligned to 532 nm with grating 1 and shutter opened.")
+    messagebox.showinfo("Alignment", "Monochromator aligned to 532 nm with grating 1, filter 1, and shutter opened.")
 
 def start_power_measurement():
     clear_power_plot()
@@ -343,10 +344,11 @@ def start_power_measurement():
     end_wavelength = float(end_wavelength_var.get())
     step_size = float(step_size_var.get())
 
-    # Check if the start wavelength is less than 400 nm and prompt the user
+    # Check if the start wavelength is less than 420 nm and set filter to 3 (no filter)
     if start_wavelength <= 420:
         usb_mono.SendCommand("filter 3", False)
         usb_mono.WaitForIdle()
+        print("Setting filter to 3 (no filter).")
     
 
     # Second loop: Measure actual signal with shutter open
@@ -368,15 +370,17 @@ def start_power_measurement():
         usb_mono.SendCommand(f"gowave {current_wavelength}", False)
         usb_mono.WaitForIdle()
 
-        # Prompt the user to install the 400 nm filter
         print(f"Current Wavelength: {current_wavelength}")
         if current_wavelength > 420 and current_wavelength <= 420 + step_size:
             usb_mono.SendCommand("filter 1", False)
-            usb_mono.WaitForIdle()        
-        # Prompt the user to install the 780 nm filter
+            usb_mono.WaitForIdle()      
+            print("Setting filter to 1 (400 nm).")  
+
         if current_wavelength > 800 and current_wavelength <= 800 + step_size:
             usb_mono.SendCommand("filter 2", False)
             usb_mono.WaitForIdle()
+            print("Setting filter to 2 (780 nm).")
+
         confirmed_mono_wavelength = usb_mono.GetQueryResponse("wave?")
         confirmed_mono_wavelength_float = float(confirmed_mono_wavelength)
         tlPM.setWavelength(c_double(confirmed_mono_wavelength_float), TLPM_DEFAULT_CHANNEL)
@@ -423,6 +427,7 @@ def start_current_measurement():
     if start_wavelength <= 400:
         usb_mono.SendCommand("filter 3", False)
         usb_mono.WaitForIdle()
+        print("Setting filter to 3 (no filter).")
     usb_mono.SendCommand("shutter o", False)
     usb_mono.WaitForIdle()
 
@@ -447,10 +452,12 @@ def start_current_measurement():
         print(f"Current Wavelength: {current_wavelength}")
         if current_wavelength > 420 and current_wavelength <= 420 + step_size:
             usb_mono.SendCommand("filter 1", False)
-            usb_mono.WaitForIdle()        
+            usb_mono.WaitForIdle()       
+            print("Setting filter to 1 (400 nm).")  
         if current_wavelength > 800 and current_wavelength <= 800 + step_size:
             usb_mono.SendCommand("filter 2", False)
             usb_mono.WaitForIdle()
+            print("Setting filter to 2 (780 nm).")
         confirmed_mono_wavelength = usb_mono.GetQueryResponse("wave?")
         confirmed_mono_wavelength_float = float(confirmed_mono_wavelength)
 
