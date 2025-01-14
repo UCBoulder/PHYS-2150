@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # Directory containing the CSV files
-directory = 'C:/Users/krist/Documents/GitHub/PHYS-2150/jv/data/'
+directory = 'C:/Users/krbu4353/GitHub/PHYS-2150/jv/data/'
 
 # Initialize a plot
 plt.figure(figsize=(10, 6))
