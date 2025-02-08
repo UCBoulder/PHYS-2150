@@ -161,37 +161,47 @@ def adjust_lockin_phase():
         ser.write(f'P {phase}\r'.encode())
         wait_for_lockin_ready()
 
-    def verify_phase(phase):
-        set_phase(phase)
+    def sample_phase_response():
+        phases = np.linspace(0, 360, 37)  # Sample 37 points (0 to 360 degrees inclusive)
+        signals = []
+        
+        for phase in phases:
+            set_phase(phase)
+            try:
+                signal = float(read_output())
+                signals.append(signal)
+                print(f"Phase: {phase:.1f}°, Signal: {signal:.6f}")
+            except ValueError as e:
+                print(f"Error reading signal at phase {phase}: {e}")
+                return None, None
+        
+        return phases, np.array(signals)
+
+    def fit_sine(phases, signals):
+        # Convert phases to radians for numpy
+        x = np.radians(phases)
+        
+        # Define the sine function to fit
+        def sine_func(x, amplitude, phase_shift, offset):
+            return amplitude * np.sin(x + phase_shift) + offset
+        
+        # Initial parameter guesses
+        p0 = [
+            (np.max(signals) - np.min(signals))/2,  # amplitude
+            0,                                      # phase_shift
+            np.mean(signals)                        # offset
+        ]
+        
         try:
-            return abs(float(read_output())) <= 0.0005
-        except ValueError as e:
-            print(f"Error parsing output response: {e}")
-            return False
+            # Fit the sine function to the data
+            from scipy.optimize import curve_fit
+            popt, _ = curve_fit(sine_func, x, signals, p0=p0)
+            return popt
+        except Exception as e:
+            print(f"Error during sine fitting: {e}")
+            return None
 
-    def normalize_phase_angle(phase):
-        phase = phase % 360
-        if phase > 180:
-            phase -= 360
-        return f"{phase:.1f}"
-
-    def minimize_output_phase(start_phase, increment):
-        best_phase = start_phase
-        min_output = float('inf')
-        while increment >= 0.1:
-            for direction in [-1, 1]:
-                new_phase = (best_phase + direction * increment) % 360
-                set_phase(new_phase)
-                try:
-                    signal_value = float(read_output())
-                    if abs(signal_value) < abs(min_output):
-                        min_output = signal_value
-                        best_phase = new_phase
-                except ValueError as e:
-                    print(f"Error parsing output response: {e}")
-            increment /= 2
-        return best_phase, min_output
-
+    # Setup initial conditions
     usb_mono.SendCommand("grating 1", False)
     usb_mono.WaitForIdle()
     usb_mono.SendCommand("gowave 532", False)
@@ -201,41 +211,58 @@ def adjust_lockin_phase():
 
     set_lockin_parameters()
 
-    ser.write('P\r'.encode())
-    current_phase = float(read_lockin_response())
-    print(f"Current phase: {normalize_phase_angle(current_phase)}")
+    # Sample through 360 degrees
+    print("Sampling phase response...")
+    phases, signals = sample_phase_response()
+    if phases is None or signals is None:
+        messagebox.showerror("Error", "Failed to sample phase response")
+        return None, None
 
-    best_phase, min_output = minimize_output_phase(current_phase, 45)
-    print(f"Minimized output at phase: {normalize_phase_angle(best_phase)} with signal value: {min_output}")
+    # Fit sine wave to the data
+    print("Fitting sine wave to phase response...")
+    fit_params = fit_sine(phases, signals)
+    if fit_params is None:
+        messagebox.showerror("Error", "Failed to fit sine wave to phase response")
+        return None, None
 
-    if min_output < 0:
-        best_phase = (best_phase + 180) % 360
-        set_phase(best_phase)
-        print(f"Adjusted phase to {normalize_phase_angle(best_phase)} degrees to ensure positive output.")
+    amplitude, phase_shift, offset = fit_params
+    
+    # Convert phase_shift from radians to degrees and normalize to 0-360
+    optimal_phase = (np.degrees(-phase_shift) + 90) % 360
+    
+    # Set the phase for maximum positive signal
+    print(f"Setting optimal phase to {optimal_phase:.1f}°")
+    set_phase(optimal_phase)
+    
+    # Verify the signal is positive
+    final_signal = float(read_output())
+    if final_signal < 0:
+        optimal_phase = (optimal_phase + 180) % 360
+        print(f"Signal negative, adjusting phase to {optimal_phase:.1f}°")
+        set_phase(optimal_phase)
+        final_signal = float(read_output())
 
-    while not verify_phase((best_phase + 180) % 360):
-        print(f"Phase {normalize_phase_angle(best_phase)} does not meet the condition at 180 degrees.")
-        best_phase, min_output = minimize_output_phase(best_phase, 45)
-        print(f"Minimized output at phase: {normalize_phase_angle(best_phase)} with signal value: {min_output}")
-        if min_output < 0:
-            best_phase = (best_phase + 180) % 360
-            set_phase(best_phase)
-            print(f"Adjusted phase to {normalize_phase_angle(best_phase)} degrees to ensure positive output.")
+    message = f"Set phase to {optimal_phase:.1f}° with signal value: {final_signal:.6f}"
+    print(message)
+    messagebox.showinfo("Phase Adjustment", message)
 
-    print(f"Phase {normalize_phase_angle(best_phase)} and {normalize_phase_angle(best_phase + 180)} both meet the condition.")
-    for offset in [90, 270]:
-        phase_offset = (best_phase + offset) % 360
-        set_phase(phase_offset)
-        try:
-            signal_value = float(read_output())
-            if signal_value > 0:
-                print(f"Set phase to {normalize_phase_angle(phase_offset)} degrees with positive signal value: {signal_value}")
-                messagebox.showinfo("Phase Adjustment", f"Set phase to {normalize_phase_angle(phase_offset)} degrees with positive signal value: {signal_value}")
-                return best_phase, min_output
-        except ValueError as e:
-            print(f"Error parsing output response: {e}")
+    # # Optional: Create a plot of the data and fit
+    # fig_phase, ax_phase = plt.subplots()
+    # ax_phase.plot(phases, signals, 'o', label='Measured')
+    
+    # # Plot the fitted curve
+    # x_fit = np.linspace(0, 360, 1000)
+    # y_fit = amplitude * np.sin(np.radians(x_fit) + phase_shift) + offset
+    # ax_phase.plot(x_fit, y_fit, '-', label='Fitted Sine')
+    
+    # ax_phase.set_xlabel('Phase (degrees)')
+    # ax_phase.set_ylabel('Signal (V)')
+    # ax_phase.set_title('Phase Response and Sine Fit')
+    # ax_phase.legend()
+    # ax_phase.grid(True)
+    # plt.show()
 
-    return best_phase, min_output
+    return optimal_phase, final_signal
 
 # Function to send a command to the lock-in amplifier and read the response
 def send_command_to_lockin(command):
@@ -335,7 +362,7 @@ def align_monochromator():
     usb_mono.SendCommand("gowave 532", False)
     usb_mono.SendCommand("shutter o", False)
     usb_mono.WaitForIdle()
-    messagebox.showinfo("Alignment", "Monochromator aligned to 532 nm with grating 1, filter 1, and shutter opened.")
+    #messagebox.showinfo("Alignment", "Monochromator aligned to 532 nm with grating 1, filter 1, and shutter opened.")
 
 def start_power_measurement():
     clear_power_plot()
@@ -489,6 +516,7 @@ def start_current_measurement():
         print("Measurement stopped.")
     else:
         print("Measurement complete.")
+        align_monochromator()
 
 def save_power_data():
     if not power_x_values or not power_y_values:
