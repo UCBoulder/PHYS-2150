@@ -78,10 +78,17 @@ try:
 except Exception as e:
     show_error(f"Failed to initialize Monochromator: {e}")
 
+# # Define the correction factors for each serial number
+# correction_factors = {
+#     "130B5203": 0.37, # EQE2
+#     "130B5201": 0.44, # EQE3
+#     "130B5202": 0.45 # EQE1
+# }
+
 # Define the correction factors for each serial number
 correction_factors = {
-    "130B5203": 0.37, # EQE2
-    "130B5201": 0.44, # EQE3
+    "130B5203": 0.45, # EQE2
+    "130B5201": 0.45, # EQE3
     "130B5202": 0.45 # EQE1
 }
 
@@ -443,6 +450,7 @@ def start_power_measurement():
         print("Measurement stopped.")
     else:
         print("Measurement complete.")
+        align_monochromator()
 
 def start_current_measurement():
     clear_current_plot()
