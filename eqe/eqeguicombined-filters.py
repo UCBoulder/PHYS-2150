@@ -469,6 +469,7 @@ def read_lockin_status_and_keithley_output():
 # Function to set the monochromator to 532 nm for alignment
 def align_monochromator():
     print("Aligning monochromator...")
+    print("Aligning monochromator...")
     usb_mono.SendCommand("filter 1", False)
     usb_mono.SendCommand("grating 1", False)
     usb_mono.SendCommand("gowave 532", False)
