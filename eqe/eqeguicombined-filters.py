@@ -1,5 +1,6 @@
 import time
 import csv
+import scipy
 from ctypes import c_double, byref, c_uint32, create_string_buffer, c_bool
 from cornerstone_mono import Cornerstone_Mono
 from TLPMX import TLPMX, TLPM_DEFAULT_CHANNEL
@@ -25,6 +26,10 @@ current_x_values = []
 current_y_values = []
 power_x_values = []
 power_y_values = []
+phase_x_values = []
+phase_y_values = []
+phase_fit_x_values = []
+phase_fit_y_values = []
 
 # Set up variables for threading and closing the application
 stop_thread = threading.Event()
@@ -158,7 +163,107 @@ def set_lockin_parameters():
     wait_for_lockin_ready()
 
 # Function to adjust the lock-in amplifier phase
+# Modify the adjust_lockin_phase function
 def adjust_lockin_phase():
+    def read_output():
+        ser.write('Q\r'.encode())
+        time.sleep(0.5)
+        return read_lockin_response()
+
+    def set_phase(phase):
+        ser.write(f'P {phase}\r'.encode())
+        wait_for_lockin_ready()
+
+    def sample_phase_response():
+        phases = np.linspace(0, 360, 37)  # Sample 37 points (0 to 360 degrees inclusive)
+        signals = []
+        
+        for phase in phases:
+            set_phase(phase)
+            try:
+                signal = float(read_output())
+                signals.append(signal)
+                print(f"Phase: {phase:.1f}°, Signal: {signal:.6f}")
+            except ValueError as e:
+                print(f"Error reading signal at phase {phase}: {e}")
+                return None, None
+        
+        return phases, np.array(signals)
+
+    def fit_sine(phases, signals):
+        x = np.radians(phases)
+        def sine_func(x, amplitude, phase_shift, offset):
+            return amplitude * np.sin(x + phase_shift) + offset
+        p0 = [(np.max(signals) - np.min(signals))/2, 0, np.mean(signals)]
+        try:
+            from scipy.optimize import curve_fit
+            popt, _ = curve_fit(sine_func, x, signals, p0=p0)
+            return popt
+        except Exception as e:
+            print(f"Error during sine fitting: {e}")
+            return None
+
+    usb_mono.SendCommand("grating 1", False)
+    usb_mono.WaitForIdle()
+    usb_mono.SendCommand("gowave 532", False)
+    usb_mono.WaitForIdle()
+    usb_mono.SendCommand("shutter o", False)
+    usb_mono.WaitForIdle()
+
+    set_lockin_parameters()
+
+    print("Sampling phase response...")
+    phases, signals = sample_phase_response()
+    if phases is None or signals is None:
+        messagebox.showerror("Error", "Failed to sample phase response")
+        return None, None
+
+    print("Fitting sine wave to phase response...")
+    fit_params = fit_sine(phases, signals)
+    if fit_params is None:
+        messagebox.showerror("Error", "Failed to fit sine wave to phase response")
+        return None, None
+
+    amplitude, phase_shift, offset = fit_params
+    optimal_phase = (np.degrees(-phase_shift) + 90) % 360
+    print(f"Setting optimal phase to {optimal_phase:.1f}°")
+    set_phase(optimal_phase)
+    
+    final_signal = float(read_output())
+    if final_signal < 0:
+        optimal_phase = (optimal_phase + 180) % 360
+        print(f"Signal negative, adjusting phase to {optimal_phase:.1f}°")
+        set_phase(optimal_phase)
+        final_signal = float(read_output())
+
+    message = f"Set phase to {optimal_phase:.1f}° with signal value: {final_signal:.6f}"
+    print(message)
+    messagebox.showinfo("Phase Adjustment", message)
+
+    # Store data for plotting
+    phase_x_values.clear()
+    phase_y_values.clear()
+    phase_fit_x_values.clear()
+    phase_fit_y_values.clear()
+    phase_x_values.extend(phases)
+    phase_y_values.extend(signals)
+    phase_fit_x_values.extend(np.linspace(0, 360, 1000))
+    phase_fit_y_values.extend(amplitude * np.sin(np.radians(phase_fit_x_values) + phase_shift) + offset)
+
+    # Update the phase plot
+    ax_phase.cla()
+    ax_phase.plot(phase_x_values, phase_y_values, 'o', label='Measured')
+    ax_phase.plot(phase_fit_x_values, phase_fit_y_values, '-', label='Fitted Sine')
+    ax_phase.set_xlabel('Phase (degrees)')
+    ax_phase.set_ylabel('Signal (V)')
+    ax_phase.set_title('Phase Response and Sine Fit')
+    ax_phase.legend()
+    ax_phase.grid(True)
+    canvas_phase.draw()
+
+    return optimal_phase, final_signal
+
+"""def adjust_lockin_phase():
     def read_output():
         ser.write('Q\r'.encode())
         time.sleep(0.5)
@@ -269,7 +374,7 @@ def adjust_lockin_phase():
     # ax_phase.grid(True)
     # plt.show()
 
-    return optimal_phase, final_signal
+    return optimal_phase, final_signal"""
 
 # Function to send a command to the lock-in amplifier and read the response
 def send_command_to_lockin(command):
@@ -726,6 +831,27 @@ root.grid_rowconfigure(4, weight=1)
 root.grid_rowconfigure(5, weight=0)
 root.grid_columnconfigure(0, weight=1)
 root.grid_columnconfigure(1, weight=1)
+
+# Add phase plot setup
+plot_frame_phase = tk.Frame(root)
+plot_frame_phase.grid(row=4, column=2, padx=20, pady=10, sticky="nsew")
+fig_phase, ax_phase = plt.subplots()
+ax_phase.set_xlabel('Phase (degrees)', fontsize=12)
+ax_phase.set_ylabel('Signal (V)', fontsize=12)
+ax_phase.set_title('Phase Response and Sine Fit', fontsize=12)
+ax_phase.tick_params(axis='both', which='major', labelsize=12)
+canvas_phase = FigureCanvasTkAgg(fig_phase, master=plot_frame_phase)
+canvas_phase.draw()
+canvas_phase.get_tk_widget().grid(row=0, column=0, sticky="nsew")
+
+toolbar_frame_phase = tk.Frame(root)
+toolbar_frame_phase.grid(row=5, column=2, sticky="ew", padx=20)
+toolbar_phase = NavigationToolbar2Tk(canvas_phase, toolbar_frame_phase)
+toolbar_phase.update()
+
+plot_frame_phase.grid_rowconfigure(0, weight=1)
+plot_frame_phase.grid_columnconfigure(0, weight=1)
+root.grid_columnconfigure(2, weight=1)
 
 # Create the input fields
 start_wavelength_var = tk.StringVar(value="350")
