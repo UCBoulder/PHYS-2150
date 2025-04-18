@@ -18,5 +18,10 @@ adjust phase lock could not find a proper set for 4-6
     student data confirms pixels stopped working
 
 PLots work, moving on to add text and drop downs for cell# pixel# to automate file naming
+added validation for cell# conventions (currently C60_XX or 2501-XX) Can be adjusted depending on later cellID format
 
 Starting to adjust phase timing and degree checks
+6 data points completes in ~12s
+4 data points completes in ~8-9s
+
+adjusting the function to produce a csv of 10 runs of data_points = 3-13 for consideration for actual use

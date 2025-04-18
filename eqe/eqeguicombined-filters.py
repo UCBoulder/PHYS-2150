@@ -9,6 +9,7 @@ import pyvisa as visa
 import matplotlib.pyplot as plt
 import pandas as pd
 import sys
+import re
 import datetime
 import threading
 import numpy as np
@@ -176,7 +177,7 @@ def adjust_lockin_phase():
         wait_for_lockin_ready()
 
     def sample_phase_response():
-        phases = np.linspace(0, 360, 37)  # Sample 37 points (0 to 360 degrees inclusive)
+        phases = np.linspace(0, 360, 7)  # Sample 37 points (0 to 360 degrees inclusive)
         signals = []
         
         for phase in phases:
@@ -532,6 +533,9 @@ def save_power_data():
     if not cell_number:
         messagebox.showerror("Input Error", "Cell number cannot be empty.")
         return
+    if not re.match(r'^(C60_\d+|\d+-\d+)$', cell_number):
+        messagebox.showerror("Input Error", "Cell number must be in format C60_XX or XXXX-XX (e.g., C60_01, 2501-04).")
+        return
     
     file_name = f"{date}_power_cell{cell_number}.csv"
     file_path = filedialog.asksaveasfilename(
@@ -562,6 +566,9 @@ def save_current_data():
     # Validate inputs
     if not cell_number:
         messagebox.showerror("Input Error", "Cell number cannot be empty.")
+        return
+    if not re.match(r'^(C60_\d+|\d+-\d+)$', cell_number):
+        messagebox.showerror("Input Error", "Cell number must be in format C60_XX or XXXX-XX (e.g., C60_01, 2501-04).")
         return
     if not pixel_number or pixel_number not in [str(i) for i in range(1, 7)]:
         messagebox.showerror("Input Error", "Pixel number must be 1-6.")
