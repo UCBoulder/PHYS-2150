@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import sys
 import re
+import os
 import datetime
 import threading
 import numpy as np
@@ -32,6 +33,12 @@ phase_x_values = []
 phase_y_values = []
 phase_fit_x_values = []
 phase_fit_y_values = []
+phase_optimal = None  # Store optimal phase angle
+phase_signal = None   # Store signal at optimal phase
+phase_r_squared = None  # Store R^2 of the fit
+power_thread = None
+current_thread = None
+phase_thread = None
 
 # Set up variables for threading and closing the application
 stop_thread = threading.Event()
@@ -165,7 +172,6 @@ def set_lockin_parameters():
     wait_for_lockin_ready()
 
 # Function to adjust the lock-in amplifier phase
-# Modify the adjust_lockin_phase function
 def adjust_lockin_phase():
     def read_output():
         ser.write('Q\r'.encode())
@@ -177,10 +183,13 @@ def adjust_lockin_phase():
         wait_for_lockin_ready()
 
     def sample_phase_response():
-        phases = np.linspace(0, 360, 7)  # Sample 37 points (0 to 360 degrees inclusive)
+        phases = np.linspace(0, 360, 7)  # Sample 7 points (60-degree steps)
         signals = []
         
         for phase in phases:
+            if stop_thread.is_set():
+                print("Phase adjustment stopped.")
+                return None, None
             set_phase(phase)
             try:
                 signal = float(read_output())
@@ -204,6 +213,19 @@ def adjust_lockin_phase():
         except Exception as e:
             print(f"Error during sine fitting: {e}")
             return None
+
+    def calculate_r_squared(phases, signals, popt):
+        if popt is None:
+            return None
+        amplitude, phase_shift, offset = popt
+        x = np.radians(phases)
+        fitted = amplitude * np.sin(x + phase_shift) + offset
+        ss_tot = np.sum((signals - np.mean(signals))**2)
+        ss_res = np.sum((signals - fitted)**2)
+        if ss_tot == 0:  # Avoid division by zero
+            return None
+        r_squared = 1 - ss_res / ss_tot
+        return r_squared
 
     usb_mono.SendCommand("grating 1", False)
     usb_mono.WaitForIdle()
@@ -233,10 +255,16 @@ def adjust_lockin_phase():
     
     final_signal = float(read_output())
     if final_signal < 0:
-        optimal_phase = (optimal_phase + 180) % 360
+        optimal_phase = (np.degrees(-phase_shift) + 270) % 360
         print(f"Signal negative, adjusting phase to {optimal_phase:.1f}°")
         set_phase(optimal_phase)
         final_signal = float(read_output())
+
+    r_squared = calculate_r_squared(phases, signals, fit_params)
+    global phase_optimal, phase_signal, phase_r_squared
+    phase_optimal = optimal_phase
+    phase_signal = final_signal
+    phase_r_squared = r_squared
 
     message = f"Set phase to {optimal_phase:.1f}° with signal value: {final_signal:.6f}"
     print(message)
@@ -357,7 +385,6 @@ def read_lockin_status_and_keithley_output():
 
 # Function to set the monochromator to 532 nm for alignment
 def align_monochromator():
-    print("Aligning monochromator...")
     print("Aligning monochromator...")
     usb_mono.SendCommand("filter 1", False)
     usb_mono.SendCommand("grating 1", False)
@@ -591,6 +618,22 @@ def save_current_data():
 
     messagebox.showinfo("Data Saved", f"Current data saved to {file_path}")
 
+def save_phase_data():
+    if phase_optimal is None or phase_signal is None or phase_r_squared is None:
+        messagebox.showerror("No Data", "No phase adjustment data available to save.")
+        return
+
+    file_path = "phase_lock_info.csv"
+    write_header = not os.path.exists(file_path)
+    
+    with open(file_path, mode='a', newline='') as file:
+        writer = csv.writer(file)
+        if write_header:
+            writer.writerow(["set angle", "signal", "r-value"])
+        writer.writerow([phase_optimal, phase_signal, phase_r_squared])
+
+    messagebox.showinfo("Data Saved", f"Phase data saved to {file_path}")
+    
 def measure_power_thread():
     global power_thread
 
@@ -635,20 +678,38 @@ def toggle_current_measurement():
         stop_measurement()
         start_current_button.config(text="Start Current Measurement", bg="#CCDDAA", command=toggle_current_measurement)
 
+# Function to toggle measurement state
+def toggle_phase_adjustment():
+    global phase_thread
+    if adjust_lockin_phase_button.config('text')[-1] == 'Start Phase Adjustment':
+        stop_thread.clear()
+        phase_thread = threading.Thread(target=adjust_lockin_phase)
+        phase_thread.start()
+        adjust_lockin_phase_button.config(text="Stop Phase Adjustment", bg="#FFCCCC", command=stop_measurement)
+    else:
+        stop_measurement()
+        adjust_lockin_phase_button.config(text="Start Phase Adjustment", bg="#CCDDAA", command=toggle_phase_adjustment)
 
+def configure_phase_plot():
+    ax_phase.set_xlabel('Phase (degrees)', fontsize=12)
+    ax_phase.set_ylabel('Signal (V)', fontsize=12)
+    ax_phase.set_title('Phase Response and Sine Fit', fontsize=12)
+    ax_phase.tick_params(axis='both', which='major', labelsize=12)
 
 
 
 def on_close():
+    global is_closing
     is_closing = True
-    # Set the stop event to stop any running threads
     stop_thread.set()
 
     # Wait for threads to finish
-    if 'power_thread' in globals() and power_thread.is_alive():
+    if 'power_thread' in globals() and power_thread and power_thread.is_alive():
         power_thread.join()
-    if 'current_thread' in globals() and current_thread.is_alive():
+    if 'current_thread' in globals() and current_thread and current_thread.is_alive():
         current_thread.join()
+    if 'phase_thread' in globals() and phase_thread and phase_thread.is_alive():
+        phase_thread.join()
 
     # Close any open resources
     try:
@@ -656,16 +717,14 @@ def on_close():
             tlPM.close()
         if 'keithley' in globals():
             keithley.close()
-        # No close method for usb_mono, so we skip it
         if 'ser' in globals():
             ser.close()
     except Exception as e:
         print(f"Error closing resources: {e}")
 
-    # Destroy the Tkinter root window
     root.destroy()
     print("Application closed.")
-    sys.exit()  # Explicitly exit the application
+    sys.exit()
 
 # def on_close():
 #     global is_closing
@@ -824,10 +883,16 @@ clear_power_button.grid(row=6, column=0, padx=20, pady=10, sticky='w')
 
 # Add the align and phase buttons in the right column above the current plot
 align_button = tk.Button(root, text="Enable Green Alignment Dot", font=("Helvetica", 14), command=align_monochromator)
-align_button.grid(row=2, column=1, padx=20, pady=10, sticky='e')
+align_button.grid(row=2, column=1, padx=20, pady=10)
 
-adjust_lockin_phase_button = tk.Button(root, text="Adjust Lock-in Phase", font=("Helvetica", 14), command=adjust_lockin_phase)
-adjust_lockin_phase_button.grid(row=2, column=1, padx=20, pady=10, sticky='w')
+adjust_lockin_phase_button = tk.Button(root, text="Start Phase Adjustment", font=("Helvetica", 14), bg="#CCDDAA", command=toggle_phase_adjustment)
+adjust_lockin_phase_button.grid(row=5, column=2, padx=20, sticky='e')
+
+save_phase_button = tk.Button(root, text="Save Phase Data", font=("Helvetica", 14), command=save_phase_data)
+save_phase_button.grid(row=6, column=2, padx=20, pady=10, sticky='e')
+
+clear_phase_button = tk.Button(root, text="Clear Phase Data", font=("Helvetica", 14), command=lambda: [phase_x_values.clear(), phase_y_values.clear(), phase_fit_x_values.clear(), phase_fit_y_values.clear(), ax_phase.cla(), configure_phase_plot(), canvas_phase.draw()])
+clear_phase_button.grid(row=6, column=2, padx=20, pady=10, sticky='w')
 
 # Add the start and save buttons for the current measurements in the right column below the current plot
 start_current_button = tk.Button(root, text="Start Current Measurement", font=("Helvetica", 14), bg="#CCDDAA", command=toggle_current_measurement)
