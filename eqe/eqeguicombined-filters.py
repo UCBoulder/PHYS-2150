@@ -760,7 +760,7 @@ def on_close():
 # Function to configure the power plot
 def configure_power_plot():
     ax_power.set_xlabel('Wavelength (nm)', fontsize=12)
-    ax_power.set_ylabel('Power ($\mu$W)', fontsize=12)
+    ax_power.set_ylabel(r'Power ($\mu$W)', fontsize=12)
     ax_power.set_title('Incident Light Power Measurements', fontsize=12)
     ax_power.tick_params(axis='both', which='major', labelsize=12)
 
