@@ -19,3 +19,4 @@ adjust phase lock could not find a proper set for 4-6
 
 PLots work, moving on to add text and drop downs for cell# pixel# to automate file naming
 
+Starting to adjust phase timing and degree checks
