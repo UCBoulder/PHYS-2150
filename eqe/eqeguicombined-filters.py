@@ -623,7 +623,15 @@ def save_phase_data():
         messagebox.showerror("No Data", "No phase adjustment data available to save.")
         return
 
-    file_path = "phase_lock_info.csv"
+    file_name = "phase_lock_info.csv"
+    file_path = filedialog.asksaveasfilename(
+        initialfile=file_name,
+        defaultextension=".csv",
+        filetypes=[("CSV files", "*.csv")]
+    )
+    if not file_path:
+        return
+
     write_header = not os.path.exists(file_path)
     
     with open(file_path, mode='a', newline='') as file:
@@ -685,9 +693,11 @@ def toggle_phase_adjustment():
         stop_thread.clear()
         phase_thread = threading.Thread(target=adjust_lockin_phase)
         phase_thread.start()
-        adjust_lockin_phase_button.config(text="Stop Phase Adjustment", bg="#FFCCCC", command=stop_measurement)
+        adjust_lockin_phase_button.config(text="Stop Phase Adjustment", bg="#FFCCCC", command=toggle_phase_adjustment)
     else:
-        stop_measurement()
+        stop_thread.set()
+        if phase_thread and phase_thread.is_alive():
+            phase_thread.join(timeout=1.0)  # Wait briefly for thread to exit
         adjust_lockin_phase_button.config(text="Start Phase Adjustment", bg="#CCDDAA", command=toggle_phase_adjustment)
 
 def configure_phase_plot():
@@ -883,7 +893,7 @@ clear_power_button.grid(row=6, column=0, padx=20, pady=10, sticky='w')
 
 # Add the align and phase buttons in the right column above the current plot
 align_button = tk.Button(root, text="Enable Green Alignment Dot", font=("Helvetica", 14), command=align_monochromator)
-align_button.grid(row=2, column=1, padx=20, pady=10)
+align_button.grid(row=1, column=1, padx=20, pady=10)
 
 adjust_lockin_phase_button = tk.Button(root, text="Start Phase Adjustment", font=("Helvetica", 14), bg="#CCDDAA", command=toggle_phase_adjustment)
 adjust_lockin_phase_button.grid(row=5, column=2, padx=20, sticky='e')
