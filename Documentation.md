@@ -17,4 +17,5 @@ PV measurement for pixel3 took 3:08
 adjust phase lock could not find a proper set for 4-6
     student data confirms pixels stopped working
 
-suggest that "enable green alignment" added to end of current measurements
+PLots work, moving on to add text and drop downs for cell# pixel# to automate file naming
+
