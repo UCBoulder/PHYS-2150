@@ -9,6 +9,7 @@ import pyvisa as visa
 import matplotlib.pyplot as plt
 import pandas as pd
 import sys
+import datetime
 import threading
 import numpy as np
 import tkinter as tk
@@ -262,119 +263,6 @@ def adjust_lockin_phase():
     canvas_phase.draw()
 
     return optimal_phase, final_signal
-
-"""def adjust_lockin_phase():
-    def read_output():
-        ser.write('Q\r'.encode())
-        time.sleep(0.5)
-        return read_lockin_response()
-
-    def set_phase(phase):
-        ser.write(f'P {phase}\r'.encode())
-        wait_for_lockin_ready()
-
-    def sample_phase_response():
-        phases = np.linspace(0, 360, 37)  # Sample 37 points (0 to 360 degrees inclusive)
-        signals = []
-        
-        for phase in phases:
-            set_phase(phase)
-            try:
-                signal = float(read_output())
-                signals.append(signal)
-                print(f"Phase: {phase:.1f}°, Signal: {signal:.6f}")
-            except ValueError as e:
-                print(f"Error reading signal at phase {phase}: {e}")
-                return None, None
-        
-        return phases, np.array(signals)
-
-    def fit_sine(phases, signals):
-        # Convert phases to radians for numpy
-        x = np.radians(phases)
-        
-        # Define the sine function to fit
-        def sine_func(x, amplitude, phase_shift, offset):
-            return amplitude * np.sin(x + phase_shift) + offset
-        
-        # Initial parameter guesses
-        p0 = [
-            (np.max(signals) - np.min(signals))/2,  # amplitude
-            0,                                      # phase_shift
-            np.mean(signals)                        # offset
-        ]
-        
-        try:
-            # Fit the sine function to the data
-            from scipy.optimize import curve_fit
-            popt, _ = curve_fit(sine_func, x, signals, p0=p0)
-            return popt
-        except Exception as e:
-            print(f"Error during sine fitting: {e}")
-            return None
-
-    # Setup initial conditions
-    usb_mono.SendCommand("grating 1", False)
-    usb_mono.WaitForIdle()
-    usb_mono.SendCommand("gowave 532", False)
-    usb_mono.WaitForIdle()
-    usb_mono.SendCommand("shutter o", False)
-    usb_mono.WaitForIdle()
-
-    set_lockin_parameters()
-
-    # Sample through 360 degrees
-    print("Sampling phase response...")
-    phases, signals = sample_phase_response()
-    if phases is None or signals is None:
-        messagebox.showerror("Error", "Failed to sample phase response")
-        return None, None
-
-    # Fit sine wave to the data
-    print("Fitting sine wave to phase response...")
-    fit_params = fit_sine(phases, signals)
-    if fit_params is None:
-        messagebox.showerror("Error", "Failed to fit sine wave to phase response")
-        return None, None
-
-    amplitude, phase_shift, offset = fit_params
-    
-    # Convert phase_shift from radians to degrees and normalize to 0-360
-    optimal_phase = (np.degrees(-phase_shift) + 90) % 360
-    
-    # Set the phase for maximum positive signal
-    print(f"Setting optimal phase to {optimal_phase:.1f}°")
-    set_phase(optimal_phase)
-    
-    # Verify the signal is positive
-    final_signal = float(read_output())
-    if final_signal < 0:
-        optimal_phase = (optimal_phase + 180) % 360
-        print(f"Signal negative, adjusting phase to {optimal_phase:.1f}°")
-        set_phase(optimal_phase)
-        final_signal = float(read_output())
-
-    message = f"Set phase to {optimal_phase:.1f}° with signal value: {final_signal:.6f}"
-    print(message)
-    messagebox.showinfo("Phase Adjustment", message)
-
-    # # Optional: Create a plot of the data and fit
-    # fig_phase, ax_phase = plt.subplots()
-    # ax_phase.plot(phases, signals, 'o', label='Measured')
-    
-    # # Plot the fitted curve
-    # x_fit = np.linspace(0, 360, 1000)
-    # y_fit = amplitude * np.sin(np.radians(x_fit) + phase_shift) + offset
-    # ax_phase.plot(x_fit, y_fit, '-', label='Fitted Sine')
-    
-    # ax_phase.set_xlabel('Phase (degrees)')
-    # ax_phase.set_ylabel('Signal (V)')
-    # ax_phase.set_title('Phase Response and Sine Fit')
-    # ax_phase.legend()
-    # ax_phase.grid(True)
-    # plt.show()
-
-    return optimal_phase, final_signal"""
 
 # Function to send a command to the lock-in amplifier and read the response
 def send_command_to_lockin(command):
@@ -637,7 +525,20 @@ def save_power_data():
         messagebox.showerror("No Data", "No power data available to save.")
         return
 
-    file_path = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV files", "*.csv")])
+    cell_number = cell_number_var.get().strip()
+    date = datetime.datetime.now().strftime("%Y_%m_%d")
+    
+    # Validate inputs
+    if not cell_number:
+        messagebox.showerror("Input Error", "Cell number cannot be empty.")
+        return
+    
+    file_name = f"{date}_power_cell{cell_number}.csv"
+    file_path = filedialog.asksaveasfilename(
+        initialfile=file_name,
+        defaultextension=".csv",
+        filetypes=[("CSV files", "*.csv")]
+    )
     if not file_path:
         return
 
@@ -648,13 +549,30 @@ def save_power_data():
             writer.writerow([x, y])
 
     messagebox.showinfo("Data Saved", f"Power data saved to {file_path}")
-
+    
 def save_current_data():
     if not current_x_values or not current_y_values:
         messagebox.showerror("No Data", "No current data available to save.")
         return
 
-    file_path = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV files", "*.csv")])
+    cell_number = cell_number_var.get().strip()
+    pixel_number = pixel_number_var.get().strip()
+    date = datetime.datetime.now().strftime("%Y_%m_%d")
+    
+    # Validate inputs
+    if not cell_number:
+        messagebox.showerror("Input Error", "Cell number cannot be empty.")
+        return
+    if not pixel_number or pixel_number not in [str(i) for i in range(1, 7)]:
+        messagebox.showerror("Input Error", "Pixel number must be 1-6.")
+        return
+    
+    file_name = f"{date}_current_cell{cell_number}_pixel{pixel_number}.csv"
+    file_path = filedialog.asksaveasfilename(
+        initialfile=file_name,
+        defaultextension=".csv",
+        filetypes=[("CSV files", "*.csv")]
+    )
     if not file_path:
         return
 
@@ -859,6 +777,19 @@ start_wavelength_var = tk.StringVar(value="350")
 end_wavelength_var = tk.StringVar(value="850")
 step_size_var = tk.StringVar(value="10")
 
+# Add input fields for cell number and pixel number in the third column
+input_frame_third = tk.Frame(root)
+input_frame_third.grid(row=1, column=2, padx=10, pady=10)
+
+tk.Label(input_frame_third, text="Cell Number:", font=("Helvetica", 14)).grid(row=0, column=0, sticky='w')
+cell_number_var = tk.StringVar(value="C60_01")  # Default cell number
+tk.Entry(input_frame_third, textvariable=cell_number_var, font=("Helvetica", 14)).grid(row=0, column=1, sticky='w')
+
+tk.Label(input_frame_third, text="Pixel Number:", font=("Helvetica", 14)).grid(row=1, column=0, sticky='w')
+pixel_number_var = tk.StringVar(value="1")  # Default pixel
+pixel_dropdown = ttk.Combobox(input_frame_third, textvariable=pixel_number_var, values=[str(i) for i in range(1, 7)], state="readonly", font=("Helvetica", 14))
+pixel_dropdown.grid(row=1, column=1, sticky='w')
+
 # Create a frame to hold the labels and entries
 input_frame = tk.Frame(root)
 input_frame.grid(row=1, column=0, padx=10, pady=10)
@@ -886,10 +817,10 @@ clear_power_button.grid(row=6, column=0, padx=20, pady=10, sticky='w')
 
 # Add the align and phase buttons in the right column above the current plot
 align_button = tk.Button(root, text="Enable Green Alignment Dot", font=("Helvetica", 14), command=align_monochromator)
-align_button.grid(row=1, column=1, padx=20, pady=10, sticky='e')
+align_button.grid(row=2, column=1, padx=20, pady=10, sticky='e')
 
 adjust_lockin_phase_button = tk.Button(root, text="Adjust Lock-in Phase", font=("Helvetica", 14), command=adjust_lockin_phase)
-adjust_lockin_phase_button.grid(row=1, column=1, padx=20, pady=10, sticky='w')
+adjust_lockin_phase_button.grid(row=2, column=1, padx=20, pady=10, sticky='w')
 
 # Add the start and save buttons for the current measurements in the right column below the current plot
 start_current_button = tk.Button(root, text="Start Current Measurement", font=("Helvetica", 14), bg="#CCDDAA", command=toggle_current_measurement)
