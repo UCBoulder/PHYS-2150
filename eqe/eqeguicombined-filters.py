@@ -92,13 +92,6 @@ try:
 except Exception as e:
     show_error(f"Failed to initialize Monochromator: {e}")
 
-# # Define the correction factors for each serial number
-# correction_factors = {
-#     "130B5203": 0.37, # EQE2
-#     "130B5201": 0.44, # EQE3
-#     "130B5202": 0.45 # EQE1
-# }
-
 # Define the correction factors for each serial number
 correction_factors = {
     "130B5203": 0.45, # EQE2
@@ -172,7 +165,7 @@ def set_lockin_parameters():
     wait_for_lockin_ready()
 
 # Function to adjust the lock-in amplifier phase
-def adjust_lockin_phase():
+def adjust_lockin_phase(pixel_number):
     def read_output():
         ser.write('Q\r'.encode())
         time.sleep(0.5)
@@ -280,11 +273,14 @@ def adjust_lockin_phase():
     ax_phase.cla()
     ax_phase.plot(phase_x_values, phase_y_values, 'o', label='Measured')
     ax_phase.plot(phase_fit_x_values, phase_fit_y_values, '-', label='Fitted Sine')
-    ax_phase.set_xlabel('Phase (degrees)')
-    ax_phase.set_ylabel('Signal (V)')
-    ax_phase.set_title('Phase Response and Sine Fit')
+    ax_phase.set_xlabel('Phase (degrees)', fontsize=12)
+    ax_phase.set_ylabel('Signal (V)', fontsize=12)
+    ax_phase.set_title(f'Phase Response and Sine Fit for Pixel {pixel_number}', fontsize=12)
+    ax_phase.tick_params(axis='both', which='major', labelsize=12)
     ax_phase.legend()
     ax_phase.grid(True)
+    fig_phase.tight_layout()  # Reapply to ensure fit
+    fig_phase.subplots_adjust(bottom=0.15)  # Ensure label space
     canvas_phase.draw()
 
     return optimal_phase, final_signal
@@ -450,8 +446,8 @@ def start_power_measurement():
         power_y_values_microwatts = [average_power * 1e6 for average_power in power_y_values] # Plot in microwatts
 
         ax_power.plot(power_x_values, power_y_values_microwatts, '.-', color='#0077BB', label='Power Measurement')
-
-        fig_power.tight_layout()
+        if not ax_power.get_legend():  # Add legend only once
+            ax_power.legend()
         canvas_power.draw()
 
         current_wavelength += step_size
@@ -519,7 +515,7 @@ def start_current_measurement(pixel_number):
 
     # Run phase adjustment in a separate thread
     def run_phase_adjustment():
-        adjust_lockin_phase()
+        adjust_lockin_phase(pixel_number)
         root.after(0, popup.destroy)  # Close popup on main thread
 
     phase_thread = threading.Thread(target=run_phase_adjustment)
@@ -655,7 +651,6 @@ def start_current_measurement(pixel_number):
         current_y_values_nanoamps = [output * 1e9 for output in current_y_values]
 
         ax_current.plot(current_x_values, current_y_values_nanoamps, '.-', color='#0077BB')
-        fig_current.tight_layout()
         canvas_current.draw()
 
         current_wavelength += step_size
@@ -694,121 +689,23 @@ def start_current_measurement(pixel_number):
         print("Measurement complete.")
         align_monochromator()
 
-def save_power_data():
-    if not power_x_values or not power_y_values:
-        messagebox.showerror("No Data", "No power data available to save.")
-        return
-
-    cell_number = cell_number_var.get().strip()
-    date = datetime.datetime.now().strftime("%Y_%m_%d")
-    
-    # Validate inputs
-    if not cell_number:
-        messagebox.showerror("Input Error", "Cell number cannot be empty.")
-        return
-    if not re.match(r'^(C60_\d+|\d+-\d+)$', cell_number):
-        messagebox.showerror("Input Error", "Cell number must be in format C60_XX or XXXX-XX (e.g., C60_01, 2501-04).")
-        return
-    
-    file_name = f"{date}_power_cell{cell_number}.csv"
-    file_path = filedialog.asksaveasfilename(
-        initialfile=file_name,
-        defaultextension=".csv",
-        filetypes=[("CSV files", "*.csv")]
-    )
-    if not file_path:
-        return
-
-    with open(file_path, mode='w', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow(["Wavelength (nm)", "Power (W)"])
-        for x, y in zip(power_x_values, power_y_values):
-            writer.writerow([x, y])
-
-    messagebox.showinfo("Data Saved", f"Power data saved to {file_path}")
-    
-def save_current_data():
-    if not current_x_values or not current_y_values:
-        messagebox.showerror("No Data", "No current data available to save.")
-        return
-
-    cell_number = cell_number_var.get().strip()
-    pixel_number = pixel_number_var.get().strip()
-    date = datetime.datetime.now().strftime("%Y_%m_%d")
-    
-    # Validate inputs
-    if not cell_number:
-        messagebox.showerror("Input Error", "Cell number cannot be empty.")
-        return
-    if not re.match(r'^(C60_\d+|\d+-\d+)$', cell_number):
-        messagebox.showerror("Input Error", "Cell number must be in format C60_XX or XXXX-XX (e.g., C60_01, 2501-04).")
-        return
-    if not pixel_number or pixel_number not in [str(i) for i in range(1, 7)]:
-        messagebox.showerror("Input Error", "Pixel number must be 1-6.")
-        return
-    
-    file_name = f"{date}_current_cell{cell_number}_pixel{pixel_number}.csv"
-    file_path = filedialog.asksaveasfilename(
-        initialfile=file_name,
-        defaultextension=".csv",
-        filetypes=[("CSV files", "*.csv")]
-    )
-    if not file_path:
-        return
-
-    with open(file_path, mode='w', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow(["Wavelength (nm)", "Current (A)"])
-        for x, y in zip(current_x_values, current_y_values):
-            writer.writerow([x, y])
-
-    messagebox.showinfo("Data Saved", f"Current data saved to {file_path}")
-
-def save_phase_data():
-    if phase_optimal is None or phase_signal is None or phase_r_squared is None:
-        messagebox.showerror("No Data", "No phase adjustment data available to save.")
-        return
-
-    file_name = "phase_lock_info.csv"
-    file_path = filedialog.asksaveasfilename(
-        initialfile=file_name,
-        defaultextension=".csv",
-        filetypes=[("CSV files", "*.csv")]
-    )
-    if not file_path:
-        return
-
-    write_header = not os.path.exists(file_path)
-    
-    with open(file_path, mode='a', newline='') as file:
-        writer = csv.writer(file)
-        if write_header:
-            writer.writerow(["set angle", "signal", "r-value"])
-        writer.writerow([phase_optimal, phase_signal, phase_r_squared])
-
-    messagebox.showinfo("Data Saved", f"Phase data saved to {file_path}")
-    
+# Function to start power measurement in a separate thread   
 def measure_power_thread():
     global power_thread
-
     stop_thread.clear()
-    #measure_button.config(text="Stop Measurement", command=stop_measurements)
-
     power_thread = threading.Thread(target=start_power_measurement)
-
     power_thread.start()
 
+# Function to measure current for a specific pixel number
 def measure_current_thread(pixel_number):
     global current_thread
     stop_thread.clear()
     current_thread = threading.Thread(target=start_current_measurement, args=(pixel_number,))
     current_thread.start()
 
+# Function to stop measurement threads
 def stop_measurement():
     stop_thread.set()
-    #power_thread.join()
-    #current_thread.join()
-    #measure_button.config(text="Start Measurement", command=start_measurements)
 
 # Function to toggle measurement state
 def toggle_power_measurement():
@@ -837,28 +734,7 @@ def toggle_current_measurement():
             current_thread.join(timeout=1.0)
         start_current_button.config(text="Start Current Measurement", bg="#CCDDAA", command=toggle_current_measurement)
 
-# Function to toggle measurement state
-def toggle_phase_adjustment():
-    global phase_thread
-    if adjust_lockin_phase_button.config('text')[-1] == 'Start Phase Adjustment':
-        stop_thread.clear()
-        phase_thread = threading.Thread(target=adjust_lockin_phase)
-        phase_thread.start()
-        adjust_lockin_phase_button.config(text="Stop Phase Adjustment", bg="#FFCCCC", command=toggle_phase_adjustment)
-    else:
-        stop_thread.set()
-        if phase_thread and phase_thread.is_alive():
-            phase_thread.join(timeout=1.0)  # Wait briefly for thread to exit
-        adjust_lockin_phase_button.config(text="Start Phase Adjustment", bg="#CCDDAA", command=toggle_phase_adjustment)
-
-def configure_phase_plot(pixel_number):
-    ax_phase.set_xlabel('Phase (degrees)', fontsize=12)
-    ax_phase.set_ylabel('Signal (V)', fontsize=12)
-    ax_phase.set_title(f'Phase Response and Sine Fit for Pixel {pixel_number}', fontsize=12)
-    ax_phase.tick_params(axis='both', which='major', labelsize=12)
-
-
-
+# Function to handle window close event
 def on_close():
     global is_closing
     is_closing = True
@@ -869,8 +745,6 @@ def on_close():
         power_thread.join()
     if 'current_thread' in globals() and current_thread and current_thread.is_alive():
         current_thread.join()
-    if 'phase_thread' in globals() and phase_thread and phase_thread.is_alive():
-        phase_thread.join()
 
     # Close any open resources
     try:
@@ -887,28 +761,14 @@ def on_close():
     print("Application closed.")
     sys.exit()
 
-# def on_close():
-#     global is_closing
-#     is_closing = True
-#     print("Closing application")
-#     stop_thread.set()
-#     if 'device' in globals():
-#         try:
-#             device.write("OUTP OFF")  # Disable the output
-#             device.close()
-#         except Exception as e:
-#             print(f"Error closing device: {e}")
-#     if 'rm' in globals():
-#         rm.close()
-#     root.destroy()  # Ensure the GUI is properly closed
-#     sys.exit()  # Explicitly exit the application
-
 # Function to configure the power plot
 def configure_power_plot():
     ax_power.set_xlabel('Wavelength (nm)', fontsize=12)
     ax_power.set_ylabel(r'Power ($\mu$W)', fontsize=12)
     ax_power.set_title('Incident Light Power Measurements', fontsize=12)
     ax_power.tick_params(axis='both', which='major', labelsize=12)
+    fig_power.tight_layout()  # Ensure layout fits labels
+    fig_power.subplots_adjust(bottom=0.15)  # Adjust bottom margin
 
 # Function to configure the current plot
 def configure_current_plot(pixel_number):
@@ -916,7 +776,18 @@ def configure_current_plot(pixel_number):
     ax_current.set_ylabel('Current (nA)', fontsize=12)
     ax_current.set_title(f'PV Current Measurements for Pixel {pixel_number}', fontsize=12)
     ax_current.tick_params(axis='both', which='major', labelsize=12)
+    fig_current.tight_layout()  # Ensure layout fits labels
+    fig_current.subplots_adjust(bottom=0.15)  # Adjust bottom margin
 
+# Function to configure the phase plot
+def configure_phase_plot(pixel_number):
+    ax_phase.set_xlabel('Phase (degrees)', fontsize=12)
+    ax_phase.set_ylabel('Signal (V)', fontsize=12)
+    ax_phase.set_title(f'Phase Response and Sine Fit for Pixel {pixel_number}', fontsize=12)
+    ax_phase.tick_params(axis='both', which='major', labelsize=12)
+    fig_phase.tight_layout()  # Ensure layout fits labels
+    fig_phase.subplots_adjust(bottom=0.15)  # Adjust bottom margin
+    
 # Function to clear the power plot
 def clear_power_plot():
     ax_power.cla()  # Clear the axes
@@ -939,61 +810,83 @@ root.title("PHYS 2150 EQE Measurement")
 
 # Create frames for the plots
 plot_frame_power = tk.Frame(root)
-plot_frame_power.grid(row=4, column=0, padx=20, pady=10, sticky="nsew")
+plot_frame_power.grid(row=4, column=0, padx=20, pady=5, sticky="nsew")  # Reduced pady
 plot_frame_current = tk.Frame(root)
-plot_frame_current.grid(row=4, column=1, padx=20, pady=10, sticky="nsew")
+plot_frame_current.grid(row=4, column=1, padx=20, pady=5, sticky="nsew")  # Reduced pady
+plot_frame_phase = tk.Frame(root)
+plot_frame_phase.grid(row=4, column=2, padx=20, pady=5, sticky="nsew")  # Reduced pady
 
-# Create the matplotlib figure and axes for power measurements
-fig_power, ax_power = plt.subplots()
+# Create the matplotlib figure and axes for power measurements with adjusted size
+fig_power, ax_power = plt.subplots(figsize=(5.5, 4.5))  # Increased figsize
+fig_power.tight_layout()  # Apply tight_layout at initialization
+fig_power.subplots_adjust(bottom=0.15)  # Adjust bottom margin for label
 configure_power_plot()
 canvas_power = FigureCanvasTkAgg(fig_power, master=plot_frame_power)
 canvas_power.draw()
 canvas_power.get_tk_widget().grid(row=0, column=0, sticky="nsew")
 
-# Create the matplotlib figure and axes for current measurements
-fig_current, ax_current = plt.subplots()
+# Create the matplotlib figure and axes for current measurements with adjusted size
+fig_current, ax_current = plt.subplots(figsize=(5.5, 4.5))  # Increased figsize
+fig_current.tight_layout()  # Apply tight_layout at initialization
+fig_current.subplots_adjust(bottom=0.15)  # Adjust bottom margin for label
 configure_current_plot(pixel_number)
 canvas_current = FigureCanvasTkAgg(fig_current, master=plot_frame_current)
 canvas_current.draw()
 canvas_current.get_tk_widget().grid(row=0, column=0, sticky="nsew")
 
-# Create a toolbar for the plot
-toolbar_frame_power = tk.Frame(root)
-toolbar_frame_current = tk.Frame(root)
-toolbar_frame_power.grid(row=5, column=0, columnspan=2, sticky="ew", padx=20)
-toolbar_frame_current.grid(row=5, column=1, columnspan=2, sticky="ew", padx=20)
-toolbar_current = NavigationToolbar2Tk(canvas_current, toolbar_frame_current)
-toolbar_power = NavigationToolbar2Tk(canvas_power, toolbar_frame_power)
-toolbar_current.update()
-toolbar_power.update()
-
-# Make the canvas and toolbar_frame expand and fill the space
-plot_frame_power.grid_rowconfigure(0, weight=1)
-plot_frame_power.grid_columnconfigure(0, weight=1)
-plot_frame_current.grid_rowconfigure(0, weight=1)
-plot_frame_current.grid_columnconfigure(0, weight=1)
-
-root.grid_rowconfigure(4, weight=1)
-root.grid_rowconfigure(5, weight=0)
-root.grid_columnconfigure(0, weight=1)
-root.grid_columnconfigure(1, weight=1)
-
-# Add phase plot setup
-plot_frame_phase = tk.Frame(root)
-plot_frame_phase.grid(row=4, column=2, padx=20, pady=10, sticky="nsew")
-fig_phase, ax_phase = plt.subplots()
+# Create the matplotlib figure and axes for phase measurements with adjusted size
+fig_phase, ax_phase = plt.subplots(figsize=(5.5, 4.5))  # Increased figsize
+fig_phase.tight_layout()  # Apply tight_layout at initialization
+fig_phase.subplots_adjust(bottom=0.15)  # Adjust bottom margin for label
 configure_phase_plot(pixel_number)
 canvas_phase = FigureCanvasTkAgg(fig_phase, master=plot_frame_phase)
 canvas_phase.draw()
 canvas_phase.get_tk_widget().grid(row=0, column=0, sticky="nsew")
 
+# Create toolbar frames for each plot
+toolbar_frame_power = tk.Frame(root)
+toolbar_frame_power.grid(row=5, column=0, sticky="ew", padx=20, pady=0)
+toolbar_power = NavigationToolbar2Tk(canvas_power, toolbar_frame_power)
+toolbar_power.update()
+
+toolbar_frame_current = tk.Frame(root)
+toolbar_frame_current.grid(row=5, column=1, sticky="ew", padx=20, pady=0)
+toolbar_current = NavigationToolbar2Tk(canvas_current, toolbar_frame_current)
+toolbar_current.update()
+
 toolbar_frame_phase = tk.Frame(root)
-toolbar_frame_phase.grid(row=5, column=2, sticky="ew", padx=20)
+toolbar_frame_phase.grid(row=5, column=2, sticky="ew", padx=20, pady=0)
 toolbar_phase = NavigationToolbar2Tk(canvas_phase, toolbar_frame_phase)
 toolbar_phase.update()
 
+# Create button frames to center buttons under plots
+button_frame_power = tk.Frame(root)
+button_frame_power.grid(row=6, column=0, sticky="nsew", padx=20, pady=5)
+button_frame_current = tk.Frame(root)
+button_frame_current.grid(row=6, column=1, sticky="nsew", padx=20, pady=5)
+button_frame_phase = tk.Frame(root)  # Placeholder frame for phase plot
+button_frame_phase.grid(row=6, column=2, sticky="nsew", padx=20, pady=5)
+
+# Add the start buttons for the measurements, centered in their frames
+start_power_button = tk.Button(button_frame_power, text="Start Power Measurement", font=("Helvetica", 14), bg="#CCDDAA", command=toggle_power_measurement)
+start_power_button.pack(anchor="center")
+
+start_current_button = tk.Button(button_frame_current, text="Start Current Measurement", font=("Helvetica", 14), bg="#CCDDAA", command=toggle_current_measurement)
+start_current_button.pack(anchor="center")
+
+# Make the canvas and frames expand and fill the space
+plot_frame_power.grid_rowconfigure(0, weight=1)
+plot_frame_power.grid_columnconfigure(0, weight=1)
+plot_frame_current.grid_rowconfigure(0, weight=1)
+plot_frame_current.grid_columnconfigure(0, weight=1)
 plot_frame_phase.grid_rowconfigure(0, weight=1)
 plot_frame_phase.grid_columnconfigure(0, weight=1)
+
+root.grid_rowconfigure(4, weight=1)
+root.grid_rowconfigure(5, weight=0)
+root.grid_rowconfigure(6, weight=0)
+root.grid_columnconfigure(0, weight=1)
+root.grid_columnconfigure(1, weight=1)
 root.grid_columnconfigure(2, weight=1)
 
 # Create the input fields
@@ -1023,13 +916,6 @@ tk.Entry(input_frame, textvariable=end_wavelength_var, font=("Helvetica", 14)).g
 tk.Label(input_frame, text="Step Size (nm):", font=("Helvetica", 14)).grid(row=2, column=0, sticky='w')
 tk.Entry(input_frame, textvariable=step_size_var, font=("Helvetica", 14)).grid(row=2, column=1, sticky='w')
 
-# Add the start buttons for the measurements
-start_power_button = tk.Button(root, text="Start Power Measurement", font=("Helvetica", 14), bg="#CCDDAA", command=toggle_power_measurement)
-start_power_button.grid(row=5, column=0, padx=20, sticky='e')
-
-start_current_button = tk.Button(root, text="Start Current Measurement", font=("Helvetica", 14), bg="#CCDDAA", command=toggle_current_measurement)
-start_current_button.grid(row=5, column=1, padx=20, sticky='e')
-
 # Add the align button in the center column above the current plot
 align_button = tk.Button(root, text="Enable Green Alignment Dot", font=("Helvetica", 14), command=align_monochromator)
 align_button.grid(row=1, column=1, padx=20, pady=10)
@@ -1037,15 +923,15 @@ align_button.grid(row=1, column=1, padx=20, pady=10)
 def show_cell_number_popup():
     popup = tk.Toplevel(root)
     popup.title("Enter Cell Number")
-    popup.geometry("300x150")
+    popup.geometry("340x150")  # Wider popup
     # Center popup over main window
     root_x = root.winfo_rootx()
     root_y = root.winfo_rooty()
     root_width = root.winfo_width()
     root_height = root.winfo_height()
-    popup_x = root_x + (root_width - 300) // 2
+    popup_x = root_x + (root_width - 340) // 2
     popup_y = root_y + (root_height - 150) // 2
-    popup.geometry(f"300x150+{popup_x}+{popup_y}")
+    popup.geometry(f"340x150+{popup_x}+{popup_y}")
     popup.transient(root)
     popup.grab_set()
 
@@ -1062,17 +948,16 @@ def show_cell_number_popup():
         else:
             messagebox.showwarning("Invalid Input", "Cell number must be in format C60_XX or XXXX-XX (e.g., C60_01, 2501-04).", parent=popup)
 
+    def prevent_close():
+        messagebox.showwarning("Invalid Input", "Cell number must be in format C60_XX or XXXX-XX (e.g., C60_01, 2501-04).", parent=popup)
+
     tk.Button(popup, text="OK", font=("Helvetica", 12), command=on_ok).pack(pady=10)
     popup.bind('<Return>', lambda event: on_ok())  # Allow Enter key to submit
-    popup.protocol("WM_DELETE_WINDOW", popup.destroy)  # Handle close button
-    
+    popup.bind('<Escape>', lambda event: prevent_close())  # Prevent Esc from closing
+    popup.protocol("WM_DELETE_WINDOW", prevent_close)  # Prevent close button from closing
+
 # Trigger cell number popup after 1 second
 root.after(1000, show_cell_number_popup)
-
-# Bind the on_close function to the window's close event
-root.protocol("WM_DELETE_WINDOW", on_close)
-
-root.mainloop()
 
 # Bind the on_close function to the window's close event
 root.protocol("WM_DELETE_WINDOW", on_close)
