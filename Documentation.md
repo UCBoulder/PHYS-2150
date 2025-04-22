@@ -25,3 +25,5 @@ Starting to adjust phase timing and degree checks
 4 data points completes in ~8-9s
 
 adjusting the function to produce a csv of 10 runs of data_points = 3-13 for consideration for actual use
+
+missed statement here - have a thorough description in the commit documentation - functionally complete and GUI tweaked 
