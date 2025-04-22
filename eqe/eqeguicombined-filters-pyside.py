@@ -14,11 +14,13 @@ import os
 import datetime
 import threading
 import numpy as np
-import tkinter as tk
-from tkinter import ttk, messagebox, filedialog, simpledialog
 import serial
 import serial.tools.list_ports
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+                               QPushButton, QLineEdit, QLabel, QMessageBox, QFileDialog, QInputDialog)
+from PySide6.QtCore import Qt
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 
 # Initialize the VISA resource manager
 rm = visa.ResourceManager()
@@ -46,8 +48,13 @@ is_closing = False
 
 # Function to display pop up error messages
 def show_error(message):
-    messagebox.showerror("Error", message)
-    root.destroy()
+    app = QApplication.instance()
+    msg = QMessageBox()
+    msg.setWindowTitle("Error")
+    msg.setText(message)
+    msg.setIcon(QMessageBox.Critical)
+    msg.exec_()
+    app.quit()
     sys.exit()
 
 # Initialize Thorlabs Power Meter
@@ -232,13 +239,13 @@ def adjust_lockin_phase(pixel_number):
     print("Sampling phase response...")
     phases, signals = sample_phase_response()
     if phases is None or signals is None:
-        messagebox.showerror("Error", "Failed to sample phase response")
+        QMessageBox.critical(None, "Error", "Failed to sample phase response")
         return None, None
 
     print("Fitting sine wave to phase response...")
     fit_params = fit_sine(phases, signals)
     if fit_params is None:
-        messagebox.showerror("Error", "Failed to fit sine wave to phase response")
+        QMessageBox.critical(None, "Error", "Failed to fit sine wave to phase response")
         return None, None
 
     amplitude, phase_shift, offset = fit_params
@@ -279,8 +286,8 @@ def adjust_lockin_phase(pixel_number):
     ax_phase.tick_params(axis='both', which='major', labelsize=12)
     ax_phase.legend()
     ax_phase.grid(True)
-    fig_phase.tight_layout()  # Reapply to ensure fit
-    fig_phase.subplots_adjust(bottom=0.15)  # Ensure label space
+    fig_phase.tight_layout()
+    fig_phase.subplots_adjust(bottom=0.15)
     canvas_phase.draw()
 
     return optimal_phase, final_signal
@@ -323,7 +330,6 @@ def read_lockin_status_and_keithley_output():
                     is_overloaded = status_byte & (1 << 4)
                     print(f"Lock status: {is_locked}, Reference status: {has_reference}, Overload status: {is_overloaded}")
                     if is_locked and has_reference and not is_overloaded:
-
                         while True:
                             print("Querying sensitivity...")
                             sensitivity_response = send_command_to_lockin("G")
@@ -346,8 +352,6 @@ def read_lockin_status_and_keithley_output():
                                 print("Waiting 5 seconds after increasing sensitivity.")
                                 time.sleep(5)  # Wait for the sensitivity change to take effect
                                 break  # Break out of the inner while loop to re-read the status
-
-
                             
                             adjusted_voltage = (average_voltage * sensitivity_value / 10) / correction_factor
                             print(f"Adjusted Voltage: {adjusted_voltage}")
@@ -370,9 +374,6 @@ def read_lockin_status_and_keithley_output():
                 continue
     except Exception as e:
         print(f"Error: {e}")
-    # finally:
-    #     ser.close()
-    #     print("Serial connection closed.")
     return None
 
 # Function to set the monochromator to 532 nm for alignment
@@ -383,22 +384,19 @@ def align_monochromator():
     usb_mono.SendCommand("gowave 532", False)
     usb_mono.SendCommand("shutter o", False)
     usb_mono.WaitForIdle()
-    #messagebox.showinfo("Alignment", "Monochromator aligned to 532 nm with grating 1, filter 1, and shutter opened.")
 
 def start_power_measurement():
     clear_power_plot()
     print("Starting light power measurement...")
-    start_wavelength = float(start_wavelength_var.get())
-    end_wavelength = float(end_wavelength_var.get())
-    step_size = float(step_size_var.get())
+    start_wavelength = float(start_wavelength_var.text())
+    end_wavelength = float(end_wavelength_var.text())
+    step_size = float(step_size_var.text())
 
-    # Check if the start wavelength is less than 420 nm and set filter to 3 (no filter)
     if start_wavelength <= 420:
         usb_mono.SendCommand("filter 3", False)
         usb_mono.WaitForIdle()
         print("Setting filter to 3 (no filter).")
     
-    # Second loop: Measure actual signal with shutter open
     print("Measuring actual signal...")
     usb_mono.SendCommand("shutter o", False)
     usb_mono.WaitForIdle()
@@ -408,7 +406,6 @@ def start_power_measurement():
         if stop_thread.is_set():
             break
 
-        # Check the wavelength and switch gratings accordingly
         if current_wavelength < 685:
             usb_mono.SendCommand("grating 1", False)
         else:
@@ -431,44 +428,38 @@ def start_power_measurement():
         confirmed_mono_wavelength = usb_mono.GetQueryResponse("wave?")
         confirmed_mono_wavelength_float = float(confirmed_mono_wavelength)
         tlPM.setWavelength(c_double(confirmed_mono_wavelength_float), TLPM_DEFAULT_CHANNEL)
-        time.sleep(0.2)  # Wait for the power reading to stabilize
+        time.sleep(0.2)
 
-        # Measure power 200 times and calculate the average
         power_values = []
         for _ in range(200):
             power = c_double()
             tlPM.measPower(byref(power), TLPM_DEFAULT_CHANNEL)
             power_values.append(power.value)
-        average_power = (sum(power_values) / len(power_values)) * 2  # Multiply by 2 to account for the 50% duty cycle of the chopper
+        average_power = (sum(power_values) / len(power_values)) * 2
 
         power_x_values.append(confirmed_mono_wavelength_float)
         power_y_values.append(average_power)  
-        power_y_values_microwatts = [average_power * 1e6 for average_power in power_y_values] # Plot in microwatts
+        power_y_values_microwatts = [average_power * 1e6 for average_power in power_y_values]
 
         ax_power.plot(power_x_values, power_y_values_microwatts, '.-', color='#0077BB', label='Power Measurement')
-        if not ax_power.get_legend():  # Add legend only once
+        if not ax_power.get_legend():
             ax_power.legend()
         canvas_power.draw()
+        QApplication.processEvents()
 
         current_wavelength += step_size
-        root.update()
 
     usb_mono.SendCommand("shutter c", False)
-    usb_mono.WaitForIdle() 
+    usb_mono.WaitForIdle()
 
-    # Save power data only if not stopped
     if not stop_thread.is_set() and power_x_values and power_y_values:
-        cell_number = cell_number_var.get().strip()
+        cell_number = cell_number_var.text().strip()
         date = datetime.datetime.now().strftime("%Y_%m_%d")
         if not cell_number or not re.match(r'^(C60_\d+|\d+-\d+)$', cell_number):
-            messagebox.showerror("Input Error", "Cell number must be in format C60_XX or XXXX-XX (e.g., C60_01, 2501-04).")
+            QMessageBox.critical(None, "Input Error", "Cell number must be in format C60_XX or XXXX-XX (e.g., C60_01, 2501-04).")
         else:
             file_name = f"{date}_power_cell{cell_number}.csv"
-            file_path = filedialog.asksaveasfilename(
-                initialfile=file_name,
-                defaultextension=".csv",
-                filetypes=[("CSV files", "*.csv")]
-            )
+            file_path, _ = QFileDialog.getSaveFileName(None, "Save Power Data", file_name, "CSV files (*.csv)")
             if file_path:
                 with open(file_path, mode='w', newline='') as file:
                     writer = csv.writer(file)
@@ -477,8 +468,10 @@ def start_power_measurement():
                         writer.writerow([x, y])
                 print(f"Power data saved to {file_path}")
 
-    # Reset the Start/Stop button text and functionality
-    start_power_button.config(text="Start Power Measurement", bg="#CCDDAA", command=toggle_power_measurement) 
+    start_power_button.setText("Start Power Measurement")
+    start_power_button.setStyleSheet("background-color: #CCDDAA")
+    start_power_button.clicked.disconnect()
+    start_power_button.clicked.connect(toggle_power_measurement)
 
     if stop_thread.is_set():
         print("Measurement stopped.")
@@ -487,24 +480,13 @@ def start_power_measurement():
         align_monochromator()
 
 def start_current_measurement(pixel_number):
-    # Create self-disappearing popup centered over current plot
-    popup = tk.Toplevel(root)
-    popup.title("Processing")
-    popup.geometry("200x100")
-    tk.Label(popup, text="Please Wait....", font=("Helvetica", 14)).pack(pady=20)
-    popup.transient(root)
-    popup.grab_set()
-    # Center popup over current plot
-    canvas_x = canvas_current.get_tk_widget().winfo_rootx()
-    canvas_y = canvas_current.get_tk_widget().winfo_rooty()
-    canvas_width = canvas_current.get_tk_widget().winfo_width()
-    canvas_height = canvas_current.get_tk_widget().winfo_height()
-    popup_x = canvas_x + (canvas_width - 200) // 2
-    popup_y = canvas_y + (canvas_height - 100) // 2
-    popup.geometry(f"200x100+{popup_x}+{popup_y}")
-    popup.update()
+    popup = QMessageBox()
+    popup.setWindowTitle("Processing")
+    popup.setText("Please Wait....")
+    popup.setStandardButtons(QMessageBox.NoButton)
+    popup.show()
+    QApplication.processEvents()
 
-    # Clear phase plot
     phase_x_values.clear()
     phase_y_values.clear()
     phase_fit_x_values.clear()
@@ -513,32 +495,24 @@ def start_current_measurement(pixel_number):
     configure_phase_plot(pixel_number)
     canvas_phase.draw()
 
-    # Run phase adjustment in a separate thread
     def run_phase_adjustment():
         adjust_lockin_phase(pixel_number)
-        root.after(0, popup.destroy)  # Close popup on main thread
+        popup.accept()
 
     phase_thread = threading.Thread(target=run_phase_adjustment)
     phase_thread.start()
-    phase_thread.join()  # Wait for phase adjustment to complete
+    phase_thread.join()
 
-    # Save phase data
     if phase_optimal is not None and phase_signal is not None and phase_r_squared is not None:
-        cell_number = cell_number_var.get().strip()
+        cell_number = cell_number_var.text().strip()
         date = datetime.datetime.now().strftime("%Y_%m_%d")
         if not cell_number or not re.match(r'^(C60_\d+|\d+-\d+)$', cell_number):
-            messagebox.showerror("Input Error", "Cell number must be in format C60_XX or XXXX-XX (e.g., C60_01, 2501-04).")
+            QMessageBox.critical(None, "Input Error", "Cell number must be in format C60_XX or XXXX-XX (e.g., C60_01, 2501-04).")
             return
         file_name = f"{date}_phase_cell{cell_number}.csv"
-        file_path = filedialog.asksaveasfilename(
-            initialfile=file_name,
-            defaultextension=".csv",
-            filetypes=[("CSV files", "*.csv")]
-        )
+        file_path, _ = QFileDialog.getSaveFileName(None, "Save Phase Data", file_name, "CSV files (*.csv)")
         if file_path:
-            # Create or update DataFrame
             if not os.path.exists(file_path):
-                # Initialize DataFrame with 6 rows for pixels 1-6
                 df = pd.DataFrame({
                     "Pixel #": [1, 2, 3, 4, 5, 6],
                     "Set Angle": [None, None, None, None, None, None],
@@ -547,26 +521,20 @@ def start_current_measurement(pixel_number):
                 })
             else:
                 try:
-                    # Read existing file
                     df = pd.read_csv(file_path)
-                    # Check if it has the expected columns
                     if "Pixel #" not in df.columns:
-                        # Handle legacy file (no pixel # column)
                         legacy_data = df[["set angle", "signal", "r-value"]].values
-                        # Initialize new DataFrame with 6 rows
                         df = pd.DataFrame({
                             "Pixel #": [1, 2, 3, 4, 5, 6],
                             "Set Angle": [None, None, None, None, None, None],
                             "Signal": [None, None, None, None, None, None],
                             "R^2 Value": [None, None, None, None, None, None]
                         })
-                        # Copy legacy data to corresponding rows
-                        for i, row in enumerate(legacy_data[:6]):  # Limit to 6 rows
+                        for i, row in enumerate(legacy_data[:6]):
                             df.at[i, "Set Angle"] = row[0]
                             df.at[i, "Signal"] = row[1]
                             df.at[i, "R^2 Value"] = row[2]
                     else:
-                        # Ensure 6 rows (fill with empty if needed)
                         existing_pixels = df["Pixel #"].tolist()
                         for i in range(1, 7):
                             if i not in existing_pixels:
@@ -579,7 +547,6 @@ def start_current_measurement(pixel_number):
                         df = df[df["Pixel #"].isin([1, 2, 3, 4, 5, 6])].sort_values("Pixel #").reset_index(drop=True)
                 except Exception as e:
                     print(f"Error reading CSV: {e}")
-                    # Fallback: Initialize new DataFrame
                     df = pd.DataFrame({
                         "Pixel #": [1, 2, 3, 4, 5, 6],
                         "Set Angle": [None, None, None, None, None, None],
@@ -587,22 +554,19 @@ def start_current_measurement(pixel_number):
                         "R^2 Value": [None, None, None, None, None, None]
                     })
 
-            # Update row for the current pixel with formatted values
-            pixel_index = pixel_number - 1  # 0-based index
+            pixel_index = pixel_number - 1
             df.at[pixel_index, "Set Angle"] = f"{phase_optimal:.2f}"
             df.at[pixel_index, "Signal"] = phase_signal
             df.at[pixel_index, "R^2 Value"] = f"{phase_r_squared:.4f}"
 
-            # Save DataFrame back to file
             df.to_csv(file_path, index=False)
             print(f"Phase data for pixel {pixel_number} saved to {file_path}")
 
-    # Start current measurement
     clear_current_plot(pixel_number)
     print("Starting photocell measurement...")
-    start_wavelength = float(start_wavelength_var.get())
-    end_wavelength = float(end_wavelength_var.get())
-    step_size = float(step_size_var.get())
+    start_wavelength = float(start_wavelength_var.text())
+    end_wavelength = float(end_wavelength_var.text())
+    step_size = float(step_size_var.text())
 
     if start_wavelength <= 400:
         usb_mono.SendCommand("filter 3", False)
@@ -643,7 +607,7 @@ def start_current_measurement(pixel_number):
 
         output = read_lockin_status_and_keithley_output()
         if output is None:
-            messagebox.showerror("Measurement Error", "Failed to read output from SR510.")
+            QMessageBox.critical(None, "Measurement Error", "Failed to read output from SR510.")
             return
 
         current_x_values.append(confirmed_mono_wavelength_float)
@@ -652,26 +616,21 @@ def start_current_measurement(pixel_number):
 
         ax_current.plot(current_x_values, current_y_values_nanoamps, '.-', color='#0077BB')
         canvas_current.draw()
+        QApplication.processEvents()
 
         current_wavelength += step_size
-        root.update()
 
     usb_mono.SendCommand("shutter c", False)
     usb_mono.WaitForIdle()
 
-    # Save current data only if not stopped
     if not stop_thread.is_set() and current_x_values and current_y_values:
-        cell_number = cell_number_var.get().strip()
+        cell_number = cell_number_var.text().strip()
         date = datetime.datetime.now().strftime("%Y_%m_%d")
         if not cell_number or not re.match(r'^(C60_\d+|\d+-\d+)$', cell_number):
-            messagebox.showerror("Input Error", "Cell number must be in format C60_XX or XXXX-XX (e.g., C60_01, 2501-04).")
+            QMessageBox.critical(None, "Input Error", "Cell number must be in format C60_XX or XXXX-XX (e.g., C60_01, 2501-04).")
         else:
             file_name = f"{date}_current_cell{cell_number}_pixel{pixel_number}.csv"
-            file_path = filedialog.asksaveasfilename(
-                initialfile=file_name,
-                defaultextension=".csv",
-                filetypes=[("CSV files", "*.csv")]
-            )
+            file_path, _ = QFileDialog.getSaveFileName(None, "Save Current Data", file_name, "CSV files (*.csv)")
             if file_path:
                 with open(file_path, mode='w', newline='') as file:
                     writer = csv.writer(file)
@@ -680,8 +639,10 @@ def start_current_measurement(pixel_number):
                         writer.writerow([x, y])
                 print(f"Current data saved to {file_path}")
 
-    # Reset button
-    start_current_button.config(text="Start Current Measurement", bg="#CCDDAA", command=toggle_current_measurement)
+    start_current_button.setText("Start Current Measurement")
+    start_current_button.setStyleSheet("background-color: #CCDDAA")
+    start_current_button.clicked.disconnect()
+    start_current_button.clicked.connect(toggle_current_measurement)
 
     if stop_thread.is_set():
         print("Measurement stopped.")
@@ -689,64 +650,67 @@ def start_current_measurement(pixel_number):
         print("Measurement complete.")
         align_monochromator()
 
-# Function to start power measurement in a separate thread   
 def measure_power_thread():
     global power_thread
     stop_thread.clear()
     power_thread = threading.Thread(target=start_power_measurement)
     power_thread.start()
 
-# Function to measure current for a specific pixel number
 def measure_current_thread(pixel_number):
     global current_thread
     stop_thread.clear()
     current_thread = threading.Thread(target=start_current_measurement, args=(pixel_number,))
     current_thread.start()
 
-# Function to stop measurement threads
 def stop_measurement():
     stop_thread.set()
 
-# Function to toggle measurement state
 def toggle_power_measurement():
-    if start_power_button.config('text')[-1] == 'Start Power Measurement':
+    if start_power_button.text() == "Start Power Measurement":
         measure_power_thread()
-        start_power_button.config(text="Stop Power Measurement", bg="#FFCCCC", command=stop_measurement)
+        start_power_button.setText("Stop Power Measurement")
+        start_power_button.setStyleSheet("background-color: #FFCCCC")
+        start_power_button.clicked.disconnect()
+        start_power_button.clicked.connect(stop_measurement)
     else:
         stop_measurement()
-        start_power_button.config(text="Start Power Measurement", bg="#CCDDAA", command=toggle_power_measurement)
+        start_power_button.setText("Start Power Measurement")
+        start_power_button.setStyleSheet("background-color: #CCDDAA")
+        start_power_button.clicked.disconnect()
+        start_power_button.clicked.connect(toggle_power_measurement)
 
-# Function to toggle measurement state and request pixel number before current measurement starts
 def toggle_current_measurement():
     global current_thread
-    if start_current_button.config('text')[-1] == 'Start Current Measurement':
-        # Prompt for pixel number
-        pixel_number = simpledialog.askinteger("Pixel Selection", "Enter pixel number (1-6):", minvalue=1, maxvalue=6, parent=root)
-        if pixel_number is None:  # User cancelled
+    if start_current_button.text() == "Start Current Measurement":
+        pixel_number, ok = QInputDialog.getInt(None, "Pixel Selection", "Enter pixel number (1-6):", min=1, max=6)
+        if not ok:
             return
         stop_thread.clear()
         current_thread = threading.Thread(target=start_current_measurement, args=(pixel_number,))
         current_thread.start()
-        start_current_button.config(text="Stop Current Measurement", bg="#FFCCCC", command=toggle_current_measurement)
+        start_current_button.setText("Stop Current Measurement")
+        start_current_button.setStyleSheet("background-color: #FFCCCC")
+        start_current_button.clicked.disconnect()
+        start_current_button.clicked.connect(toggle_current_measurement)
     else:
         stop_thread.set()
         if current_thread and current_thread.is_alive():
             current_thread.join(timeout=1.0)
-        start_current_button.config(text="Start Current Measurement", bg="#CCDDAA", command=toggle_current_measurement)
+        start_current_button.setText("Start Current Measurement")
+        start_current_button.setStyleSheet("background-color: #CCDDAA")
+        start_current_button.clicked.disconnect()
+        start_current_button.clicked.connect(toggle_current_measurement)
 
-# Function to handle window close event
 def on_close():
     global is_closing
     is_closing = True
     stop_thread.set()
 
-    # Wait for threads to finish
     if 'power_thread' in globals() and power_thread and power_thread.is_alive():
         power_thread.join()
     if 'current_thread' in globals() and current_thread and current_thread.is_alive():
         current_thread.join()
 
-    # Close any open resources
     try:
         if 'tlPM' in globals():
             tlPM.close()
@@ -757,209 +721,169 @@ def on_close():
     except Exception as e:
         print(f"Error closing resources: {e}")
 
-    root.destroy()
-    print("Application closed.")
+    app.quit()
     sys.exit()
 
-# Function to configure the power plot
 def configure_power_plot():
     ax_power.set_xlabel('Wavelength (nm)', fontsize=12)
     ax_power.set_ylabel(r'Power ($\mu$W)', fontsize=12)
     ax_power.set_title('Incident Light Power Measurements', fontsize=12)
     ax_power.tick_params(axis='both', which='major', labelsize=12)
-    fig_power.tight_layout()  # Ensure layout fits labels
-    fig_power.subplots_adjust(bottom=0.15)  # Adjust bottom margin
+    fig_power.tight_layout()
+    fig_power.subplots_adjust(bottom=0.15)
 
-# Function to configure the current plot
 def configure_current_plot(pixel_number):
     ax_current.set_xlabel('Wavelength (nm)', fontsize=12)
     ax_current.set_ylabel('Current (nA)', fontsize=12)
     ax_current.set_title(f'PV Current Measurements for Pixel {pixel_number}', fontsize=12)
     ax_current.tick_params(axis='both', which='major', labelsize=12)
-    fig_current.tight_layout()  # Ensure layout fits labels
-    fig_current.subplots_adjust(bottom=0.15)  # Adjust bottom margin
+    fig_current.tight_layout()
+    fig_current.subplots_adjust(bottom=0.15)
 
-# Function to configure the phase plot
 def configure_phase_plot(pixel_number):
     ax_phase.set_xlabel('Phase (degrees)', fontsize=12)
     ax_phase.set_ylabel('Signal (V)', fontsize=12)
     ax_phase.set_title(f'Phase Response and Sine Fit for Pixel {pixel_number}', fontsize=12)
     ax_phase.tick_params(axis='both', which='major', labelsize=12)
-    fig_phase.tight_layout()  # Ensure layout fits labels
-    fig_phase.subplots_adjust(bottom=0.15)  # Adjust bottom margin
-    
-# Function to clear the power plot
+    fig_phase.tight_layout()
+    fig_phase.subplots_adjust(bottom=0.15)
+
 def clear_power_plot():
-    ax_power.cla()  # Clear the axes
+    ax_power.cla()
     power_x_values.clear()
     power_y_values.clear()
     configure_power_plot()
-    canvas_power.draw()  # Redraw the canvas
+    canvas_power.draw()
 
-# Function to clear the current plot
 def clear_current_plot(pixel_number):
-    ax_current.cla()  # Clear the axes
+    ax_current.cla()
     current_x_values.clear()
     current_y_values.clear()
     configure_current_plot(pixel_number)
-    canvas_current.draw()  # Redraw the canvas
+    canvas_current.draw()
 
-# Create the main GUI window
-root = tk.Tk()
-root.title("PHYS 2150 EQE Measurement")
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("PHYS 2150 EQE Measurement")
+        self.setMinimumSize(1200, 600)
 
-# Create frames for the plots
-plot_frame_power = tk.Frame(root)
-plot_frame_power.grid(row=4, column=0, padx=20, pady=5, sticky="nsew")  # Reduced pady
-plot_frame_current = tk.Frame(root)
-plot_frame_current.grid(row=4, column=1, padx=20, pady=5, sticky="nsew")  # Reduced pady
-plot_frame_phase = tk.Frame(root)
-plot_frame_phase.grid(row=4, column=2, padx=20, pady=5, sticky="nsew")  # Reduced pady
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        main_layout = QHBoxLayout(central_widget)
 
-# Create the matplotlib figure and axes for power measurements with adjusted size
-fig_power, ax_power = plt.subplots(figsize=(5.5, 4.5))  # Increased figsize
-fig_power.tight_layout()  # Apply tight_layout at initialization
-fig_power.subplots_adjust(bottom=0.15)  # Adjust bottom margin for label
-configure_power_plot()
-canvas_power = FigureCanvasTkAgg(fig_power, master=plot_frame_power)
-canvas_power.draw()
-canvas_power.get_tk_widget().grid(row=0, column=0, sticky="nsew")
+        # Power plot
+        power_widget = QWidget()
+        power_layout = QVBoxLayout(power_widget)
+        fig_power, self.ax_power = plt.subplots(figsize=(5.5, 4.5))
+        fig_power.tight_layout()
+        fig_power.subplots_adjust(bottom=0.15)
+        configure_power_plot()
+        global ax_power, canvas_power
+        ax_power = self.ax_power
+        canvas_power = FigureCanvas(fig_power)
+        power_layout.addWidget(canvas_power)
+        toolbar_power = NavigationToolbar(canvas_power, power_widget)
+        power_layout.addWidget(toolbar_power)
+        global start_power_button
+        start_power_button = QPushButton("Start Power Measurement")
+        start_power_button.setStyleSheet("background-color: #CCDDAA; font-size: 14px")
+        start_power_button.clicked.connect(toggle_power_measurement)
+        power_layout.addWidget(start_power_button, alignment=Qt.AlignHCenter)
+        main_layout.addWidget(power_widget)
 
-# Create the matplotlib figure and axes for current measurements with adjusted size
-fig_current, ax_current = plt.subplots(figsize=(5.5, 4.5))  # Increased figsize
-fig_current.tight_layout()  # Apply tight_layout at initialization
-fig_current.subplots_adjust(bottom=0.15)  # Adjust bottom margin for label
-configure_current_plot(pixel_number)
-canvas_current = FigureCanvasTkAgg(fig_current, master=plot_frame_current)
-canvas_current.draw()
-canvas_current.get_tk_widget().grid(row=0, column=0, sticky="nsew")
+        # Current plot
+        current_widget = QWidget()
+        current_layout = QVBoxLayout(current_widget)
+        fig_current, self.ax_current = plt.subplots(figsize=(5.5, 4.5))
+        fig_current.tight_layout()
+        fig_current.subplots_adjust(bottom=0.15)
+        configure_current_plot(pixel_number)
+        global ax_current, canvas_current
+        ax_current = self.ax_current
+        canvas_current = FigureCanvas(fig_current)
+        current_layout.addWidget(canvas_current)
+        toolbar_current = NavigationToolbar(canvas_current, current_widget)
+        current_layout.addWidget(toolbar_current)
+        global start_current_button
+        start_current_button = QPushButton("Start Current Measurement")
+        start_current_button.setStyleSheet("background-color: #CCDDAA; font-size: 14px")
+        start_current_button.clicked.connect(toggle_current_measurement)
+        current_layout.addWidget(start_current_button, alignment=Qt.AlignHCenter)
+        main_layout.addWidget(current_widget)
 
-# Create the matplotlib figure and axes for phase measurements with adjusted size
-fig_phase, ax_phase = plt.subplots(figsize=(5.5, 4.5))  # Increased figsize
-fig_phase.tight_layout()  # Apply tight_layout at initialization
-fig_phase.subplots_adjust(bottom=0.15)  # Adjust bottom margin for label
-configure_phase_plot(pixel_number)
-canvas_phase = FigureCanvasTkAgg(fig_phase, master=plot_frame_phase)
-canvas_phase.draw()
-canvas_phase.get_tk_widget().grid(row=0, column=0, sticky="nsew")
+        # Phase plot
+        phase_widget = QWidget()
+        phase_layout = QVBoxLayout(phase_widget)
+        fig_phase, self.ax_phase = plt.subplots(figsize=(5.5, 4.5))
+        fig_phase.tight_layout()
+        fig_phase.subplots_adjust(bottom=0.15)
+        configure_phase_plot(pixel_number)
+        global ax_phase, canvas_phase
+        ax_phase = self.ax_phase
+        canvas_phase = FigureCanvas(fig_phase)
+        phase_layout.addWidget(canvas_phase)
+        toolbar_phase = NavigationToolbar(canvas_phase, phase_widget)
+        phase_layout.addWidget(toolbar_phase)
+        main_layout.addWidget(phase_widget)
 
-# Create toolbar frames for each plot
-toolbar_frame_power = tk.Frame(root)
-toolbar_frame_power.grid(row=5, column=0, sticky="ew", padx=20, pady=0)
-toolbar_power = NavigationToolbar2Tk(canvas_power, toolbar_frame_power)
-toolbar_power.update()
+        # Input fields
+        input_widget = QWidget()
+        input_layout = QVBoxLayout(input_widget)
+        input_layout.addWidget(QLabel("Start Wavelength (nm):", input_widget))
+        global start_wavelength_var
+        start_wavelength_var = QLineEdit("350")
+        start_wavelength_var.setStyleSheet("font-size: 14px")
+        input_layout.addWidget(start_wavelength_var)
+        input_layout.addWidget(QLabel("End Wavelength (nm):", input_widget))
+        global end_wavelength_var
+        end_wavelength_var = QLineEdit("850")
+        end_wavelength_var.setStyleSheet("font-size: 14px")
+        input_layout.addWidget(end_wavelength_var)
+        input_layout.addWidget(QLabel("Step Size (nm):", input_widget))
+        global step_size_var
+        step_size_var = QLineEdit("10")
+        step_size_var.setStyleSheet("font-size: 14px")
+        input_layout.addWidget(step_size_var)
+        input_layout.addStretch()
 
-toolbar_frame_current = tk.Frame(root)
-toolbar_frame_current.grid(row=5, column=1, sticky="ew", padx=20, pady=0)
-toolbar_current = NavigationToolbar2Tk(canvas_current, toolbar_frame_current)
-toolbar_current.update()
+        # Align button
+        align_button = QPushButton("Enable Green Alignment Dot")
+        align_button.setStyleSheet("font-size: 14px")
+        align_button.clicked.connect(align_monochromator)
+        input_layout.addWidget(align_button, alignment=Qt.AlignHCenter)
 
-toolbar_frame_phase = tk.Frame(root)
-toolbar_frame_phase.grid(row=5, column=2, sticky="ew", padx=20, pady=0)
-toolbar_phase = NavigationToolbar2Tk(canvas_phase, toolbar_frame_phase)
-toolbar_phase.update()
+        # Cell number input
+        cell_number_layout = QHBoxLayout()
+        cell_number_layout.addWidget(QLabel("Cell Number:", input_widget))
+        global cell_number_var
+        cell_number_var = QLineEdit("C60_01")
+        cell_number_var.setStyleSheet("font-size: 14px")
+        cell_number_layout.addWidget(cell_number_var)
+        input_layout.addLayout(cell_number_layout)
+        main_layout.addWidget(input_widget)
 
-# Create button frames to center buttons under plots
-button_frame_power = tk.Frame(root)
-button_frame_power.grid(row=6, column=0, sticky="nsew", padx=20, pady=5)
-button_frame_current = tk.Frame(root)
-button_frame_current.grid(row=6, column=1, sticky="nsew", padx=20, pady=5)
-button_frame_phase = tk.Frame(root)  # Placeholder frame for phase plot
-button_frame_phase.grid(row=6, column=2, sticky="nsew", padx=20, pady=5)
+        # Show cell number popup after 1 second
+        from PySide6.QtCore import QTimer
+        QTimer.singleShot(1000, self.show_cell_number_popup)
 
-# Add the start buttons for the measurements, centered in their frames
-start_power_button = tk.Button(button_frame_power, text="Start Power Measurement", font=("Helvetica", 14), bg="#CCDDAA", command=toggle_power_measurement)
-start_power_button.pack(anchor="center")
-
-start_current_button = tk.Button(button_frame_current, text="Start Current Measurement", font=("Helvetica", 14), bg="#CCDDAA", command=toggle_current_measurement)
-start_current_button.pack(anchor="center")
-
-# Make the canvas and frames expand and fill the space
-plot_frame_power.grid_rowconfigure(0, weight=1)
-plot_frame_power.grid_columnconfigure(0, weight=1)
-plot_frame_current.grid_rowconfigure(0, weight=1)
-plot_frame_current.grid_columnconfigure(0, weight=1)
-plot_frame_phase.grid_rowconfigure(0, weight=1)
-plot_frame_phase.grid_columnconfigure(0, weight=1)
-
-root.grid_rowconfigure(4, weight=1)
-root.grid_rowconfigure(5, weight=0)
-root.grid_rowconfigure(6, weight=0)
-root.grid_columnconfigure(0, weight=1)
-root.grid_columnconfigure(1, weight=1)
-root.grid_columnconfigure(2, weight=1)
-
-# Create the input fields
-start_wavelength_var = tk.StringVar(value="350")
-end_wavelength_var = tk.StringVar(value="850")
-step_size_var = tk.StringVar(value="10")
-
-# Add input fields for cell number in the third column
-input_frame_third = tk.Frame(root)
-input_frame_third.grid(row=1, column=2, padx=10, pady=10)
-
-tk.Label(input_frame_third, text="Cell Number:", font=("Helvetica", 14)).grid(row=0, column=0, sticky='w')
-cell_number_var = tk.StringVar(value="C60_01")  # Default cell number
-tk.Entry(input_frame_third, textvariable=cell_number_var, font=("Helvetica", 14)).grid(row=0, column=1, sticky='w')
-
-# Create a frame to hold the labels and entries
-input_frame = tk.Frame(root)
-input_frame.grid(row=1, column=0, padx=10, pady=10)
-
-# Place the labels and entries inside the frame
-tk.Label(input_frame, text="Start Wavelength (nm):", font=("Helvetica", 14)).grid(row=0, column=0, sticky='w')
-tk.Entry(input_frame, textvariable=start_wavelength_var, font=("Helvetica", 14)).grid(row=0, column=1, sticky='w')
-
-tk.Label(input_frame, text="End Wavelength (nm):", font=("Helvetica", 14)).grid(row=1, column=0, sticky='w')
-tk.Entry(input_frame, textvariable=end_wavelength_var, font=("Helvetica", 14)).grid(row=1, column=1, sticky='w')
-
-tk.Label(input_frame, text="Step Size (nm):", font=("Helvetica", 14)).grid(row=2, column=0, sticky='w')
-tk.Entry(input_frame, textvariable=step_size_var, font=("Helvetica", 14)).grid(row=2, column=1, sticky='w')
-
-# Add the align button in the center column above the current plot
-align_button = tk.Button(root, text="Enable Green Alignment Dot", font=("Helvetica", 14), command=align_monochromator)
-align_button.grid(row=1, column=1, padx=20, pady=10)
-
-def show_cell_number_popup():
-    popup = tk.Toplevel(root)
-    popup.title("Enter Cell Number")
-    popup.geometry("340x150")  # Wider popup
-    # Center popup over main window
-    root_x = root.winfo_rootx()
-    root_y = root.winfo_rooty()
-    root_width = root.winfo_width()
-    root_height = root.winfo_height()
-    popup_x = root_x + (root_width - 340) // 2
-    popup_y = root_y + (root_height - 150) // 2
-    popup.geometry(f"340x150+{popup_x}+{popup_y}")
-    popup.transient(root)
-    popup.grab_set()
-
-    tk.Label(popup, text="Enter Cell Number (e.g., C60_01, 2501-04):", font=("Helvetica", 12)).pack(pady=10)
-    entry = tk.Entry(popup, font=("Helvetica", 12))
-    entry.pack(pady=10)
-    entry.focus_set()
-
-    def on_ok():
-        cell_number = entry.get().strip()
-        if cell_number and re.match(r'^(C60_\d+|\d+-\d+)$', cell_number):
-            cell_number_var.set(cell_number)
-            popup.destroy()
+    def show_cell_number_popup(self):
+        cell_number, ok = QInputDialog.getText(self, "Enter Cell Number",
+                                               "Enter Cell Number (e.g., C60_01, 2501-04):",
+                                               text=cell_number_var.text())
+        if ok and cell_number and re.match(r'^(C60_\d+|\d+-\d+)$', cell_number.strip()):
+            cell_number_var.setText(cell_number.strip())
         else:
-            messagebox.showwarning("Invalid Input", "Cell number must be in format C60_XX or XXXX-XX (e.g., C60_01, 2501-04).", parent=popup)
+            QMessageBox.warning(self, "Invalid Input",
+                                "Cell number must be in format C60_XX or XXXX-XX (e.g., C60_01, 2501-04).")
+            self.show_cell_number_popup()
 
-    def prevent_close():
-        messagebox.showwarning("Invalid Input", "Cell number must be in format C60_XX or XXXX-XX (e.g., C60_01, 2501-04).", parent=popup)
+    def closeEvent(self, event):
+        on_close()
+        event.accept()
 
-    tk.Button(popup, text="OK", font=("Helvetica", 12), command=on_ok).pack(pady=10)
-    popup.bind('<Return>', lambda event: on_ok())  # Allow Enter key to submit
-    popup.bind('<Escape>', lambda event: prevent_close())  # Prevent Esc from closing
-    popup.protocol("WM_DELETE_WINDOW", prevent_close)  # Prevent close button from closing
-
-# Trigger cell number popup after 1 second
-root.after(1000, show_cell_number_popup)
-
-# Bind the on_close function to the window's close event
-root.protocol("WM_DELETE_WINDOW", on_close)
-
-root.mainloop()
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    window = MainWindow()
+    window.show()
+    sys.exit(app.exec())
