@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
     QPushButton, QLineEdit, QLabel, QMessageBox, QFileDialog, QInputDialog,
     QGridLayout, QSpacerItem, QSizePolicy
 )
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, Signal, QObject
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 
@@ -49,9 +49,19 @@ pixel_number = 1  # Default pixel number for startup
 stop_thread = threading.Event()
 is_closing = False
 
+# Signal emitter for thread-safe file saving
+class SignalEmitter(QObject):
+    save_file_dialog = Signal(str, str, list, list)  # For power and current data
+    save_phase_data = Signal(str, int, float, float, float)  # For phase data
+    invoke_popup = Signal()  # For popup creation
+    close_popup = Signal()  # For popup closure
+    show_r_squared_warning = Signal(int)  # For R^2 < 0.90 warning
+
+signal_emitter = SignalEmitter()
+
 # Function to display pop up error messages
 def show_error(message):
-    app = QApplication.instance()
+    app = application_instance = QApplication.instance()
     msg = QMessageBox()
     msg.setWindowTitle("Error")
     msg.setText(message)
@@ -279,18 +289,18 @@ def adjust_lockin_phase(pixel_number):
     phase_fit_x_values.extend(np.linspace(0, 360, 1000))
     phase_fit_y_values.extend(amplitude * np.sin(np.radians(phase_fit_x_values) + phase_shift) + offset)
 
-    # Update the phase plot
+    # Update the phase plot with consistent size and font sizes
     ax_phase.cla()
     ax_phase.plot(phase_x_values, phase_y_values, 'o', label='Measured')
     ax_phase.plot(phase_fit_x_values, phase_fit_y_values, '-', label='Fitted Sine')
-    ax_phase.set_xlabel('Phase (degrees)', fontsize=12)
-    ax_phase.set_ylabel('Signal (V)', fontsize=12)
-    ax_phase.set_title(f'Phase Response and Sine Fit for Pixel {pixel_number}', fontsize=12)
-    ax_phase.tick_params(axis='both', which='major', labelsize=12)
+    ax_phase.set_xlabel('Phase (degrees)', fontsize=10)
+    ax_phase.set_ylabel('Signal (V)', fontsize=10)
+    ax_phase.set_title(f'Phase Response and Sine Fit for Pixel {pixel_number}', fontsize=10)
+    ax_phase.tick_params(axis='both', which='major', labelsize=8)
     ax_phase.legend()
     ax_phase.grid(True)
-    fig_phase.tight_layout()
-    fig_phase.subplots_adjust(bottom=0.15)
+    # Use fixed margins to prevent resizing
+    fig_phase.subplots_adjust(left=0.15, right=0.85, top=0.85, bottom=0.15)
     canvas_phase.draw()
 
     return optimal_phase, final_signal
@@ -391,9 +401,17 @@ def align_monochromator():
 def start_power_measurement():
     clear_power_plot()
     print("Starting light power measurement...")
-    start_wavelength = float(start_wavelength_var.text())
-    end_wavelength = float(end_wavelength_var.text())
-    step_size = float(step_size_var.text())
+    try:
+        start_wavelength = float(start_wavelength_var.text())
+        end_wavelength = float(end_wavelength_var.text())
+        step_size = float(step_size_var.text())
+    except ValueError:
+        QMessageBox.critical(None, "Input Error", "Please enter valid numerical values for wavelength and step size.")
+        start_power_button.setText("Start Power Measurement")
+        start_power_button.setStyleSheet("background-color: #CCDDAA; color: black;")
+        start_power_button.clicked.disconnect()
+        start_power_button.clicked.connect(toggle_power_measurement)
+        return
 
     if start_wavelength <= 420:
         usb_mono.SendCommand("filter 3", False)
@@ -462,15 +480,10 @@ def start_power_measurement():
             QMessageBox.critical(None, "Input Error", "Cell number must be in format C60_XX or XXXX-XX (e.g., C60_01, 2501-04).")
         else:
             file_name = f"{date}_power_cell{cell_number}.csv"
-            file_path, _ = QFileDialog.getSaveFileName(None, "Save Power Data", file_name, "CSV files (*.csv)")
-            if file_path:
-                with open(file_path, mode='w', newline='') as file:
-                    writer = csv.writer(file)
-                    writer.writerow(["Wavelength (nm)", "Power (W)"])
-                    for x, y in zip(power_x_values, power_y_values):
-                        writer.writerow([x, y])
-                print(f"Power data saved to {file_path}")
+            # Emit signal to handle file saving in the main thread
+            signal_emitter.save_file_dialog.emit(file_name, "Save Power Data", power_x_values, power_y_values)
 
+    # Reset button state
     start_power_button.setText("Start Power Measurement")
     start_power_button.setStyleSheet("background-color: #CCDDAA; color: black;")
     start_power_button.clicked.disconnect()
@@ -483,13 +496,48 @@ def start_power_measurement():
         align_monochromator()
 
 def start_current_measurement(pixel_number):
-    popup = QMessageBox()
-    popup.setWindowTitle("Processing")
-    popup.setText("Please Wait....")
-    popup.setStandardButtons(QMessageBox.NoButton)
-    popup.show()
-    QApplication.processEvents()
+    print(f"Starting current measurement for pixel {pixel_number}")
+    
+    # Create custom dialog in the main thread using a signal
+    def show_popup():
+        from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel
+        from PySide6.QtCore import Qt
+        class NonClosableDialog(QDialog):
+            def keyPressEvent(self, event):
+                if event.key() == Qt.Key_Escape:
+                    event.ignore()  # Ignore Esc key
+                else:
+                    super().keyPressEvent(event)
+        
+        popup = NonClosableDialog()
+        popup.setWindowTitle("Processing")
+        popup.setFixedSize(300, 100)  # 300px wide, 100px tall
+        popup.setWindowFlags(Qt.Window | Qt.WindowTitleHint | Qt.CustomizeWindowHint)  # No close button
+        popup.setModal(True)  # Block GUI interactions
+        layout = QVBoxLayout()
+        label = QLabel("Please Wait...")
+        label.setAlignment(Qt.AlignCenter)
+        label.setStyleSheet("font-size: 14px;")
+        layout.addWidget(label)
+        popup.setLayout(layout)
+        popup.show()
+        print(f"Custom dialog created with width: 300px")
+        return popup
 
+    # Run popup in main thread
+    from PySide6.QtCore import QMetaObject, Qt
+    popup = None
+    def invoke_popup():
+        nonlocal popup
+        popup = show_popup()
+    try:
+        print("Invoking popup...")
+        QMetaObject.invokeMethod(signal_emitter, "invoke_popup", Qt.BlockingQueuedConnection)
+    except Exception as e:
+        print(f"Error invoking popup: {e}")
+        QMessageBox.critical(None, "Popup Error", f"Failed to show processing popup: {e}")
+        return
+    
     phase_x_values.clear()
     phase_y_values.clear()
     phase_fit_x_values.clear()
@@ -497,15 +545,25 @@ def start_current_measurement(pixel_number):
     ax_phase.cla()
     configure_phase_plot(pixel_number)
     canvas_phase.draw()
+    QApplication.processEvents()
 
-    def run_phase_adjustment():
-        adjust_lockin_phase(pixel_number)
-        popup.accept()
+    # Run phase adjustment
+    try:
+        print("Starting phase adjustment...")
+        optimal_phase, final_signal = adjust_lockin_phase(pixel_number)
+        print(f"Phase adjustment complete: {optimal_phase}, {final_signal}")
+    except Exception as e:
+        print(f"Error during phase adjustment: {e}")
+        QMessageBox.critical(None, "Phase Adjustment Error", f"Failed to adjust phase: {e}")
+        signal_emitter.close_popup.emit()
+        return
 
-    phase_thread = threading.Thread(target=run_phase_adjustment)
-    phase_thread.start()
-    phase_thread.join()
+    # Close popup in main thread
+    print("Closing popup...")
+    signal_emitter.close_popup.emit()
+    QApplication.processEvents()
 
+    # Save phase data using signal
     if phase_optimal is not None and phase_signal is not None and phase_r_squared is not None:
         cell_number = cell_number_var.text().strip()
         date = datetime.datetime.now().strftime("%Y_%m_%d")
@@ -513,63 +571,31 @@ def start_current_measurement(pixel_number):
             QMessageBox.critical(None, "Input Error", "Cell number must be in format C60_XX or XXXX-XX (e.g., C60_01, 2501-04).")
             return
         file_name = f"{date}_phase_cell{cell_number}.csv"
-        file_path, _ = QFileDialog.getSaveFileName(None, "Save Phase Data", file_name, "CSV files (*.csv)")
-        if file_path:
-            if not os.path.exists(file_path):
-                df = pd.DataFrame({
-                    "Pixel #": [1, 2, 3, 4, 5, 6],
-                    "Set Angle": [None, None, None, None, None, None],
-                    "Signal": [None, None, None, None, None, None],
-                    "R^2 Value": [None, None, None, None, None, None]
-                })
-            else:
-                try:
-                    df = pd.read_csv(file_path)
-                    if "Pixel #" not in df.columns:
-                        legacy_data = df[["set angle", "signal", "r-value"]].values
-                        df = pd.DataFrame({
-                            "Pixel #": [1, 2, 3, 4, 5, 6],
-                            "Set Angle": [None, None, None, None, None, None],
-                            "Signal": [None, None, None, None, None, None],
-                            "R^2 Value": [None, None, None, None, None, None]
-                        })
-                        for i, row in enumerate(legacy_data[:6]):
-                            df.at[i, "Set Angle"] = row[0]
-                            df.at[i, "Signal"] = row[1]
-                            df.at[i, "R^2 Value"] = row[2]
-                    else:
-                        existing_pixels = df["Pixel #"].tolist()
-                        for i in range(1, 7):
-                            if i not in existing_pixels:
-                                df = pd.concat([df, pd.DataFrame({
-                                    "Pixel #": [i],
-                                    "Set Angle": [None],
-                                    "Signal": [None],
-                                    "R^2 Value": [None]
-                                })], ignore_index=True)
-                        df = df[df["Pixel #"].isin([1, 2, 3, 4, 5, 6])].sort_values("Pixel #").reset_index(drop=True)
-                except Exception as e:
-                    print(f"Error reading CSV: {e}")
-                    df = pd.DataFrame({
-                        "Pixel #": [1, 2, 3, 4, 5, 6],
-                        "Set Angle": [None, None, None, None, None, None],
-                        "Signal": [None, None, None, None, None, None],
-                        "R^2 Value": [None, None, None, None, None, None]
-                    })
+        print(f"Emitting save_phase_data signal for {file_name}")
+        signal_emitter.save_phase_data.emit(file_name, pixel_number, phase_optimal, phase_signal, phase_r_squared)
+    else:
+        print("Phase data not saved due to invalid results")
+        QMessageBox.critical(None, "Phase Data Error", "Phase adjustment results are invalid.")
+        return
 
-            pixel_index = pixel_number - 1
-            df.at[pixel_index, "Set Angle"] = f"{phase_optimal:.2f}"
-            df.at[pixel_index, "Signal"] = phase_signal
-            df.at[pixel_index, "R^2 Value"] = f"{phase_r_squared:.4f}"
-
-            df.to_csv(file_path, index=False)
-            print(f"Phase data for pixel {pixel_number} saved to {file_path}")
+    # Check R^2 value and show warning if < 0.90
+    if phase_r_squared is not None and phase_r_squared < 0.90:
+        print(f"R^2 value {phase_r_squared:.4f} is below 0.90 for pixel {pixel_number}")
+        signal_emitter.show_r_squared_warning.emit(pixel_number)
 
     clear_current_plot(pixel_number)
     print("Starting photocell measurement...")
-    start_wavelength = float(start_wavelength_var.text())
-    end_wavelength = float(end_wavelength_var.text())
-    step_size = float(step_size_var.text())
+    try:
+        start_wavelength = float(start_wavelength_var.text())
+        end_wavelength = float(end_wavelength_var.text())
+        step_size = float(step_size_var.text())
+    except ValueError:
+        QMessageBox.critical(None, "Input Error", "Please enter valid numerical values for wavelength and step size.")
+        start_current_button.setText("Start Current Measurement")
+        start_current_button.setStyleSheet("background-color: #CCDDAA; color: black;")
+        start_current_button.clicked.disconnect()
+        start_current_button.clicked.connect(toggle_current_measurement)
+        return
 
     if start_wavelength <= 400:
         usb_mono.SendCommand("filter 3", False)
@@ -608,9 +634,14 @@ def start_current_measurement(pixel_number):
         confirmed_mono_wavelength = usb_mono.GetQueryResponse("wave?")
         confirmed_mono_wavelength_float = float(confirmed_mono_wavelength)
 
-        output = read_lockin_status_and_keithley_output()
-        if output is None:
-            QMessageBox.critical(None, "Measurement Error", "Failed to read output from SR510.")
+        try:
+            output = read_lockin_status_and_keithley_output()
+            if output is None:
+                QMessageBox.critical(None, "Measurement Error", "Failed to read output from SR510.")
+                return
+        except Exception as e:
+            print(f"Error reading lock-in/Keithley output: {e}")
+            QMessageBox.critical(None, "Measurement Error", f"Failed to read output: {e}")
             return
 
         current_x_values.append(confirmed_mono_wavelength_float)
@@ -633,14 +664,8 @@ def start_current_measurement(pixel_number):
             QMessageBox.critical(None, "Input Error", "Cell number must be in format C60_XX or XXXX-XX (e.g., C60_01, 2501-04).")
         else:
             file_name = f"{date}_current_cell{cell_number}_pixel{pixel_number}.csv"
-            file_path, _ = QFileDialog.getSaveFileName(None, "Save Current Data", file_name, "CSV files (*.csv)")
-            if file_path:
-                with open(file_path, mode='w', newline='') as file:
-                    writer = csv.writer(file)
-                    writer.writerow(["Wavelength (nm)", "Current (A)"])
-                    for x, y in zip(current_x_values, current_y_values):
-                        writer.writerow([x, y])
-                print(f"Current data saved to {file_path}")
+            print(f"Emitting save_file_dialog signal for {file_name}")
+            signal_emitter.save_file_dialog.emit(file_name, "Save Current Data", current_x_values, current_y_values)
 
     start_current_button.setText("Start Current Measurement")
     start_current_button.setStyleSheet("background-color: #CCDDAA; color: black;")
@@ -685,9 +710,19 @@ def toggle_power_measurement():
 def toggle_current_measurement():
     global current_thread
     if start_current_button.text() == "Start Current Measurement":
-        pixel_number, ok = QInputDialog.getInt(None, "Pixel Selection", "Enter pixel number (1-6):", min=1, max=6)
-        if not ok:
+        # Prompt for pixel number using QInputDialog.getText for flexibility
+        pixel_input, ok = QInputDialog.getText(None, "Pixel Selection", "Enter pixel number (1-6):")
+        if not ok or not pixel_input:
+            return  # User canceled or entered nothing
+        try:
+            pixel_number = int(pixel_input)
+            if pixel_number < 1 or pixel_number > 6:
+                QMessageBox.critical(None, "Input Error", "Pixel number must be between 1 and 6.")
+                return
+        except ValueError:
+            QMessageBox.critical(None, "Input Error", "Please enter a valid integer for pixel number.")
             return
+        
         stop_thread.clear()
         current_thread = threading.Thread(target=start_current_measurement, args=(pixel_number,))
         current_thread.start()
@@ -772,7 +807,7 @@ class MainWindow(QMainWindow):
         # Main widget and layout
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
-        main_layout = QVBoxLayout()  # Main layout is vertical
+        main_layout = QVBoxLayout()
         main_widget.setLayout(main_layout)
 
         # Top section: Grid layout for input fields and buttons
@@ -894,8 +929,123 @@ class MainWindow(QMainWindow):
         main_layout.addLayout(plot_layout)
         main_layout.addStretch(1)
 
+        # Connect signals
+        signal_emitter.save_file_dialog.connect(self.handle_save_file_dialog)
+        signal_emitter.save_phase_data.connect(self.handle_save_phase_data)
+        signal_emitter.invoke_popup.connect(self.invoke_popup)
+        signal_emitter.close_popup.connect(self.close_popup)
+        signal_emitter.show_r_squared_warning.connect(self.show_r_squared_warning)
+
         # Show cell number popup
         QTimer.singleShot(1000, self.show_cell_number_popup)
+
+    def invoke_popup(self):
+        from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel
+        from PySide6.QtCore import Qt
+        class NonClosableDialog(QDialog):
+            def keyPressEvent(self, event):
+                if event.key() == Qt.Key_Escape:
+                    event.ignore()  # Ignore Esc key
+                else:
+                    super().keyPressEvent(event)
+        
+        popup = NonClosableDialog(self)
+        popup.setWindowTitle("Processing")
+        popup.setFixedSize(300, 100)  # 300px wide, 100px tall
+        popup.setWindowFlags(Qt.Window | Qt.WindowTitleHint | Qt.CustomizeWindowHint)  # No close button
+        popup.setModal(True)  # Block GUI interactions
+        layout = QVBoxLayout()
+        label = QLabel("Please Wait...")
+        label.setAlignment(Qt.AlignCenter)
+        label.setStyleSheet("font-size: 14px;")
+        layout.addWidget(label)
+        popup.setLayout(layout)
+        popup.show()
+        self._popup = popup
+        print(f"Custom dialog created with width: 300px")
+
+    def close_popup(self):
+        if hasattr(self, '_popup') and self._popup:
+            self._popup.accept()
+            self._popup = None
+            print("Custom dialog closed successfully")
+
+    def show_r_squared_warning(self, pixel_number):
+        QMessageBox.warning(
+            self,
+            "Low R² Value",
+            f"Is the lamp on? If it is, pixel {pixel_number} might be dead. Check in with a TA.",
+            QMessageBox.Ok
+        )
+
+    def handle_save_file_dialog(self, file_name, dialog_title, x_values, y_values):
+        file_path, _ = QFileDialog.getSaveFileName(self, dialog_title, file_name, "CSV files (*.csv)")
+        if file_path:
+            try:
+                with open(file_path, mode='w', newline='') as file:
+                    writer = csv.writer(file)
+                    writer.writerow(["Wavelength (nm)", "Power (W)" if "power" in file_name.lower() else "Current (A)"])
+                    for x, y in zip(x_values, y_values):
+                        writer.writerow([x, y])
+                print(f"Data saved to {file_path}")
+            except Exception as e:
+                QMessageBox.critical(self, "Save Error", f"Failed to save file: {e}")
+
+    def handle_save_phase_data(self, file_name, pixel_number, phase_optimal, phase_signal, phase_r_squared):
+        file_path, _ = QFileDialog.getSaveFileName(self, "Save Phase Data", file_name, "CSV files (*.csv)")
+        if file_path:
+            try:
+                if not os.path.exists(file_path):
+                    df = pd.DataFrame({
+                        "Pixel #": [1, 2, 3, 4, 5, 6],
+                        "Set Angle": [None, None, None, None, None, None],
+                        "Signal": [None, None, None, None, None, None],
+                        "R^2 Value": [None, None, None, None, None, None]
+                    })
+                else:
+                    try:
+                        df = pd.read_csv(file_path)
+                        if "Pixel #" not in df.columns:
+                            legacy_data = df[["set angle", "signal", "r-value"]].values
+                            df = pd.DataFrame({
+                                "Pixel #": [1, 2, 3, 4, 5, 6],
+                                "Set Angle": [None, None, None, None, None, None],
+                                "Signal": [None, None, None, None, None, None],
+                                "R^2 Value": [None, None, None, None, None, None]
+                            })
+                            for i, row in enumerate(legacy_data[:6]):
+                                df.at[i, "Set Angle"] = row[0]
+                                df.at[i, "Signal"] = row[1]
+                                df.at[i, "R^2 Value"] = row[2]
+                        else:
+                            existing_pixels = df["Pixel #"].tolist()
+                            for i in range(1, 7):
+                                if i not in existing_pixels:
+                                    df = pd.concat([df, pd.DataFrame({
+                                        "Pixel #": [i],
+                                        "Set Angle": [None],
+                                        "Signal": [None],
+                                        "R^2 Value": [None]
+                                    })], ignore_index=True)
+                            df = df[df["Pixel #"].isin([1, 2, 3, 4, 5, 6])].sort_values("Pixel #").reset_index(drop=True)
+                    except Exception as e:
+                        print(f"Error reading CSV: {e}")
+                        df = pd.DataFrame({
+                            "Pixel #": [1, 2, 3, 4, 5, 6],
+                            "Set Angle": [None, None, None, None, None, None],
+                            "Signal": [None, None, None, None, None, None],
+                            "R^2 Value": [None, None, None, None, None, None]
+                        })
+
+                pixel_index = pixel_number - 1
+                df.at[pixel_index, "Set Angle"] = f"{phase_optimal:.2f}"
+                df.at[pixel_index, "Signal"] = phase_signal
+                df.at[pixel_index, "R^2 Value"] = f"{phase_r_squared:.4f}"
+
+                df.to_csv(file_path, index=False)
+                print(f"Phase data for pixel {pixel_number} saved to {file_path}")
+            except Exception as e:
+                QMessageBox.critical(self, "Save Error", f"Failed to save phase data: {e}")
 
     def show_cell_number_popup(self):
         cell_number, ok = QInputDialog.getText(self, "Enter Cell Number",
@@ -908,6 +1058,9 @@ class MainWindow(QMainWindow):
             self.show_cell_number_popup()
 
     def closeEvent(self, event):
+        # Ensure popup is closed on window close
+        if hasattr(self, '_popup') and self._popup:
+            self._popup.accept()
         on_close()
         event.accept()
 
