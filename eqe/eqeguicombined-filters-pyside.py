@@ -16,9 +16,12 @@ import threading
 import numpy as np
 import serial
 import serial.tools.list_ports
-from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-                               QPushButton, QLineEdit, QLabel, QMessageBox, QFileDialog, QInputDialog)
-from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+    QPushButton, QLineEdit, QLabel, QMessageBox, QFileDialog, QInputDialog,
+    QGridLayout, QSpacerItem, QSizePolicy
+)
+from PySide6.QtCore import Qt, QTimer
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 
@@ -110,7 +113,7 @@ correction_factors = {
 correction_factor = correction_factors.get(monochromator_serial_number, 0)  # Default to 0 if not found
 print(f"Correction Factor: {correction_factor}")
 
-# Find the COM port for the SR510 lock-in amplifier (connected with a USB to serial adaptor) and initialize the serial connection
+# Find the COM port for the SR510 lock-in amplifier and initialize the serial connection
 def initialize_serial_connection():
     ports = serial.tools.list_ports.comports()
     for port in ports:
@@ -469,7 +472,7 @@ def start_power_measurement():
                 print(f"Power data saved to {file_path}")
 
     start_power_button.setText("Start Power Measurement")
-    start_power_button.setStyleSheet("background-color: #CCDDAA")
+    start_power_button.setStyleSheet("background-color: #CCDDAA; color: black;")
     start_power_button.clicked.disconnect()
     start_power_button.clicked.connect(toggle_power_measurement)
 
@@ -640,7 +643,7 @@ def start_current_measurement(pixel_number):
                 print(f"Current data saved to {file_path}")
 
     start_current_button.setText("Start Current Measurement")
-    start_current_button.setStyleSheet("background-color: #CCDDAA")
+    start_current_button.setStyleSheet("background-color: #CCDDAA; color: black;")
     start_current_button.clicked.disconnect()
     start_current_button.clicked.connect(toggle_current_measurement)
 
@@ -669,13 +672,13 @@ def toggle_power_measurement():
     if start_power_button.text() == "Start Power Measurement":
         measure_power_thread()
         start_power_button.setText("Stop Power Measurement")
-        start_power_button.setStyleSheet("background-color: #FFCCCC")
+        start_power_button.setStyleSheet("background-color: #FFCCCC; color: black;")
         start_power_button.clicked.disconnect()
         start_power_button.clicked.connect(stop_measurement)
     else:
         stop_measurement()
         start_power_button.setText("Start Power Measurement")
-        start_power_button.setStyleSheet("background-color: #CCDDAA")
+        start_power_button.setStyleSheet("background-color: #CCDDAA; color: black;")
         start_power_button.clicked.disconnect()
         start_power_button.clicked.connect(toggle_power_measurement)
 
@@ -689,15 +692,13 @@ def toggle_current_measurement():
         current_thread = threading.Thread(target=start_current_measurement, args=(pixel_number,))
         current_thread.start()
         start_current_button.setText("Stop Current Measurement")
-        start_current_button.setStyleSheet("background-color: #FFCCCC")
+        start_current_button.setStyleSheet("background-color: #FFCCCC; color: black;")
         start_current_button.clicked.disconnect()
         start_current_button.clicked.connect(toggle_current_measurement)
     else:
-        stop_thread.set()
-        if current_thread and current_thread.is_alive():
-            current_thread.join(timeout=1.0)
+        stop_measurement()
         start_current_button.setText("Start Current Measurement")
-        start_current_button.setStyleSheet("background-color: #CCDDAA")
+        start_current_button.setStyleSheet("background-color: #CCDDAA; color: black;")
         start_current_button.clicked.disconnect()
         start_current_button.clicked.connect(toggle_current_measurement)
 
@@ -725,28 +726,28 @@ def on_close():
     sys.exit()
 
 def configure_power_plot():
-    ax_power.set_xlabel('Wavelength (nm)', fontsize=12)
-    ax_power.set_ylabel(r'Power ($\mu$W)', fontsize=12)
-    ax_power.set_title('Incident Light Power Measurements', fontsize=12)
-    ax_power.tick_params(axis='both', which='major', labelsize=12)
+    ax_power.set_xlabel('Wavelength (nm)', fontsize=10)
+    ax_power.set_ylabel(r'Power ($\mu$W)', fontsize=10)
+    ax_power.set_title('Incident Light Power Measurements', fontsize=10)
+    ax_power.tick_params(axis='both', which='major', labelsize=8)
     fig_power.tight_layout()
-    fig_power.subplots_adjust(bottom=0.15)
+    fig_power.subplots_adjust(bottom=0.2, left=0.15, right=0.85, top=0.85)
 
 def configure_current_plot(pixel_number):
-    ax_current.set_xlabel('Wavelength (nm)', fontsize=12)
-    ax_current.set_ylabel('Current (nA)', fontsize=12)
-    ax_current.set_title(f'PV Current Measurements for Pixel {pixel_number}', fontsize=12)
-    ax_current.tick_params(axis='both', which='major', labelsize=12)
+    ax_current.set_xlabel('Wavelength (nm)', fontsize=10)
+    ax_current.set_ylabel('Current (nA)', fontsize=10)
+    ax_current.set_title(f'PV Current Measurements for Pixel {pixel_number}', fontsize=10)
+    ax_current.tick_params(axis='both', which='major', labelsize=8)
     fig_current.tight_layout()
-    fig_current.subplots_adjust(bottom=0.15)
+    fig_current.subplots_adjust(bottom=0.2, left=0.15, right=0.85, top=0.85)
 
 def configure_phase_plot(pixel_number):
-    ax_phase.set_xlabel('Phase (degrees)', fontsize=12)
-    ax_phase.set_ylabel('Signal (V)', fontsize=12)
-    ax_phase.set_title(f'Phase Response and Sine Fit for Pixel {pixel_number}', fontsize=12)
-    ax_phase.tick_params(axis='both', which='major', labelsize=12)
+    ax_phase.set_xlabel('Phase (degrees)', fontsize=10)
+    ax_phase.set_ylabel('Signal (V)', fontsize=10)
+    ax_phase.set_title(f'Phase Response and Sine Fit for Pixel {pixel_number}', fontsize=10)
+    ax_phase.tick_params(axis='both', which='major', labelsize=8)
     fig_phase.tight_layout()
-    fig_phase.subplots_adjust(bottom=0.15)
+    fig_phase.subplots_adjust(bottom=0.2, left=0.15, right=0.85, top=0.85)
 
 def clear_power_plot():
     ax_power.cla()
@@ -766,113 +767,141 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("PHYS 2150 EQE Measurement")
-        self.setMinimumSize(1200, 600)
+        self.setGeometry(100, 100, 1200, 800)
 
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        main_layout = QHBoxLayout(central_widget)
+        # Main widget and layout
+        main_widget = QWidget()
+        self.setCentralWidget(main_widget)
+        main_layout = QVBoxLayout()  # Main layout is vertical
+        main_widget.setLayout(main_layout)
 
-        # Power plot
-        power_widget = QWidget()
-        power_layout = QVBoxLayout(power_widget)
-        fig_power, self.ax_power = plt.subplots(figsize=(5.5, 4.5))
-        fig_power.tight_layout()
-        fig_power.subplots_adjust(bottom=0.15)
-        configure_power_plot()
-        global ax_power, canvas_power
-        ax_power = self.ax_power
-        canvas_power = FigureCanvas(fig_power)
-        power_layout.addWidget(canvas_power)
-        toolbar_power = NavigationToolbar(canvas_power, power_widget)
-        power_layout.addWidget(toolbar_power)
-        global start_power_button
-        start_power_button = QPushButton("Start Power Measurement")
-        start_power_button.setStyleSheet("background-color: #CCDDAA; font-size: 14px")
-        start_power_button.clicked.connect(toggle_power_measurement)
-        power_layout.addWidget(start_power_button, alignment=Qt.AlignHCenter)
-        main_layout.addWidget(power_widget)
+        # Top section: Grid layout for input fields and buttons
+        input_grid = QGridLayout()
+        input_grid.setVerticalSpacing(10)
+        input_grid.setHorizontalSpacing(20)
 
-        # Current plot
-        current_widget = QWidget()
-        current_layout = QVBoxLayout(current_widget)
-        fig_current, self.ax_current = plt.subplots(figsize=(5.5, 4.5))
-        fig_current.tight_layout()
-        fig_current.subplots_adjust(bottom=0.15)
-        configure_current_plot(pixel_number)
-        global ax_current, canvas_current
-        ax_current = self.ax_current
-        canvas_current = FigureCanvas(fig_current)
-        current_layout.addWidget(canvas_current)
-        toolbar_current = NavigationToolbar(canvas_current, current_widget)
-        current_layout.addWidget(toolbar_current)
-        global start_current_button
-        start_current_button = QPushButton("Start Current Measurement")
-        start_current_button.setStyleSheet("background-color: #CCDDAA; font-size: 14px")
-        start_current_button.clicked.connect(toggle_current_measurement)
-        current_layout.addWidget(start_current_button, alignment=Qt.AlignHCenter)
-        main_layout.addWidget(current_widget)
-
-        # Phase plot
-        phase_widget = QWidget()
-        phase_layout = QVBoxLayout(phase_widget)
-        fig_phase, self.ax_phase = plt.subplots(figsize=(5.5, 4.5))
-        fig_phase.tight_layout()
-        fig_phase.subplots_adjust(bottom=0.15)
-        configure_phase_plot(pixel_number)
-        global ax_phase, canvas_phase
-        ax_phase = self.ax_phase
-        canvas_phase = FigureCanvas(fig_phase)
-        phase_layout.addWidget(canvas_phase)
-        toolbar_phase = NavigationToolbar(canvas_phase, phase_widget)
-        phase_layout.addWidget(toolbar_phase)
-        main_layout.addWidget(phase_widget)
-
-        # Input fields
-        input_widget = QWidget()
-        input_layout = QVBoxLayout(input_widget)
-        input_layout.addWidget(QLabel("Start Wavelength (nm):", input_widget))
+        # Column 0: Start Wavelength
+        start_wavelength_label = QLabel("Start Wavelength (nm):")
+        start_wavelength_label.setStyleSheet("font-size: 14px;")
         global start_wavelength_var
         start_wavelength_var = QLineEdit("350")
-        start_wavelength_var.setStyleSheet("font-size: 14px")
-        input_layout.addWidget(start_wavelength_var)
-        input_layout.addWidget(QLabel("End Wavelength (nm):", input_widget))
+        start_wavelength_var.setStyleSheet("font-size: 14px;")
+        start_wavelength_var.setFixedHeight(30)
+        input_grid.addWidget(start_wavelength_label, 0, 0)
+        input_grid.addWidget(start_wavelength_var, 1, 0)
+
+        # Column 1: End Wavelength and Align Button
+        end_wavelength_label = QLabel("End Wavelength (nm):")
+        end_wavelength_label.setStyleSheet("font-size: 14px;")
         global end_wavelength_var
         end_wavelength_var = QLineEdit("850")
-        end_wavelength_var.setStyleSheet("font-size: 14px")
-        input_layout.addWidget(end_wavelength_var)
-        input_layout.addWidget(QLabel("Step Size (nm):", input_widget))
+        end_wavelength_var.setStyleSheet("font-size: 14px;")
+        end_wavelength_var.setFixedHeight(30)
+        align_button = QPushButton("Enable Green Alignment Dot")
+        align_button.setStyleSheet("font-size: 14px; background-color: #CCDDAA; color: black;")
+        align_button.setFixedHeight(30)
+        align_button.clicked.connect(align_monochromator)
+        input_grid.addWidget(end_wavelength_label, 0, 1)
+        input_grid.addWidget(end_wavelength_var, 1, 1)
+        input_grid.addWidget(align_button, 4, 1, alignment=Qt.AlignCenter)
+
+        # Column 2: Step Size and Cell Number
+        step_size_label = QLabel("Step Size (nm):")
+        step_size_label.setStyleSheet("font-size: 14px;")
         global step_size_var
         step_size_var = QLineEdit("10")
-        step_size_var.setStyleSheet("font-size: 14px")
-        input_layout.addWidget(step_size_var)
-        input_layout.addStretch()
-
-        # Align button
-        align_button = QPushButton("Enable Green Alignment Dot")
-        align_button.setStyleSheet("font-size: 14px")
-        align_button.clicked.connect(align_monochromator)
-        input_layout.addWidget(align_button, alignment=Qt.AlignHCenter)
-
-        # Cell number input
-        cell_number_layout = QHBoxLayout()
-        cell_number_layout.addWidget(QLabel("Cell Number:", input_widget))
+        step_size_var.setStyleSheet("font-size: 14px;")
+        step_size_var.setFixedHeight(30)
+        cell_number_label = QLabel("Cell Number:")
+        cell_number_label.setStyleSheet("font-size: 14px;")
         global cell_number_var
         cell_number_var = QLineEdit("C60_01")
-        cell_number_var.setStyleSheet("font-size: 14px")
-        cell_number_layout.addWidget(cell_number_var)
-        input_layout.addLayout(cell_number_layout)
-        main_layout.addWidget(input_widget)
+        cell_number_var.setStyleSheet("font-size: 14px;")
+        cell_number_var.setFixedHeight(30)
+        input_grid.addWidget(step_size_label, 0, 2)
+        input_grid.addWidget(step_size_var, 1, 2)
+        input_grid.addWidget(cell_number_label, 2, 2)
+        input_grid.addWidget(cell_number_var, 3, 2)
 
-        # Show cell number popup after 1 second
-        from PySide6.QtCore import QTimer
+        main_layout.addLayout(input_grid)
+
+        # Spacer to push plots down
+        main_layout.addSpacerItem(QSpacerItem(20, 20, QSizePolicy.Minimum, QSizePolicy.Fixed))
+
+        # Plot section: Horizontal layout for plots
+        plot_layout = QHBoxLayout()
+
+        # Column 0: Power Plot
+        power_column_widget = QWidget()
+        power_column_layout = QVBoxLayout()
+        power_column_widget.setLayout(power_column_layout)
+        global fig_power, ax_power, canvas_power
+        fig_power, ax_power = plt.subplots(figsize=(8, 8), dpi=100)
+        configure_power_plot()
+        canvas_power = FigureCanvas(fig_power)
+        canvas_power.setMinimumSize(300, 300)
+        canvas_power.setMaximumSize(400, 400)
+        toolbar_power = NavigationToolbar(canvas_power, self)
+        power_column_layout.addWidget(canvas_power, alignment=Qt.AlignHCenter)
+        power_column_layout.addWidget(toolbar_power, alignment=Qt.AlignHCenter)
+        global start_power_button
+        start_power_button = QPushButton("Start Power Measurement")
+        start_power_button.setStyleSheet("font-size: 14px; background-color: #CCDDAA; color: black;")
+        start_power_button.setFixedHeight(30)
+        start_power_button.clicked.connect(toggle_power_measurement)
+        power_column_layout.addWidget(start_power_button, alignment=Qt.AlignHCenter)
+        power_column_layout.addStretch(1)
+        plot_layout.addWidget(power_column_widget)
+
+        # Column 1: Current Plot
+        current_column_widget = QWidget()
+        current_column_layout = QVBoxLayout()
+        current_column_widget.setLayout(current_column_layout)
+        global fig_current, ax_current, canvas_current
+        fig_current, ax_current = plt.subplots(figsize=(8, 8), dpi=100)
+        configure_current_plot(pixel_number)
+        canvas_current = FigureCanvas(fig_current)
+        canvas_current.setMinimumSize(300, 300)
+        canvas_current.setMaximumSize(400, 400)
+        toolbar_current = NavigationToolbar(canvas_current, self)
+        current_column_layout.addWidget(canvas_current, alignment=Qt.AlignHCenter)
+        current_column_layout.addWidget(toolbar_current, alignment=Qt.AlignHCenter)
+        global start_current_button
+        start_current_button = QPushButton("Start Current Measurement")
+        start_current_button.setStyleSheet("font-size: 14px; background-color: #CCDDAA; color: black;")
+        start_current_button.setFixedHeight(30)
+        start_current_button.clicked.connect(toggle_current_measurement)
+        current_column_layout.addWidget(start_current_button, alignment=Qt.AlignHCenter)
+        current_column_layout.addStretch(1)
+        plot_layout.addWidget(current_column_widget)
+
+        # Column 2: Phase Plot
+        phase_column_widget = QWidget()
+        phase_column_layout = QVBoxLayout()
+        phase_column_widget.setLayout(phase_column_layout)
+        global fig_phase, ax_phase, canvas_phase
+        fig_phase, ax_phase = plt.subplots(figsize=(8, 8), dpi=100)
+        configure_phase_plot(pixel_number)
+        canvas_phase = FigureCanvas(fig_phase)
+        canvas_phase.setMinimumSize(300, 300)
+        canvas_phase.setMaximumSize(400, 400)
+        toolbar_phase = NavigationToolbar(canvas_phase, self)
+        phase_column_layout.addWidget(canvas_phase, alignment=Qt.AlignHCenter)
+        phase_column_layout.addWidget(toolbar_phase, alignment=Qt.AlignHCenter)
+        phase_column_layout.addStretch(1)
+        plot_layout.addWidget(phase_column_widget)
+
+        main_layout.addLayout(plot_layout)
+        main_layout.addStretch(1)
+
+        # Show cell number popup
         QTimer.singleShot(1000, self.show_cell_number_popup)
 
     def show_cell_number_popup(self):
         cell_number, ok = QInputDialog.getText(self, "Enter Cell Number",
-                                               "Enter Cell Number (e.g., C60_01, 2501-04):",
-                                               text=cell_number_var.text())
-        if ok and cell_number and re.match(r'^(C60_\d+|\d+-\d+)$', cell_number.strip()):
-            cell_number_var.setText(cell_number.strip())
+                                               "Enter Cell Number (e.g., C60_01, 2501-04):")
+        if ok and cell_number and re.match(r'^(C60_\d+|\d+-\d+)$', cell_number):
+            cell_number_var.setText(cell_number)
         else:
             QMessageBox.warning(self, "Invalid Input",
                                 "Cell number must be in format C60_XX or XXXX-XX (e.g., C60_01, 2501-04).")
@@ -885,5 +914,5 @@ class MainWindow(QMainWindow):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = MainWindow()
-    window.show()
+    window.showMaximized()  # Start maximized
     sys.exit(app.exec())
