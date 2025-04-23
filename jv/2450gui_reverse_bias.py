@@ -53,16 +53,24 @@ def export_to_csv(combined_data, cell_number, pixel_number):
     if file_path:
         combined_data.to_csv(file_path, index=False)
         print(f"Data successfully exported to {file_path}")
-        messagebox.showinfo("Export Successful", f"Data successfully exported to {file_path}")
+        # Removed messagebox.showinfo to avoid popup after successful save
     return file_path
 
 # Function to configure the plot
-def configure_plot():
+def configure_plot(pixel_number):
     ax.set_xlabel('Voltage (V)', fontsize=14)
     ax.set_ylabel('Current (mA)', fontsize=14)
-    ax.set_title('J-V Characterization', fontsize=14)
+    ax.set_title(f'J-V Characterization of Pixel {pixel_number}', fontsize=14)
     ax.tick_params(axis='both', which='major', labelsize=14)
 
+# Function to clear the plot
+def clear_plot(pixel_number):
+    voltages_plot.clear()
+    currents_plot.clear()
+    ax.clear()
+    configure_plot(pixel_number)
+    canvas.draw()
+    
 # Function to clean up and close the application
 def on_close():
     global is_closing
@@ -83,7 +91,7 @@ def on_close():
 # Function to perform the measurement and update the plot
 def perform_measurement(pixel_number):
     global combined_data
-    clear_plot()
+    clear_plot(pixel_number)  # Pass pixel_number to clear_plot
     print("Starting measurement...")
     start_voltage = float(start_voltage_entry.get())
     stop_voltage = float(stop_voltage_entry.get())
@@ -249,14 +257,6 @@ def toggle_measurement():
         stop_measurement()
         measure_button.config(text="Start Measurement", bg="#CCDDAA", command=toggle_measurement)
 
-# Function to clear the plot
-def clear_plot():
-    voltages_plot.clear()
-    currents_plot.clear()
-    ax.clear()
-    configure_plot()
-    canvas.draw()
-
 # Function to show cell number popup
 def show_cell_number_popup():
     popup = tk.Toplevel(root)
@@ -332,7 +332,7 @@ measure_button.grid(column=0, row=4, columnspan=2, padx=5, pady=5)
 fig, ax = plt.subplots()
 
 # Initial configuration of the plot
-configure_plot()
+configure_plot(1)  # Use pixel_number=1 as default
 
 # Create a canvas for the plot
 canvas = FigureCanvasTkAgg(fig, master=root)
