@@ -27,3 +27,5 @@ Starting to adjust phase timing and degree checks
 adjusting the function to produce a csv of 10 runs of data_points = 3-13 for consideration for actual use
 
 missed statement here - have a thorough description in the commit documentation - functionally complete and GUI tweaked 
+
+pyside version is up to date with everything from before - also added a pop up for R^2<0.90 for students to make sure lamp is on or potentially dead pixel.
