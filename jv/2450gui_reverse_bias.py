@@ -1,6 +1,5 @@
 import tkinter as tk
-from tkinter import messagebox
-from tkinter import filedialog
+from tkinter import messagebox, filedialog, simpledialog
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
 from decimal import Decimal, ROUND_HALF_UP
@@ -11,6 +10,8 @@ import pandas as pd
 import time
 import sys
 import pyvisa as visa
+import datetime
+import re
 
 # Initialize the VISA resource manager
 rm = visa.ResourceManager()
@@ -31,23 +32,29 @@ for resource in rm.list_resources():
     if resource.startswith("USB0::0x05E6::0x2450"):
         device_address = resource
         print(f"Keithley 2450 found at {device_address}")
-        # Open a session to the device
         device = rm.open_resource(device_address)
         device.timeout = 30000  # Set timeout to 30 seconds
         break
 
-# Exit the application if the device is not found and notify user
+# Exit the application if the device is not found
 if not device_address:
     messagebox.showerror("Error", "Keithley 2450 device not found. Please connect and power on the device and try again.")
     sys.exit(1)
 
-# Function to export the data to a CSV file
-def export_to_csv(voltages_plot, all_measurements):
-    file_path = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV files", "*.csv")])
-    if not file_path:
-        return
-    combined_data.to_csv(file_path, index=False)
-    messagebox.showinfo("Export Successful", f"Data successfully exported to {file_path}")
+# Function to export the data to a CSV file with a predefined filename
+def export_to_csv(combined_data, cell_number, pixel_number):
+    date = datetime.datetime.now().strftime("%Y_%m_%d")
+    file_name = f"{date}_JV_cell{cell_number}_pixel{pixel_number}.csv"
+    file_path = filedialog.asksaveasfilename(
+        initialfile=file_name,
+        defaultextension=".csv",
+        filetypes=[("CSV files", "*.csv")]
+    )
+    if file_path:
+        combined_data.to_csv(file_path, index=False)
+        print(f"Data successfully exported to {file_path}")
+        messagebox.showinfo("Export Successful", f"Data successfully exported to {file_path}")
+    return file_path
 
 # Function to configure the plot
 def configure_plot():
@@ -70,16 +77,14 @@ def on_close():
             print(f"Error closing device: {e}")
     if 'rm' in globals():
         rm.close()
-    root.destroy()  # Ensure the GUI is properly closed
-    sys.exit()  # Explicitly exit the application
+    root.destroy()
+    sys.exit()
 
 # Function to perform the measurement and update the plot
-def perform_measurement():
+def perform_measurement(pixel_number):
     global combined_data
     clear_plot()
     print("Starting measurement...")
-    # Start a timer for performance debugging
-    #t = time.time() 
     start_voltage = float(start_voltage_entry.get())
     stop_voltage = float(stop_voltage_entry.get())
     step_voltage = float(step_voltage_entry.get())
@@ -88,43 +93,37 @@ def perform_measurement():
     total_range = stop_voltage - start_voltage
     steps_needed = total_range / step_voltage
     if not steps_needed.is_integer():
-        # Adjust stop_voltage slightly to ensure it's inclusive
         stop_voltage += (step_voltage - (total_range % step_voltage))
 
     forward_voltages = np.arange(start_voltage, stop_voltage + (step_voltage / 2), step_voltage)
     backward_voltages = np.arange(stop_voltage, start_voltage - (step_voltage / 2), -step_voltage)
 
-    # Round the voltages to mitigate floating-point issues
     forward_voltages = np.round(forward_voltages, decimals=2)
     backward_voltages = np.round(backward_voltages, decimals=2)
 
-    # Sending SCPI commands to the device
-    device.write("*RST") # Reset the device
-    device.write("SENS:FUNC \"CURR\"") # Set the measurement function to current
-    device.write("SENS:CURR:RANG 10") # Set the current range to 10 mA
-    device.write("SENS:CURR:RSEN ON") # Enable 4-wire sense
-    device.write("SOUR:FUNC VOLT") # Set the source function to voltage
-    device.write("SOUR:VOLT:RANG 2") # Set the voltage range to 2 V
-    device.write("SOUR:VOLT:ILIM 1") # Set the current limit to 1 A
-    device.write("OUTP ON") # Enable the output
+    device.write("*RST")
+    device.write("SENS:FUNC \"CURR\"")
+    device.write("SENS:CURR:RANG 10")
+    device.write("SENS:CURR:RSEN ON")
+    device.write("SOUR:FUNC VOLT")
+    device.write("SOUR:VOLT:RANG 2")
+    device.write("SOUR:VOLT:ILIM 1")
+    device.write("OUTP ON")
 
-    # Update the plot
-    fig.tight_layout() 
-    canvas.draw() 
-    root.update() 
+    fig.tight_layout()
+    canvas.draw()
+    root.update()
 
-    # Initialize lists to store measurements
     forward_voltages_plot = []
     forward_currents_plot = []
     backward_voltages_plot = []
     backward_currents_plot = []
 
-    # Create line object for forward sweep
     forward_line, = ax.plot([], [], '.', label="Forward Scan", color='#0077BB')
-    ax.legend(fontsize=14) 
+    ax.legend(fontsize=14)
 
-    device.write(f"SOUR:VOLT {start_voltage}") # Set the initial voltage
-    time.sleep(2) # Stabilization time
+    device.write(f"SOUR:VOLT {start_voltage}")
+    time.sleep(2)
 
     # Forward sweep
     for i, voltage in enumerate(forward_voltages):
@@ -135,18 +134,17 @@ def perform_measurement():
             return
         try:
             device.write(f"SOUR:VOLT {voltage}")
-            time.sleep(0.1)  # Stabilization time
+            time.sleep(0.1)
             current_reading = device.query("MEAS:CURR?")
             current_reading = Decimal(current_reading)
             forward_voltages_plot.append(voltage)
-            forward_current = (current_reading * Decimal(10**3)).quantize(Decimal('0.00001'), rounding=ROUND_HALF_UP)  # Convert to mA
+            forward_current = (current_reading * Decimal(10**3)).quantize(Decimal('0.00001'), rounding=ROUND_HALF_UP)
             forward_current = float(forward_current)
             forward_currents_plot.append(forward_current)
         except Exception as e:
             print(f"Error during measurement: {e}")
             return
 
-        # Update plot during forward sweep every 10 iterations
         if i % 10 == 0 or i == len(forward_voltages) - 1:
             with lock:
                 forward_line.set_data(forward_voltages_plot, forward_currents_plot)
@@ -156,11 +154,10 @@ def perform_measurement():
                 canvas.draw()
                 root.update()
 
-    time.sleep(2)  # Short delay between sweeps
+    time.sleep(2)
 
-    # Create line object for backward sweep
     backward_line, = ax.plot([], [], '.', label="Reverse Scan", color='#EE7733')
-    ax.legend(fontsize=14) 
+    ax.legend(fontsize=14)
 
     # Backward sweep
     for i, voltage in enumerate(backward_voltages):
@@ -171,7 +168,7 @@ def perform_measurement():
             return
         try:
             device.write(f"SOUR:VOLT {voltage}")
-            time.sleep(0.1)  # Stabilization time
+            time.sleep(0.1)
             current_reading = device.query("MEAS:CURR?")
             current_reading = Decimal(current_reading)
             backward_voltages_plot.append(voltage)
@@ -182,7 +179,6 @@ def perform_measurement():
             print(f"Error during measurement: {e}")
             return
 
-        # Update plot during backward sweep every 10 iterations
         if i % 10 == 0 or i == len(backward_voltages) - 1:
             with lock:
                 backward_line.set_data(backward_voltages_plot, backward_currents_plot)
@@ -192,50 +188,62 @@ def perform_measurement():
                 canvas.draw()
                 root.update()
 
-    # Combine forward and reverse Scan data
+    # Combine forward and reverse scan data
     combined_data = pd.DataFrame({
         "Voltage (V)": np.concatenate((forward_voltages_plot, backward_voltages_plot)),
         "Forward Scan (mA)": np.concatenate((forward_currents_plot, [None] * len(backward_currents_plot))),
         "Reverse Scan (mA)": np.concatenate(([None] * len(forward_currents_plot), backward_currents_plot))
     })
 
-    # Group by voltage and aggregate forward and reverse Scan currents
     combined_data = combined_data.groupby("Voltage (V)").agg({
         "Forward Scan (mA)": "first",
         "Reverse Scan (mA)": "first"
     }).reset_index()
 
     try:
-        device.write("OUTP OFF") # Disable the output
+        device.write("OUTP OFF")
     except Exception as e:
         print(f"Error disabling output: {e}")
 
-    # Reset the Start/Stop button text and functionality
-    measure_button.config(text="Start Measurement", bg="#CCDDAA", command=toggle_measurement) 
+    # Reset the Start/Stop button
+    measure_button.config(text="Start Measurement", bg="#CCDDAA", command=toggle_measurement)
 
     if stop_thread.is_set():
         print("Measurement stopped.")
     else:
         print("Measurement complete.")
-    
-    # Stop and print elapsed time for performance debugging
-    #print(f"Time taken: {time.time() - t:.2f} seconds") 
+        # Auto-prompt to save data
+        cell_number = cell_number_var.get().strip()
+        if not cell_number or not re.match(r'^(C60_\d+|\d+-\d+)$', cell_number):
+            messagebox.showerror("Input Error", "Invalid cell number format.")
+        else:
+            export_to_csv(combined_data, cell_number, pixel_number)
 
 # Function to start the measurement in a separate thread
-def start_measurement_thread():
+def start_measurement_thread(pixel_number):
     stop_thread.clear()
     measure_button.config(bg="#CCDDAA")
-    measurement_thread = threading.Thread(target=perform_measurement)
+    measurement_thread = threading.Thread(target=perform_measurement, args=(pixel_number,))
     measurement_thread.start()
 
 # Function to stop the measurement
 def stop_measurement():
     stop_thread.set()
 
-# Function to toggle measurement state
+# Function to toggle measurement state with pixel number prompt
 def toggle_measurement():
     if measure_button.config('text')[-1] == 'Start Measurement':
-        start_measurement_thread()
+        # Prompt for pixel number
+        pixel_number = simpledialog.askinteger(
+            "Pixel Selection",
+            "Enter pixel number (1-6):",
+            minvalue=1,
+            maxvalue=6,
+            parent=root
+        )
+        if pixel_number is None:  # User cancelled
+            return
+        start_measurement_thread(pixel_number)
         measure_button.config(text="Stop Measurement", bg="#FFCCCC", command=stop_measurement)
     else:
         stop_measurement()
@@ -245,51 +253,89 @@ def toggle_measurement():
 def clear_plot():
     voltages_plot.clear()
     currents_plot.clear()
-    ax.clear()  # Clear the current axes
-    configure_plot()  # Reconfigure the plot
-    canvas.draw()  # Draw the canvas
+    ax.clear()
+    configure_plot()
+    canvas.draw()
+
+# Function to show cell number popup
+def show_cell_number_popup():
+    popup = tk.Toplevel(root)
+    popup.title("Enter Cell Number")
+    popup.geometry("340x150")
+    # Center popup over main window
+    root_x = root.winfo_rootx()
+    root_y = root.winfo_rooty()
+    root_width = root.winfo_width()
+    root_height = root.winfo_height()
+    popup_x = root_x + (root_width - 340) // 2
+    popup_y = root_y + (root_height - 150) // 2
+    popup.geometry(f"340x150+{popup_x}+{popup_y}")
+    popup.transient(root)
+    popup.grab_set()
+
+    tk.Label(popup, text="Enter Cell Number (e.g., C60_01, 2501-04):", font=("Helvetica", 12)).pack(pady=10)
+    entry = tk.Entry(popup, font=("Helvetica", 12))
+    entry.pack(pady=10)
+    entry.focus_set()
+
+    def on_ok():
+        cell_number = entry.get().strip()
+        if cell_number and re.match(r'^(C60_\d+|\d+-\d+)$', cell_number):
+            cell_number_var.set(cell_number)
+            popup.destroy()
+        else:
+            messagebox.showwarning("Invalid Input", "Cell number must be in format C60_XX or XXXX-XX (e.g., C60_01, 2501-04).", parent=popup)
+
+    def prevent_close():
+        messagebox.showwarning("Invalid Input", "Cell number must be in format C60_XX or XXXX-XX (e.g., C60_01, 2501-04).", parent=popup)
+
+    tk.Button(popup, text="OK", font=("Helvetica", 12), command=on_ok).pack(pady=10)
+    popup.bind('<Return>', lambda event: on_ok())
+    popup.bind('<Escape>', lambda event: prevent_close())
+    popup.protocol("WM_DELETE_WINDOW", prevent_close)
 
 # Create the main GUI window
 root = tk.Tk()
 root.title("J-V Characterization")
 root.wm_title("PHYS 2150 J-V Characterization")
 
-start_voltage_entry = tk.StringVar(value="-0.2") # Default start voltage
-stop_voltage_entry = tk.StringVar(value="1.1") # Default stop voltage
-step_voltage_entry = tk.StringVar(value=".01") # Default step voltage
+start_voltage_entry = tk.StringVar(value="-0.2")
+stop_voltage_entry = tk.StringVar(value="1.1")
+step_voltage_entry = tk.StringVar(value=".01")
+cell_number_var = tk.StringVar(value="")  # Initialize cell number variable
 
-# Create and place voltage range input fields
-tk.Label(root, text="Start Voltage:", font=("Helvetica", 14)).grid(row=0, column=0)
-tk.Entry(root, textvariable=start_voltage_entry, font=("Helvetica", 14)).grid(row=0, column=1)
+# Create input frame for voltage inputs
+input_frame = tk.Frame(root)
+input_frame.grid(row=0, column=0, padx=10, pady=10)
 
-tk.Label(root, text="Stop Voltage:", font=("Helvetica", 14)).grid(row=1, column=0)
-tk.Entry(root, textvariable=stop_voltage_entry, font=("Helvetica", 14)).grid(row=1, column=1)
+tk.Label(input_frame, text="Start Voltage:", font=("Helvetica", 14)).grid(row=0, column=0, sticky='w')
+tk.Entry(input_frame, textvariable=start_voltage_entry, font=("Helvetica", 14)).grid(row=0, column=1, sticky='w')
 
-tk.Label(root, text="Step Voltage:", font=("Helvetica", 14)).grid(row=2, column=0)
-tk.Entry(root, textvariable=step_voltage_entry, font=("Helvetica", 14)).grid(row=2, column=1)
+tk.Label(input_frame, text="Stop Voltage:", font=("Helvetica", 14)).grid(row=1, column=0, sticky='w')
+tk.Entry(input_frame, textvariable=stop_voltage_entry, font=("Helvetica", 14)).grid(row=1, column=1, sticky='w')
 
-# Button widget to clear the plot
-clear_button = tk.Button(root, text="Clear Plot", font=("Helvetica", 14), command=clear_plot)
-clear_button.grid(row=5, column=0, columnspan=1, padx=5, pady=5)
+tk.Label(input_frame, text="Step Voltage:", font=("Helvetica", 14)).grid(row=2, column=0, sticky='w')
+tk.Entry(input_frame, textvariable=step_voltage_entry, font=("Helvetica", 14)).grid(row=2, column=1, sticky='w')
 
-# Button widget to export the data to a CSV file
-export_button = tk.Button(root, text="Export to CSV", font=("Helvetica", 14), command=lambda: export_to_csv(voltages_plot, all_measurements))
-export_button.grid(row=5, column=1, columnspan=1, padx=5, pady=5)
+# Create input frame for cell number display
+cell_frame = tk.Frame(root)
+cell_frame.grid(row=0, column=1, padx=10, pady=10)
+
+tk.Label(cell_frame, text="Cell Number:", font=("Helvetica", 14)).grid(row=0, column=0, sticky='w')
+tk.Entry(cell_frame, textvariable=cell_number_var, font=("Helvetica", 14), state='readonly').grid(row=0, column=1, sticky='w')
 
 # Button widget to start/stop the measurement
 measure_button = tk.Button(root, text="Start Measurement", font=("Helvetica", 14), bg="#CCDDAA", command=toggle_measurement)
 measure_button.grid(column=0, row=4, columnspan=2, padx=5, pady=5)
 
 # Create a figure for the plot
-#fig = Figure(figsize=(5, 4), dpi=100)
-#ax = fig.add_subplot(111)
 fig, ax = plt.subplots()
 
 # Initial configuration of the plot
-configure_plot()  
+configure_plot()
 
 # Create a canvas for the plot
-canvas = FigureCanvasTkAgg(fig, master=root) 
+canvas = FigureCanvasTkAgg(fig, master=root)
 canvas.draw()
 canvas.get_tk_widget().grid(row=6, column=0, columnspan=2, sticky="nsew")
 
@@ -304,6 +350,9 @@ root.grid_rowconfigure(6, weight=1)
 root.grid_rowconfigure(7, weight=0)
 root.grid_columnconfigure(0, weight=1)
 root.grid_columnconfigure(1, weight=1)
+
+# Trigger cell number popup after 1 second
+root.after(1000, show_cell_number_popup)
 
 # Bind the on_close function to the window's close event
 root.protocol("WM_DELETE_WINDOW", on_close)
