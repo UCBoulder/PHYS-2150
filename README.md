@@ -7,3 +7,5 @@ Software Requirements:
 [Newport MonoUtility](https://www.newport.com/f/cs130b-configured-monochromators)
 
 [USB to Serial Adaptor Driver](http://bit.ly/elecable3)
+
+[QT](https://www.qt.io/download-qt-installer)
