@@ -7,12 +7,29 @@ Model-View-Controller components and handles application lifecycle.
 
 import sys
 import logging
+import os
 from PySide6.QtWidgets import QApplication, QMessageBox
 from PySide6.QtCore import QThread, QObject, Signal, QMetaObject, Qt
 
-from .models.eqe_experiment import EQEExperimentModel, EQEExperimentError
-from .views.main_view import MainApplicationView, create_application
-from .utils.data_handling import MeasurementDataLogger
+# When running the module directly (python main.py) the package imports
+# using relative paths fail because there's no parent package. Add the
+# repository root to sys.path so absolute imports work in both modes.
+if __package__ is None or __package__ == "":
+    # When running as a script, add the parent directory of this package
+    # (the repository root) to sys.path so the package `eqe_mvc` can be
+    # imported as a top-level package. This allows modules inside the
+    # package to use their existing relative imports.
+    _this_file = os.path.abspath(__file__)
+    _package_dir = os.path.dirname(_this_file)  # .../eqe_mvc
+    _repo_root = os.path.dirname(_package_dir)
+    if _repo_root not in sys.path:
+        sys.path.insert(0, _repo_root)
+
+# Import using the package-qualified names so internal relative imports
+# (like those in models.eqe_experiment) work correctly.
+from eqe_mvc.models.eqe_experiment import EQEExperimentModel, EQEExperimentError
+from eqe_mvc.views.main_view import MainApplicationView, create_application
+from eqe_mvc.utils.data_handling import MeasurementDataLogger
 
 
 class DeviceInitializationWorker(QObject):
@@ -40,31 +57,78 @@ class DeviceInitializationWorker(QObject):
             self.progress_update.emit("Initializing devices...")
             self.logger.info("Starting device initialization in worker thread")
             
-            # Temporarily replace the model's logger with a thread-safe one
+            # Temporarily replace the model's logger and callbacks with
+            # thread-safe adapters that emit Qt signals instead of touching
+            # GUI objects directly from this worker thread.
             original_logger = self.experiment_model.logger
+            original_device_cb = self.experiment_model.device_status_callback
+            original_progress_cb = self.experiment_model.measurement_progress_callback
+            original_complete_cb = self.experiment_model.experiment_complete_callback
+
             thread_safe_logger = logging.getLogger("device_init_worker")
-            
-            # Create a simple logging adapter that doesn't use Qt components
+
             class ThreadSafeLoggerAdapter:
                 def __init__(self, logger):
                     self._logger = logger
-                
+
                 def log(self, message: str, level: str = "INFO"):
                     if level.upper() == "ERROR":
                         self._logger.error(message)
+                        self._emit(message, "ERROR")
                     elif level.upper() == "WARNING":
                         self._logger.warning(message)
+                        self._emit(message, "WARNING")
                     else:
                         self._logger.info(message)
-            
-            # Replace the logger temporarily
-            self.experiment_model.logger = ThreadSafeLoggerAdapter(thread_safe_logger)
-            
+                        self._emit(message, "INFO")
+
+                def _emit(self, message: str, level: str = "INFO"):
+                    # Use the worker's progress signal to notify the UI
+                    try:
+                        self_owner = getattr(self, '__owner', None)
+                        if self_owner is not None:
+                            self_owner.progress_update.emit(f"[{level}] {message}")
+                    except Exception:
+                        pass
+
+            # Attach owner so the adapter can access the worker signals
+            logger_adapter = ThreadSafeLoggerAdapter(thread_safe_logger)
+            setattr(logger_adapter, '__owner', self)
+
+            # Replace callbacks with wrappers that emit signals
+            def device_status_wrapper(device_name, is_connected, message=""):
+                try:
+                    self.progress_update.emit(f"Device {device_name}: {message} ({'OK' if is_connected else 'FAIL'})")
+                except Exception:
+                    pass
+
+            def measurement_progress_wrapper(measurement_type, progress_data):
+                try:
+                    self.progress_update.emit(f"{measurement_type} progress: {progress_data}")
+                except Exception:
+                    pass
+
+            def experiment_complete_wrapper(success, message=""):
+                try:
+                    # Emit initialization_complete for final status
+                    self.initialization_complete.emit(success, message)
+                except Exception:
+                    pass
+
+            # Apply temporary replacements
+            self.experiment_model.logger = logger_adapter
+            self.experiment_model.device_status_callback = device_status_wrapper
+            self.experiment_model.measurement_progress_callback = measurement_progress_wrapper
+            self.experiment_model.experiment_complete_callback = experiment_complete_wrapper
+
             try:
                 success = self.experiment_model.initialize_devices()
             finally:
-                # Restore the original logger
+                # Restore the original logger and callbacks
                 self.experiment_model.logger = original_logger
+                self.experiment_model.device_status_callback = original_device_cb
+                self.experiment_model.measurement_progress_callback = original_progress_cb
+                self.experiment_model.experiment_complete_callback = original_complete_cb
             
             if success:
                 self.logger.info("Device initialization successful")

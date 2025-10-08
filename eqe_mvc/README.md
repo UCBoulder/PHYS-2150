@@ -57,6 +57,12 @@ or as a module:
 python -m eqe_mvc.main
 ```
 
+Note: Recent fixes in `main.py` make the entrypoint resilient when running
+`python main.py` directly (it adjusts sys.path to allow package-qualified
+imports). The preferred way when developing or installing is to run the
+module with `python -m eqe_mvc.main`, but running `python main.py` will
+also work for quick testing.
+
 ### Quick Start
 1. Launch the application
 2. Configure measurement parameters in the control panel
