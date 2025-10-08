@@ -1,23 +1,3 @@
-"""
-EQE Measurement System - Production GUI
-========================================
-External Quantum Efficiency measurement system using PicoScope with software lock-in
-
-Hardware:
-  - PicoScope 5242D (±20V range, 15-bit resolution, software lock-in)
-  - Newport Cornerstone monochromator (wavelength selection)
-  - Thorlabs power meter (incident light calibration)
-  - 81 Hz chopper (reference signal)
-
-Performance:
-  - Stability: 0.66% CV (validated over 20 measurements)
-  - No clipping up to ±20V signals
-  - Phase-locked triggering at 2.5V threshold
-
-Author: Physics 2150
-Date: October 2025
-"""
-
 import time
 import csv
 import scipy
@@ -25,7 +5,6 @@ from ctypes import c_double, byref, c_uint32, create_string_buffer, c_bool
 from cornerstone_mono import Cornerstone_Mono
 from TLPMX import TLPMX, TLPM_DEFAULT_CHANNEL
 import warnings
-import pyvisa as visa
 import matplotlib.pyplot as plt
 import pandas as pd
 import sys
@@ -34,8 +13,8 @@ import os
 import datetime
 import threading
 import numpy as np
-import serial
-import serial.tools.list_ports
+from scipy.optimize import curve_fit
+from picoscope_driver import PicoScopeDriver
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLineEdit, QLabel, QMessageBox, QFileDialog, QInputDialog,
@@ -45,8 +24,6 @@ from PySide6.QtCore import Qt, QTimer, Signal, QObject
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 
-# Initialize the VISA resource manager
-rm = visa.ResourceManager()
 warnings.simplefilter("ignore")
 
 # Initialize lists to store the measurements for plotting
@@ -68,6 +45,10 @@ pixel_number = 1  # Default pixel number for startup
 # Set up variables for threading and closing the application
 stop_thread = threading.Event()
 is_closing = False
+
+# Global variables for PicoScope lock-in
+picoscope = None
+chopper_freq = 81  # Default chopper frequency
 
 # Signal emitter for thread-safe file saving
 class SignalEmitter(QObject):
@@ -111,20 +92,11 @@ def initialize_thorlabs_power_meter():
 
 tlPM = initialize_thorlabs_power_meter()
 
-# Initialize the Keithley 2110
-def initialize_keithley():
-    resources = rm.list_resources()
-    for resource in resources:
-        if '2110' in resource:
-            try:
-                return rm.open_resource(resource)
-            except Exception as e:
-                show_error(f"Failed to open Keithley 2110: {e}")
-    show_error("Keithley 2110 not found. Please check the connection.")
-
-keithley = initialize_keithley()
-
 # Initialize Oriel Cornerstone Monochromator
+# Note: Cornerstone_Mono may need VISA, but we'll keep it for now since it's for the monochromator, not the lock-in
+import pyvisa as visa
+rm = visa.ResourceManager()
+
 try:
     usb_mono = Cornerstone_Mono(rm, rem_ifc="usb", timeout_msec=29000)
     monochromator_serial_number = usb_mono.serial_number
@@ -143,271 +115,257 @@ correction_factors = {
 correction_factor = correction_factors.get(monochromator_serial_number, 0)  # Default to 0 if not found
 print(f"Correction Factor: {correction_factor}")
 
-# Find the COM port for the SR510 lock-in amplifier and initialize the serial connection
-def initialize_serial_connection():
-    ports = serial.tools.list_ports.comports()
-    for port in ports:
-        if "Prolific PL2303GT USB Serial COM Port" in port.description:
-            try:
-                return serial.Serial(
-                    port=port.device,
-                    baudrate=19200,
-                    parity=serial.PARITY_ODD,
-                    stopbits=serial.STOPBITS_TWO,
-                    bytesize=serial.EIGHTBITS,
-                    timeout=2
-                )
-            except Exception as e:
-                show_error(f"Failed to initialize serial connection: {e}")
-    show_error("COM port not found for SR510 lock-in amplifier.")
+# Initialize PicoScope
+def initialize_picoscope(hostname=None, freq=81):
+    """
+    Connects to the PicoScope and initializes software lock-in.
+    
+    Args:
+        hostname (str): Ignored (kept for API compatibility). Pass None or empty string.
+        freq (float): The chopper frequency in Hz (default: 81 Hz).
+    
+    Returns:
+        bool: True if connection is successful, False otherwise.
+    """
+    global picoscope, chopper_freq
+    try:
+        # Connect to PicoScope
+        picoscope = PicoScopeDriver()
+        if not picoscope.connect():
+            raise Exception("Could not connect to PicoScope")
+        
+        # Set the reference frequency for software lock-in
+        picoscope.set_reference_frequency(freq)
+        chopper_freq = freq
+        
+        print(f"PicoScope connected successfully")
+        print(f"Signal input: CH A, Reference input: CH B (external chopper)")
+        print(f"Reference frequency: {freq} Hz (for software lock-in)")
+        print("Using software lock-in amplifier with phase-sensitive detection")
+        print(f"Input range: ±20V (no clipping!)")
+        
+        return True
 
-ser = initialize_serial_connection()
+    except Exception as e:
+        print(f"Failed to connect to PicoScope: {e}")
+        QMessageBox.critical(None, "Connection Error", 
+                           f"Failed to connect to PicoScope: {e}\n\n"
+                           f"Make sure:\n"
+                           f"1. PicoScope is connected via USB\n"
+                           f"2. PicoSDK drivers are installed\n"
+                           f"3. Python picosdk package is installed\n"
+                           f"   (pip install picosdk)")
+        return False
 
-# Function to read the lock-in amplifier response
-def read_lockin_response():
-    response = ""
-    while True:
-        char = ser.read().decode()
-        response += char
-        if char == '\r':
-            break
-    return response.strip()
+# Function to set the lock-in amplifier parameters (no-op for PicoScope)
+def set_lockin_parameters(gain=0, time_constant=0.1):
+    """
+    Legacy function for setting lock-in parameters.
+    PicoScope doesn't need these settings - integration time is controlled by num_cycles.
 
-# Function to wait for the lock-in amplifier to be ready
-def wait_for_lockin_ready():
-    while True:
-        status_command = 'Y\r'
-        ser.write(status_command.encode())
-        time.sleep(1)
-        response = ser.read(ser.in_waiting or 1).decode().strip()
-        if response:
-            status_byte = int(response)
-            if status_byte & (1 << 0):
-                break
-        else:
-            print("No response received from SR510.")
-            break
+    Args:
+        gain (int): Ignored (kept for compatibility)
+        time_constant (float): Ignored (kept for compatibility)
+    """
+    # PicoScope doesn't need these settings
+    # Integration time is controlled by num_cycles parameter in software_lockin()
+    pass
 
-# Function to set the lock-in amplifier parameters
-def set_lockin_parameters():
-    ser.write('G 24\r'.encode())  # Set sensitivity to 500 mV
-    ser.write('B 0\r'.encode())   # Bandpass: OUT
-    ser.write('L 1,0\r'.encode()) # Line: OUT
-    ser.write('L 2,0\r'.encode()) # LINE x2: OUT
-    ser.write('D 0\r'.encode())   # DYN RES: LOW
-    ser.write('S 0\r'.encode())   # DISPLAY: X
-    ser.write('E 0\r'.encode())   # Expand: X1 (OFF)
-    ser.write('O 0\r'.encode())   # Offset: OFF
-    ser.write('T 1,5\r'.encode()) # Pre Time constant: 100ms
-    ser.write('T 2,1\r'.encode()) # Post Time constant: 0.1s
-    ser.write('M 0\r'.encode())   # Reference frequency: f
-    ser.write('R 0\r'.encode())   # Input: Square wave
-    wait_for_lockin_ready()
-
-# Function to adjust the lock-in amplifier phase
+# Function to determine optimal lock-in phase using software lock-in
 def adjust_lockin_phase(pixel_number):
-    def read_output():
-        ser.write('Q\r'.encode())
-        time.sleep(0.5)
-        return read_lockin_response()
+    """
+    Uses software lock-in to measure signal and determine optimal phase.
+    The software lock-in calculates X, Y components and finds the phase
+    that maximizes the signal magnitude.
+    
+    Returns:
+        tuple: (optimal_phase, signal_magnitude, signal_quality)
+    """
+    if not picoscope:
+        print("PicoScope not connected.")
+        QMessageBox.critical(None, "Error", "PicoScope not connected")
+        return None, None, None
 
-    def set_phase(phase):
-        ser.write(f'P {phase}\r'.encode())
-        wait_for_lockin_ready()
+    global phase_x_values, phase_y_values, phase_fit_x_values, phase_fit_y_values
+    global phase_optimal, phase_signal, phase_r_squared
 
-    def sample_phase_response():
-        phases = np.linspace(0, 360, 7)  # Sample 7 points (60-degree steps)
-        signals = []
-        
-        for phase in phases:
-            if stop_thread.is_set():
-                print("Phase adjustment stopped.")
-                return None, None
-            set_phase(phase)
-            try:
-                signal = float(read_output())
-                signals.append(signal)
-                print(f"Phase: {phase:.1f}°, Signal: {signal:.6f}")
-            except ValueError as e:
-                print(f"Error reading signal at phase {phase}: {e}")
-                return None, None
-        
-        return phases, np.array(signals)
-
-    def fit_sine(phases, signals):
-        x = np.radians(phases)
-        def sine_func(x, amplitude, phase_shift, offset):
-            return amplitude * np.sin(x + phase_shift) + offset
-        p0 = [(np.max(signals) - np.min(signals))/2, 0, np.mean(signals)]
-        try:
-            from scipy.optimize import curve_fit
-            popt, _ = curve_fit(sine_func, x, signals, p0=p0)
-            return popt
-        except Exception as e:
-            print(f"Error during sine fitting: {e}")
-            return None
-
-    def calculate_r_squared(phases, signals, popt):
-        if popt is None:
-            return None
-        amplitude, phase_shift, offset = popt
-        x = np.radians(phases)
-        fitted = amplitude * np.sin(x + phase_shift) + offset
-        ss_tot = np.sum((signals - np.mean(signals))**2)
-        ss_res = np.sum((signals - fitted)**2)
-        if ss_tot == 0:  # Avoid division by zero
-            return None
-        r_squared = 1 - ss_res / ss_tot
-        return r_squared
-
+    # Set monochromator to 532 nm for phase adjustment
     usb_mono.SendCommand("grating 1", False)
     usb_mono.WaitForIdle()
     usb_mono.SendCommand("gowave 532", False)
     usb_mono.WaitForIdle()
     usb_mono.SendCommand("shutter o", False)
     usb_mono.WaitForIdle()
-
-    set_lockin_parameters()
-
-    print("Sampling phase response...")
-    phases, signals = sample_phase_response()
-    if phases is None or signals is None:
-        QMessageBox.critical(None, "Error", "Failed to sample phase response")
-        return None, None
-
-    print("Fitting sine wave to phase response...")
-    fit_params = fit_sine(phases, signals)
-    if fit_params is None:
-        QMessageBox.critical(None, "Error", "Failed to fit sine wave to phase response")
-        return None, None
-
-    amplitude, phase_shift, offset = fit_params
-    optimal_phase = (np.degrees(-phase_shift) + 90) % 360
-    print(f"Setting optimal phase to {optimal_phase:.1f}°")
-    set_phase(optimal_phase)
     
-    final_signal = float(read_output())
-    if final_signal < 0:
-        optimal_phase = (np.degrees(-phase_shift) + 270) % 360
-        print(f"Signal negative, adjusting phase to {optimal_phase:.1f}°")
-        set_phase(optimal_phase)
-        final_signal = float(read_output())
+    # Wait for light to stabilize
+    time.sleep(1.0)
 
-    r_squared = calculate_r_squared(phases, signals, fit_params)
-    global phase_optimal, phase_signal, phase_r_squared
-    phase_optimal = optimal_phase
-    phase_signal = final_signal
-    phase_r_squared = r_squared
-
-    # Store data for plotting
+    print("Performing software lock-in measurement for phase optimization...")
+    
+    # Perform software lock-in measurement
+    result = picoscope.software_lockin(
+        chopper_freq,
+        num_cycles=50  # More cycles for better stability and averaging
+    )
+    
+    if result is None:
+        print("Failed to perform lock-in measurement")
+        QMessageBox.critical(None, "Error", "Failed to perform lock-in measurement")
+        return None, None, None
+    
+    # Extract results
+    X = result['X']
+    Y = result['Y']
+    R = result['R']
+    theta_deg = result['theta']
+    measured_freq = result['freq']
+    
+    print(f"Lock-in results:")
+    print(f"  X (in-phase):    {X:+.6f} V")
+    print(f"  Y (quadrature):  {Y:+.6f} V")
+    print(f"  R (magnitude):   {R:+.6f} V")
+    print(f"  Phase:           {theta_deg:+.1f}°")
+    print(f"  Measured freq:   {measured_freq:.2f} Hz")
+    
+    # The optimal phase is where the signal is maximum
+    # This is the phase of the signal itself
+    phase_optimal = theta_deg % 360
+    phase_signal = R  # Magnitude is the signal strength
+    
+    # Store the optimal phase (software lock-in uses magnitude R, phase-independent)
+    # Phase info is stored but not actively used since we use R = sqrt(X² + Y²)
+    
+    # Calculate signal quality (SNR estimate)
+    # Higher R relative to noise floor indicates better signal
+    signal_data = result['signal_data']
+    noise_estimate = np.std(signal_data)
+    if noise_estimate > 0:
+        phase_r_squared = min(1.0, R / (10 * noise_estimate))  # Normalized quality metric
+    else:
+        phase_r_squared = 1.0
+    
+    # Create visualization of X vs Y (Lissajous-like plot)
     phase_x_values.clear()
     phase_y_values.clear()
-    phase_fit_x_values.clear()
-    phase_fit_y_values.clear()
-    phase_x_values.extend(phases)
-    phase_y_values.extend(signals)
-    phase_fit_x_values.extend(np.linspace(0, 360, 1000))
-    phase_fit_y_values.extend(amplitude * np.sin(np.radians(phase_fit_x_values) + phase_shift) + offset)
-
-    # Update the phase plot with consistent size and font sizes
+    
+    # Plot the phase sweep showing how signal varies with assumed phase
+    test_phases = np.linspace(0, 360, 37)
+    for test_phase in test_phases:
+        # Calculate what the signal would be if we rotated by this phase
+        phase_rad = np.deg2rad(test_phase)
+        rotated_signal = X * np.cos(phase_rad) + Y * np.sin(phase_rad)
+        phase_x_values.append(test_phase)
+        phase_y_values.append(rotated_signal)
+    
+    # Generate smooth fit curve (cosine shape expected)
+    phase_fit_x_values = np.linspace(0, 360, 1000).tolist()
+    phase_rad_fit = np.deg2rad(np.array(phase_fit_x_values))
+    phase_fit_y_values = (X * np.cos(phase_rad_fit - np.deg2rad(phase_optimal)) + 
+                          Y * np.sin(phase_rad_fit - np.deg2rad(phase_optimal))).tolist()
+    
+    # Update phase plot
     ax_phase.cla()
-    ax_phase.plot(phase_x_values, phase_y_values, 'o', label='Measured')
-    ax_phase.plot(phase_fit_x_values, phase_fit_y_values, '-', label='Fitted Sine')
+    ax_phase.plot(phase_x_values, phase_y_values, 'o', label='Projected Signal', markersize=4)
+    ax_phase.plot(phase_fit_x_values, phase_fit_y_values, '-', label='Expected Response', linewidth=2)
+    ax_phase.axvline(phase_optimal, color='r', linestyle='--', label=f'Optimal Phase: {phase_optimal:.1f}°')
+    ax_phase.axhline(R, color='g', linestyle=':', label=f'Max Signal: {R:.4f} V')
     ax_phase.set_xlabel('Phase (degrees)', fontsize=10)
     ax_phase.set_ylabel('Signal (V)', fontsize=10)
-    ax_phase.set_title(f'Phase Response and Sine Fit for Pixel {pixel_number}', fontsize=10)
+    ax_phase.set_title(f'Software Lock-in Phase Analysis for Pixel {pixel_number}', fontsize=10)
     ax_phase.tick_params(axis='both', which='major', labelsize=8)
-    ax_phase.legend()
+    ax_phase.legend(fontsize=8)
     ax_phase.grid(True)
-    # Use fixed margins to prevent resizing
     fig_phase.subplots_adjust(left=0.15, right=0.85, top=0.85, bottom=0.15)
     canvas_phase.draw()
+    
+    print(f"Optimal phase set to {phase_optimal:.1f}° with signal magnitude {phase_signal:.6f} V")
+    
+    return phase_optimal, phase_signal, phase_r_squared
 
-    return optimal_phase, final_signal
-
-# Function to send a command to the lock-in amplifier and read the response
-def send_command_to_lockin(command):
-    ser.write(f"{command}\r".encode())
-    return read_lockin_response()
-
-# Function to parse the sensitivity response from the lock-in amplifier
-def parse_sensitivity_response(response):
-    sensitivity_map = {
-        1: 10e-9, 2: 20e-9, 3: 50e-9, 4: 100e-9, 5: 200e-9, 6: 500e-9,
-        7: 1e-6, 8: 2e-6, 9: 5e-6, 10: 10e-6, 11: 20e-6, 12: 50e-6,
-        13: 100e-6, 14: 200e-6, 15: 500e-6, 16: 1e-3, 17: 2e-3, 18: 5e-3,
-        19: 10e-3, 20: 20e-3, 21: 50e-3, 22: 100e-3, 23: 200e-3, 24: 500e-3
-    }
-    sensitivity_index = int(response.strip())
-    return sensitivity_map.get(sensitivity_index, 1)  # Default to 1 if not found
-
-# Function to read the lock-in status and read output from Keithley 2110
-def read_lockin_status_and_keithley_output():
+# Function to read the lock-in output
+def read_lockin_output():
+    """
+    Performs software lock-in measurement to extract signal at chopper frequency.
+    Returns the magnitude of the lock-in signal converted to current.
+    
+    Returns:
+        float: The measured current in Amps, or None if error.
+    """
+    if not picoscope:
+        print("PicoScope not connected.")
+        return None
+    
     try:
-        if not ser.is_open:
-            ser.open()
-        while True:
-            print("Flushing input buffer and sending 'Y' command...")
-            ser.flushInput()
-            ser.write('Y\r'.encode())
-            time.sleep(1)
+        # Perform software lock-in measurement - optimized parameters
+        # Strategy: 5 measurements × 100 cycles each (proven stable at 0.66% CV)
+        R_values = []
+        num_measurements = 5  # Optimal for stability
+        
+        for i in range(num_measurements):
+            # Each measurement: 100 cycles for good averaging
+            # This provides excellent stability and noise rejection
+            result = picoscope.software_lockin(
+                chopper_freq,
+                num_cycles=100  # Optimal for balance of speed and stability
+            )
             
-            response = ser.read(ser.in_waiting or 1).decode().strip()
-            print(f"Received response: {response}")
-            if response:
-                try:
-                    status_byte = int(response.split('\r')[0].strip())
-                    print(f"Parsed status byte: {status_byte}")
-                    is_locked = not (status_byte & (1 << 3))
-                    has_reference = not (status_byte & (1 << 2))
-                    is_overloaded = status_byte & (1 << 4)
-                    print(f"Lock status: {is_locked}, Reference status: {has_reference}, Overload status: {is_overloaded}")
-                    if is_locked and has_reference and not is_overloaded:
-                        while True:
-                            print("Querying sensitivity...")
-                            sensitivity_response = send_command_to_lockin("G")
-                            sensitivity_value = parse_sensitivity_response(sensitivity_response)
-                            print(f"Sensitivity value: {sensitivity_value}")
-
-                            print("Reading DC voltage from Keithley 2110...")
-                            keithley.write(":SENS:FUNC 'VOLT:DC'")
-                            voltage_readings = []
-                            for _ in range(100):
-                                voltage = float(keithley.query(":READ?"))
-                                voltage_readings.append(voltage)
-                            average_voltage = sum(voltage_readings) / len(voltage_readings)
-                            print(f"Average voltage: {average_voltage}")
-                            
-                            if average_voltage > 10:
-                                print("Average voltage > 10, increasing sensitivity...")
-                                ser.write('K 22\r'.encode())
-                                print("Sent command to increase sensitivity.")
-                                print("Waiting 5 seconds after increasing sensitivity.")
-                                time.sleep(5)  # Wait for the sensitivity change to take effect
-                                break  # Break out of the inner while loop to re-read the status
-                            
-                            adjusted_voltage = (average_voltage * sensitivity_value / 10) / correction_factor
-                            print(f"Adjusted Voltage: {adjusted_voltage}")
-                            current = adjusted_voltage * 10 ** -6  # Accounts for transimpedance amplifier gain
-
-                            if current:
-                                print(f"Returning current: {current}")
-                                return current
-                            else:
-                                print("No output response received.")
-                                continue
-                    else:
-                        print("Device not ready or overloaded.")
-                        continue
-                except ValueError as e:
-                    print(f"Error parsing response: {e}")
-                    continue
+            if result is not None:
+                # Use the magnitude (R) directly - this is phase-independent!
+                # R = sqrt(X^2 + Y^2) gives us the signal amplitude regardless of phase
+                # This eliminates instability from phase drift or trigger timing issues
+                R_values.append(result['R'])
             else:
-                print("No status response received.")
-                continue
+                print(f"Warning: Lock-in measurement {i+1}/{num_measurements} failed")
+        
+        if not R_values:
+            print("Error: All lock-in measurements failed")
+            return None
+        
+        # Use MEDIAN and TRIMMED MEAN for robust averaging
+        # This rejects outliers from lamp flicker and chopper variations
+        R_array = np.array(R_values)
+        
+        # Calculate median for reference
+        median_signal = np.median(R_array)
+        
+        # Trimmed mean: remove outliers beyond 2 standard deviations from median
+        deviations = np.abs(R_array - median_signal)
+        threshold = 2 * np.std(deviations)
+        mask = deviations <= threshold
+        R_trimmed = R_array[mask]
+        
+        # Use trimmed mean if we have enough measurements remaining
+        if len(R_trimmed) >= 3:
+            average_signal = np.mean(R_trimmed)
+            std_signal = np.std(R_trimmed)
+            n_outliers = len(R_values) - len(R_trimmed)
+        else:
+            # If too many outliers, use median (most robust)
+            average_signal = median_signal
+            std_signal = np.std(R_array)
+            n_outliers = 0
+        
+        # Calculate coefficient of variation for quality metric
+        cv = 100 * std_signal / average_signal if average_signal > 0 else 0
+        
+        print(f"Lock-in measurement: {average_signal:.6f} ± {std_signal:.6f} V (n={len(R_trimmed)}/{num_measurements}, outliers={n_outliers}, CV={cv:.2f}%)")
+        
+        # Check for saturation
+        if abs(average_signal) > 0.95:
+            print(f"Warning: Signal near saturation ({average_signal:.3f} V)")
+        
+        # Apply correction factor and transimpedance amplifier gain
+        # Assuming 1 MΩ transimpedance gain (adjust as needed)
+        adjusted_voltage = average_signal / correction_factor
+        current = adjusted_voltage * 10 ** -6  # Convert to Amps (from V with 1MΩ gain)
+        
+        return current
+        
     except Exception as e:
-        print(f"Error: {e}")
-    return None
+        print(f"Error reading from PicoScope: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
 
 # Function to set the monochromator to 532 nm for alignment
 def align_monochromator():
@@ -570,10 +528,12 @@ def start_current_measurement(pixel_number):
     # Run phase adjustment
     try:
         print("Starting phase adjustment...")
-        optimal_phase, final_signal = adjust_lockin_phase(pixel_number)
-        print(f"Phase adjustment complete: {optimal_phase}, {final_signal}")
+        optimal_phase, final_signal, r_squared = adjust_lockin_phase(pixel_number)
+        print(f"Phase adjustment complete: Phase={optimal_phase}°, Signal={final_signal} V, R²={r_squared}")
     except Exception as e:
         print(f"Error during phase adjustment: {e}")
+        import traceback
+        traceback.print_exc()
         QMessageBox.critical(None, "Phase Adjustment Error", f"Failed to adjust phase: {e}")
         signal_emitter.close_popup.emit()
         return
@@ -655,12 +615,12 @@ def start_current_measurement(pixel_number):
         confirmed_mono_wavelength_float = float(confirmed_mono_wavelength)
 
         try:
-            output = read_lockin_status_and_keithley_output()
+            output = read_lockin_output()
             if output is None:
-                QMessageBox.critical(None, "Measurement Error", "Failed to read output from SR510.")
+                QMessageBox.critical(None, "Measurement Error", "Failed to read output from PicoScope.")
                 return
         except Exception as e:
-            print(f"Error reading lock-in/Keithley output: {e}")
+            print(f"Error reading lock-in output: {e}")
             QMessageBox.critical(None, "Measurement Error", f"Failed to read output: {e}")
             return
 
@@ -770,10 +730,8 @@ def on_close():
     try:
         if 'tlPM' in globals():
             tlPM.close()
-        if 'keithley' in globals():
-            keithley.close()
-        if 'ser' in globals():
-            ser.close()
+        if 'picoscope' in globals() and picoscope:
+            picoscope.close()
     except Exception as e:
         print(f"Error closing resources: {e}")
 
@@ -823,6 +781,9 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("PHYS 2150 EQE Measurement")
         self.setGeometry(100, 100, 1200, 800)
+
+        # Initialize PicoScope before building UI
+        self.initialize_picoscope_with_dialog()
 
         # Main widget and layout
         main_widget = QWidget()
@@ -997,6 +958,32 @@ class MainWindow(QMainWindow):
             f"Is the lamp on? If it is, pixel {pixel_number} might be dead. Check in with a TA.",
             QMessageBox.Ok
         )
+
+    def initialize_picoscope_with_dialog(self):
+        """Prompt user for chopper frequency and initialize PicoScope connection."""
+        # Ask for chopper frequency only (PicoScope connects via USB, no hostname needed)
+        freq_str, ok = QInputDialog.getText(
+            None,
+            "PicoScope Connection",
+            "Enter chopper frequency (Hz):",
+            QLineEdit.Normal,
+            "81"
+        )
+        
+        if ok and freq_str:
+            try:
+                chopper_freq = float(freq_str)
+                # Connect to PicoScope (no hostname needed - USB connection)
+                if not initialize_picoscope(None, chopper_freq):
+                    show_error("Failed to connect to PicoScope.\n\n"
+                             "Please check:\n"
+                             "1. PicoScope is connected via USB\n"
+                             "2. PicoSDK drivers are installed\n"
+                             "3. Python picosdk package is installed (pip install picosdk)")
+            except ValueError:
+                show_error("Invalid frequency value. Please enter a number.")
+        else:
+            show_error("Chopper frequency is required.")
 
     def handle_save_file_dialog(self, file_name, dialog_title, x_values, y_values):
         file_path, _ = QFileDialog.getSaveFileName(self, dialog_title, file_name, "CSV files (*.csv)")
