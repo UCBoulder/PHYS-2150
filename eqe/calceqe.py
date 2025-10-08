@@ -8,12 +8,12 @@ c = 3.0e8  # Speed of light (meters per second)
 e = 1.602176634e-19  # Elementary charge (Coulombs)
 
 # Read the power data from the CSV file
-power_data = pd.read_csv('c:/Users/krbu4353/GitHub/PHYS-2150/eqe/data/2025_02_06_power_cell2501-10.csv')
+power_data = pd.read_csv('c:/Users/krbu4353/GitHub/PHYS-2150/eqe/data/2025_09_10/2025_09_10_power_cell162.csv')
 
 # List of current data files
 current_files = [
     #'c:/Users/krist/Documents/GitHub/PHYS-2150/eqe/data/20240904/030/cm1.csv',
-    'c:/Users/krbu4353/GitHub/PHYS-2150/eqe/data/2025_02_06_current_cell2501-10_pixel1.csv',
+    'c:/Users/krbu4353/GitHub/PHYS-2150/eqe/data/2025_09_10/2025_09_10_current_cell162_pixel1.csv',
    # 'c:/Users/krist/Documents/GitHub/PHYS-2150/eqe/data/20240828/c6-100.csv',
    # 'c:/Users/krist/Documents/GitHub/PHYS-2150/eqe/data/20240828/c6sens.csv',
    # 'c:/Users/krist/Documents/GitHub/PHYS-2150/eqe/data/20240828/c6sens2.csv'

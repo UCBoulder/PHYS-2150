@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # Directory containing the CSV files
-directory = 'C:/Users/krbu4353/GitHub/PHYS-2150/jv/data/'
+directory = 'C:/Users/krbu4353/GitHub/PHYS-2150/jv/data/2025_09_10/'
 
 # Initialize a plot
 plt.figure(figsize=(10, 6))
@@ -35,10 +35,10 @@ for filename in os.listdir(directory):
         # pmax_current_forward = data['Forward Scan (mA)'].iloc[pmax_index_forward]
 
         # Find the index of the row with the voltage closest to zero
-        # isc_index_forward = np.argmin(np.abs(data['Voltage (V)'].values))
-        # # Use this index to find the corresponding current value for Isc
-        # isc_forward = data['Forward Scan (mA)'].iloc[isc_index_forward]
-        # isc_voltage_forward = data['Voltage (V)'].iloc[isc_index_forward]
+        isc_index_forward = np.argmin(np.abs(data['Voltage (V)'].values))
+        # Use this index to find the corresponding current value for Isc
+        isc_forward = data['Forward Scan (mA)'].iloc[isc_index_forward]
+        isc_voltage_forward = data['Voltage (V)'].iloc[isc_index_forward]
 
         # Find the index of the row with the current closest to zero for Voc calculation
         # voc_index_forward = np.argmin(np.abs(data['Forward Scan (mA)'].values))

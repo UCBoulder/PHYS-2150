@@ -59,17 +59,14 @@ def perform_measurement(pixel_number):
     global combined_data
     clear_plot(pixel_number)
     print("Starting measurement...")
-    
+
     try:
         start_voltage = float(start_voltage_var.text())
         stop_voltage = float(stop_voltage_var.text())
         step_voltage = float(step_voltage_var.text())
     except ValueError:
-        QMessageBox.critical(None, "Input Error", "Please enter valid numerical values for voltages and step size.")
-        measure_button.setText("Start Measurement")
-        measure_button.setStyleSheet("background-color: #CCDDAA; color: black;")
-        measure_button.clicked.disconnect()
-        measure_button.clicked.connect(toggle_measurement)
+        QTimer.singleShot(0, lambda: QMessageBox.critical(None, "Input Error", "Please enter valid numerical values for voltages and step size."))
+        QTimer.singleShot(0, reset_measure_button)
         return
 
     # Ensure stop_voltage is inclusive for both forward and backward sweeps
@@ -117,7 +114,7 @@ def perform_measurement(pixel_number):
             return
         try:
             device.write(f"SOUR:VOLT {voltage}")
-            time.sleep(0.1)
+            time.sleep(0.5)
             current_reading = device.query("MEAS:CURR?")
             current_reading = Decimal(current_reading)
             forward_voltages_plot.append(voltage)
@@ -151,7 +148,7 @@ def perform_measurement(pixel_number):
             return
         try:
             device.write(f"SOUR:VOLT {voltage}")
-            time.sleep(0.1)
+            time.sleep(0.5)
             current_reading = device.query("MEAS:CURR?")
             current_reading = Decimal(current_reading)
             backward_voltages_plot.append(voltage)
@@ -188,24 +185,26 @@ def perform_measurement(pixel_number):
     except Exception as e:
         print(f"Error disabling output: {e}")
 
-    # Reset the Start/Stop button
-    measure_button.setText("Start Measurement")
-    measure_button.setStyleSheet("background-color: #CCDDAA; color: black;")
-    measure_button.clicked.disconnect()
-    measure_button.clicked.connect(toggle_measurement)
+    QTimer.singleShot(0, reset_measure_button)
 
     if stop_thread.is_set():
         print("Measurement stopped.")
     else:
         print("Measurement complete.")
-        # Auto-prompt to save data
         cell_number = cell_number_var.text().strip()
-        if not cell_number or not re.match(r'^(C60_\d+|\d+-\d+)$', cell_number):
-            QMessageBox.critical(None, "Input Error", "Invalid cell number format.")
+        if not cell_number or not re.match(r'^\d{3}$', cell_number):
+            QTimer.singleShot(0, lambda: QMessageBox.critical(None, "Input Error", "Invalid cell number format."))
         else:
             date = datetime.datetime.now().strftime("%Y_%m_%d")
             file_name = f"{date}_JV_cell{cell_number}_pixel{pixel_number}.csv"
+            # Emit the signal to show the save dialog in the main thread
             signal_emitter.save_file_dialog.emit(file_name, "Save J-V Data", combined_data)
+
+def reset_measure_button():
+    measure_button.setText("Start Measurement")
+    measure_button.setStyleSheet("background-color: #CCDDAA; color: black;")
+    measure_button.clicked.disconnect()
+    measure_button.clicked.connect(toggle_measurement)
 
 # Function to start the measurement in a separate thread
 def start_measurement_thread(pixel_number):
@@ -222,13 +221,13 @@ def stop_measurement():
 def toggle_measurement():
     if measure_button.text() == "Start Measurement":
         # Prompt for pixel number
-        pixel_input, ok = QInputDialog.getText(None, "Pixel Selection", "Enter pixel number (1-6):")
+        pixel_input, ok = QInputDialog.getText(None, "Pixel Selection", "Enter pixel number (1-8):")
         if not ok or not pixel_input:
             return  # User canceled or entered nothing
         try:
             pixel_number = int(pixel_input)
-            if pixel_number < 1 or pixel_number > 6:
-                QMessageBox.critical(None, "Input Error", "Pixel number must be between 1 and 6.")
+            if pixel_number < 1 or pixel_number > 8:
+                QMessageBox.critical(None, "Input Error", "Pixel number must be between 1 and 8.")
                 return
         except ValueError:
             QMessageBox.critical(None, "Input Error", "Please enter a valid integer for pixel number.")
@@ -306,7 +305,7 @@ class MainWindow(QMainWindow):
         stop_voltage_label = QLabel("Stop Voltage:")
         stop_voltage_label.setStyleSheet("font-size: 14px;")
         global stop_voltage_var
-        stop_voltage_var = QLineEdit("1.1")
+        stop_voltage_var = QLineEdit("1.5")
         stop_voltage_var.setStyleSheet("font-size: 14px;")
         stop_voltage_var.setFixedHeight(30)
         input_grid.addWidget(stop_voltage_label, 2, 0)
@@ -316,7 +315,7 @@ class MainWindow(QMainWindow):
         step_voltage_label = QLabel("Step Voltage:")
         step_voltage_label.setStyleSheet("font-size: 14px;")
         global step_voltage_var
-        step_voltage_var = QLineEdit("0.01")
+        step_voltage_var = QLineEdit("0.02")
         step_voltage_var.setStyleSheet("font-size: 14px;")
         step_voltage_var.setFixedHeight(30)
         input_grid.addWidget(step_voltage_label, 4, 0)
@@ -389,15 +388,17 @@ class MainWindow(QMainWindow):
                 print(f"Data saved to {file_path}")
             except Exception as e:
                 QMessageBox.critical(self, "Save Error", f"Failed to save file: {e}")
+        # Always reset the button after the dialog is closed
+        reset_measure_button()
 
     def show_cell_number_popup(self):
         cell_number, ok = QInputDialog.getText(self, "Enter Cell Number",
-                                               "Enter Cell Number (e.g., C60_01, 2501-04):")
-        if ok and cell_number and re.match(r'^(C60_\d+|\d+-\d+)$', cell_number):
+                                               "Enter Cell Number (e.g., 195):")
+        if ok and cell_number and re.match(r'^\d{3}$', cell_number):
             cell_number_var.setText(cell_number)
         else:
             QMessageBox.warning(self, "Invalid Input",
-                                "Cell number must be in format C60_XX or XXXX-XX (e.g., C60_01, 2501-04).")
+                                "Cell number must be a 3-digit number (e.g., 195).")
             self.show_cell_number_popup()
 
     def closeEvent(self, event):

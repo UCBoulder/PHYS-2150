@@ -476,8 +476,8 @@ def start_power_measurement():
     if not stop_thread.is_set() and power_x_values and power_y_values:
         cell_number = cell_number_var.text().strip()
         date = datetime.datetime.now().strftime("%Y_%m_%d")
-        if not cell_number or not re.match(r'^(C60_\d+|\d+-\d+)$', cell_number):
-            QMessageBox.critical(None, "Input Error", "Cell number must be in format C60_XX or XXXX-XX (e.g., C60_01, 2501-04).")
+        if not cell_number or not re.match(r'^\d{3}$', cell_number):
+            QMessageBox.critical(None, "Input Error", "Cell number must be a three-digit number (e.g., 195).")
         else:
             file_name = f"{date}_power_cell{cell_number}.csv"
             # Emit signal to handle file saving in the main thread
@@ -563,20 +563,20 @@ def start_current_measurement(pixel_number):
     signal_emitter.close_popup.emit()
     QApplication.processEvents()
 
-    # Save phase data using signal
-    if phase_optimal is not None and phase_signal is not None and phase_r_squared is not None:
-        cell_number = cell_number_var.text().strip()
-        date = datetime.datetime.now().strftime("%Y_%m_%d")
-        if not cell_number or not re.match(r'^(C60_\d+|\d+-\d+)$', cell_number):
-            QMessageBox.critical(None, "Input Error", "Cell number must be in format C60_XX or XXXX-XX (e.g., C60_01, 2501-04).")
-            return
-        file_name = f"{date}_phase_cell{cell_number}.csv"
-        print(f"Emitting save_phase_data signal for {file_name}")
-        signal_emitter.save_phase_data.emit(file_name, pixel_number, phase_optimal, phase_signal, phase_r_squared)
-    else:
-        print("Phase data not saved due to invalid results")
-        QMessageBox.critical(None, "Phase Data Error", "Phase adjustment results are invalid.")
-        return
+    # # Save phase data using signal
+    # if phase_optimal is not None and phase_signal is not None and phase_r_squared is not None:
+    #     cell_number = cell_number_var.text().strip()
+    #     date = datetime.datetime.now().strftime("%Y_%m_%d")
+    #     if not cell_number or not re.match(r'^\d{3}$', cell_number):
+    #         QMessageBox.critical(None, "Input Error", "Cell number must be a three-digit number (e.g., 195).")
+    #         return
+    #     file_name = f"{date}_phase_cell{cell_number}.csv"
+    #     print(f"Emitting save_phase_data signal for {file_name}")
+    #     signal_emitter.save_phase_data.emit(file_name, pixel_number, phase_optimal, phase_signal, phase_r_squared)
+    # else:
+    #     print("Phase data not saved due to invalid results")
+    #     QMessageBox.critical(None, "Phase Data Error", "Phase adjustment results are invalid.")
+    #     return
 
     # Check R^2 value and show warning if < 0.90
     if phase_r_squared is not None and phase_r_squared < 0.90:
@@ -660,8 +660,8 @@ def start_current_measurement(pixel_number):
     if not stop_thread.is_set() and current_x_values and current_y_values:
         cell_number = cell_number_var.text().strip()
         date = datetime.datetime.now().strftime("%Y_%m_%d")
-        if not cell_number or not re.match(r'^(C60_\d+|\d+-\d+)$', cell_number):
-            QMessageBox.critical(None, "Input Error", "Cell number must be in format C60_XX or XXXX-XX (e.g., C60_01, 2501-04).")
+        if not cell_number or not re.match(r'^\d{3}$', cell_number):
+            QMessageBox.critical(None, "Input Error", "Cell number must be a three-digit number (e.g., 195).")
         else:
             file_name = f"{date}_current_cell{cell_number}_pixel{pixel_number}.csv"
             print(f"Emitting save_file_dialog signal for {file_name}")
@@ -711,13 +711,13 @@ def toggle_current_measurement():
     global current_thread
     if start_current_button.text() == "Start Current Measurement":
         # Prompt for pixel number using QInputDialog.getText for flexibility
-        pixel_input, ok = QInputDialog.getText(None, "Pixel Selection", "Enter pixel number (1-6):")
+        pixel_input, ok = QInputDialog.getText(None, "Pixel Selection", "Enter pixel number (1-8):")
         if not ok or not pixel_input:
             return  # User canceled or entered nothing
         try:
             pixel_number = int(pixel_input)
-            if pixel_number < 1 or pixel_number > 6:
-                QMessageBox.critical(None, "Input Error", "Pixel number must be between 1 and 6.")
+            if pixel_number < 1 or pixel_number > 8:
+                QMessageBox.critical(None, "Input Error", "Pixel number must be between 1 and 8.")
                 return
         except ValueError:
             QMessageBox.critical(None, "Input Error", "Please enter a valid integer for pixel number.")
@@ -829,7 +829,7 @@ class MainWindow(QMainWindow):
         end_wavelength_label = QLabel("End Wavelength (nm):")
         end_wavelength_label.setStyleSheet("font-size: 14px;")
         global end_wavelength_var
-        end_wavelength_var = QLineEdit("850")
+        end_wavelength_var = QLineEdit("750")
         end_wavelength_var.setStyleSheet("font-size: 14px;")
         end_wavelength_var.setFixedHeight(30)
         align_button = QPushButton("Enable Green Alignment Dot")
@@ -850,7 +850,7 @@ class MainWindow(QMainWindow):
         cell_number_label = QLabel("Cell Number:")
         cell_number_label.setStyleSheet("font-size: 14px;")
         global cell_number_var
-        cell_number_var = QLineEdit("C60_01")
+        cell_number_var = QLineEdit("195")
         cell_number_var.setStyleSheet("font-size: 14px;")
         cell_number_var.setFixedHeight(30)
         input_grid.addWidget(step_size_label, 0, 2)
@@ -931,7 +931,7 @@ class MainWindow(QMainWindow):
 
         # Connect signals
         signal_emitter.save_file_dialog.connect(self.handle_save_file_dialog)
-        signal_emitter.save_phase_data.connect(self.handle_save_phase_data)
+        # signal_emitter.save_phase_data.connect(self.handle_save_phase_data)
         signal_emitter.invoke_popup.connect(self.invoke_popup)
         signal_emitter.close_popup.connect(self.close_popup)
         signal_emitter.show_r_squared_warning.connect(self.show_r_squared_warning)
@@ -991,70 +991,71 @@ class MainWindow(QMainWindow):
             except Exception as e:
                 QMessageBox.critical(self, "Save Error", f"Failed to save file: {e}")
 
-    def handle_save_phase_data(self, file_name, pixel_number, phase_optimal, phase_signal, phase_r_squared):
-        file_path, _ = QFileDialog.getSaveFileName(self, "Save Phase Data", file_name, "CSV files (*.csv)")
-        if file_path:
-            try:
-                if not os.path.exists(file_path):
-                    df = pd.DataFrame({
-                        "Pixel #": [1, 2, 3, 4, 5, 6],
-                        "Set Angle": [None, None, None, None, None, None],
-                        "Signal": [None, None, None, None, None, None],
-                        "R^2 Value": [None, None, None, None, None, None]
-                    })
-                else:
-                    try:
-                        df = pd.read_csv(file_path)
-                        if "Pixel #" not in df.columns:
-                            legacy_data = df[["set angle", "signal", "r-value"]].values
-                            df = pd.DataFrame({
-                                "Pixel #": [1, 2, 3, 4, 5, 6],
-                                "Set Angle": [None, None, None, None, None, None],
-                                "Signal": [None, None, None, None, None, None],
-                                "R^2 Value": [None, None, None, None, None, None]
-                            })
-                            for i, row in enumerate(legacy_data[:6]):
-                                df.at[i, "Set Angle"] = row[0]
-                                df.at[i, "Signal"] = row[1]
-                                df.at[i, "R^2 Value"] = row[2]
-                        else:
-                            existing_pixels = df["Pixel #"].tolist()
-                            for i in range(1, 7):
-                                if i not in existing_pixels:
-                                    df = pd.concat([df, pd.DataFrame({
-                                        "Pixel #": [i],
-                                        "Set Angle": [None],
-                                        "Signal": [None],
-                                        "R^2 Value": [None]
-                                    })], ignore_index=True)
-                            df = df[df["Pixel #"].isin([1, 2, 3, 4, 5, 6])].sort_values("Pixel #").reset_index(drop=True)
-                    except Exception as e:
-                        print(f"Error reading CSV: {e}")
-                        df = pd.DataFrame({
-                            "Pixel #": [1, 2, 3, 4, 5, 6],
-                            "Set Angle": [None, None, None, None, None, None],
-                            "Signal": [None, None, None, None, None, None],
-                            "R^2 Value": [None, None, None, None, None, None]
-                        })
+    # def handle_save_phase_data(self, file_name, pixel_number, phase_optimal, phase_signal, phase_r_squared):
+    #     file_path, _ = QFileDialog.getSaveFileName(self, "Save Phase Data", file_name, "CSV files (*.csv)")
+    #     if file_path:
+    #         try:
+    #             if not os.path.exists(file_path):
+    #                 df = pd.DataFrame({
+    #                     "Pixel #": [1, 2, 3, 4, 5, 6, 7, 8],
+    #                     "Set Angle": [None]*8,
+    #                     "Signal": [None]*8,
+    #                     "R^2 Value": [None]*8
+    #                 })
+    #             else:
+    #                 try:
+    #                     df = pd.read_csv(file_path)
+    #                     if "Pixel #" not in df.columns:
+    #                         legacy_data = df[["set angle", "signal", "r-value"]].values
+    #                         df = pd.DataFrame({
+    #                             "Pixel #": [1, 2, 3, 4, 5, 6, 7, 8],
+    #                             "Set Angle": [None]*8,
+    #                             "Signal": [None]*8,
+    #                             "R^2 Value": [None]*8
+    #                         })
+    #                         for i, row in enumerate(legacy_data[:8]):
+    #                             df.at[i, "Set Angle"] = row[0]
+    #                             df.at[i, "Signal"] = row[1]
+    #                             df.at[i, "R^2 Value"] = row[2]
+    #                     else:
+    #                         existing_pixels = df["Pixel #"].tolist()
+    #                         for i in range(1, 9):
+    #                             if i not in existing_pixels:
+    #                                 df = pd.concat([df, pd.DataFrame({
+    #                                     "Pixel #": [i],
+    #                                     "Set Angle": [None],
+    #                                     "Signal": [None],
+    #                                     "R^2 Value": [None]
+    #                                 })], ignore_index=True)
+    #                         df = df[df["Pixel #"].isin([1, 2, 3, 4, 5, 6, 7, 8])].sort_values("Pixel #").reset_index(drop=True)
+    #                 except Exception as e:
+    #                     print(f"Error reading CSV: {e}")
+    #                     df = pd.DataFrame({
+    #                         "Pixel #": [1, 2, 3, 4, 5, 6, 7, 8],
+    #                         "Set Angle": [None]*8,
+    #                         "Signal": [None]*8,
+    #                         "R^2 Value": [None]*8
+    #                     })
 
-                pixel_index = pixel_number - 1
-                df.at[pixel_index, "Set Angle"] = f"{phase_optimal:.2f}"
-                df.at[pixel_index, "Signal"] = phase_signal
-                df.at[pixel_index, "R^2 Value"] = f"{phase_r_squared:.4f}"
+    #             pixel_index = pixel_number - 1
+    #             if 0 <= pixel_index < 8:
+    #                 df.at[pixel_index, "Set Angle"] = f"{phase_optimal:.2f}"
+    #                 df.at[pixel_index, "Signal"] = phase_signal
+    #                 df.at[pixel_index, "R^2 Value"] = f"{phase_r_squared:.4f}"
 
-                df.to_csv(file_path, index=False)
-                print(f"Phase data for pixel {pixel_number} saved to {file_path}")
-            except Exception as e:
-                QMessageBox.critical(self, "Save Error", f"Failed to save phase data: {e}")
+    #             df.to_csv(file_path, index=False)
+    #             print(f"Phase data for pixel {pixel_number} saved to {file_path}")
+    #         except Exception as e:
+    #             QMessageBox.critical(self, "Save Error", f"Failed to save phase data: {e}")
 
     def show_cell_number_popup(self):
         cell_number, ok = QInputDialog.getText(self, "Enter Cell Number",
-                                               "Enter Cell Number (e.g., C60_01, 2501-04):")
-        if ok and cell_number and re.match(r'^(C60_\d+|\d+-\d+)$', cell_number):
+                                               "Enter Cell Number (e.g., 195):")
+        if ok and cell_number and re.match(r'^\d{3}$', cell_number):
             cell_number_var.setText(cell_number)
         else:
             QMessageBox.warning(self, "Invalid Input",
-                                "Cell number must be in format C60_XX or XXXX-XX (e.g., C60_01, 2501-04).")
+                                "Cell number must be a three-digit number (e.g., 195).")
             self.show_cell_number_popup()
 
     def closeEvent(self, event):
