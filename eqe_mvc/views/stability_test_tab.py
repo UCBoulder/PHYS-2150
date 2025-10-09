@@ -401,7 +401,7 @@ class StabilityTestTab(QWidget):
             QMessageBox.information(
                 self, "Test Complete",
                 f"Test completed with {stats['count']} measurements\n"
-                f"CV: {stats['cv']:.2f}%"
+                f"CV: {stats['cv_percent']:.2f}%"
             )
     
     @Slot(str)
@@ -539,12 +539,12 @@ class StabilityTestTab(QWidget):
         
         self.mean_label.setText(f"Mean: {mean_str}")
         self.std_label.setText(f"Std Dev: {std_str}")
-        self.cv_label.setText(f"CV: {stats['cv']:.2f}%")
+        self.cv_label.setText(f"CV: {stats['cv_percent']:.2f}%")
         self.count_label.setText(f"Count: {stats['count']}")
         self.range_label.setText(f"Range: {range_str}")
         
         # Color code CV
-        cv = stats['cv']
+        cv = stats['cv_percent']
         if cv < 1.0:
             color = "green"
         elif cv < 3.0:
@@ -577,7 +577,7 @@ class StabilityTestTab(QWidget):
                 stats = StabilityTestModel.calculate_statistics(self.values)
                 writer.writerow([f"# Mean: {stats['mean']:.6e}"])
                 writer.writerow([f"# Std Dev: {stats['std']:.6e}"])
-                writer.writerow([f"# CV: {stats['cv']:.2f}%"])
+                writer.writerow([f"# CV: {stats['cv_percent']:.2f}%"])
             
             writer.writerow([])  # Blank line
             
