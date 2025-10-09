@@ -5,6 +5,9 @@ Configuration constants and settings for the EQE measurement application.
 from enum import Enum
 from typing import Dict, Any
 
+# Application mode
+OFFLINE_MODE = False  # Set to True to run without hardware (for GUI testing)
+
 
 class MeasurementType(Enum):
     """Types of measurements supported."""

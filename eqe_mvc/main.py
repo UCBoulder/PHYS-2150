@@ -345,6 +345,20 @@ class EQEApplication:
 
 def main():
     """Main entry point for the EQE application."""
+    import argparse
+    
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='EQE Measurement Application')
+    parser.add_argument('--offline', action='store_true',
+                       help='Run in offline mode without hardware (for GUI testing)')
+    args = parser.parse_args()
+    
+    # Set offline mode in config
+    if args.offline:
+        print("Running in OFFLINE mode - hardware initialization disabled")
+        from eqe_mvc.config import settings
+        settings.OFFLINE_MODE = True
+    
     try:
         # Create and run application
         app = EQEApplication()

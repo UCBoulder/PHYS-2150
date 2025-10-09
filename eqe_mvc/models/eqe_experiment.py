@@ -18,6 +18,7 @@ from ..models.current_measurement import CurrentMeasurementModel, CurrentMeasure
 from ..models.phase_adjustment import PhaseAdjustmentModel, PhaseAdjustmentError
 from ..config.settings import DEFAULT_MEASUREMENT_PARAMS, DEVICE_CONFIGS, DeviceType
 from ..utils.data_handling import DataHandler, MeasurementDataLogger, DataValidationError
+from ..config import settings
 
 
 class EQEExperimentError(Exception):
@@ -122,6 +123,16 @@ class EQEExperimentModel:
         Raises:
             EQEExperimentError: If device initialization fails
         """
+        # Check if running in offline mode
+        if settings.OFFLINE_MODE:
+            self.logger.log("Running in OFFLINE mode - skipping hardware initialization")
+            self._notify_device_status("Thorlabs Power Meter", True, "OFFLINE MODE")
+            self._notify_device_status("Monochromator", True, "OFFLINE MODE")
+            self._notify_device_status("PicoScope Lock-in", True, "OFFLINE MODE")
+            self._devices_initialized = True
+            self.logger.log("Offline mode - devices simulated successfully")
+            return True
+        
         try:
             self.logger.log("Initializing devices...")
             
@@ -356,6 +367,9 @@ class EQEExperimentModel:
     
     def align_monochromator(self) -> None:
         """Align monochromator for visual alignment."""
+        if settings.OFFLINE_MODE:
+            raise EQEExperimentError("Cannot control hardware in OFFLINE mode")
+        
         if not self._devices_initialized:
             raise EQEExperimentError("Devices not initialized")
         
@@ -372,6 +386,9 @@ class EQEExperimentModel:
         Returns:
             bool: True if measurement started successfully
         """
+        if settings.OFFLINE_MODE:
+            raise EQEExperimentError("Cannot perform measurements in OFFLINE mode")
+        
         if not self._devices_initialized:
             raise EQEExperimentError("Devices not initialized")
         
@@ -396,6 +413,9 @@ class EQEExperimentModel:
         Returns:
             bool: True if measurement started successfully
         """
+        if settings.OFFLINE_MODE:
+            raise EQEExperimentError("Cannot perform measurements in OFFLINE mode")
+        
         if not self._devices_initialized:
             raise EQEExperimentError("Devices not initialized")
         
@@ -424,6 +444,9 @@ class EQEExperimentModel:
         Returns:
             bool: True if adjustment started successfully
         """
+        if settings.OFFLINE_MODE:
+            raise EQEExperimentError("Cannot perform measurements in OFFLINE mode")
+        
         if not self._devices_initialized:
             raise EQEExperimentError("Devices not initialized")
         

@@ -48,6 +48,8 @@ User interface components with no direct device access:
 ## Usage
 
 ### Running the Application
+
+**Normal Mode (with hardware):**
 ```powershell
 python main.py
 ```
@@ -56,6 +58,13 @@ or as a module:
 ```powershell
 python -m eqe_mvc.main
 ```
+
+**Offline Mode (for GUI testing without hardware):**
+```powershell
+python main.py --offline
+```
+
+Perfect for testing the GUI when you're away from the lab! The application will start with simulated devices, allowing you to test UI changes, parameter validation, and file operations without requiring hardware connections. See [OFFLINE_MODE.md](OFFLINE_MODE.md) for complete details.
 
 Note: Recent fixes in `main.py` make the entrypoint resilient when running
 `python main.py` directly (it adjusts sys.path to allow package-qualified
