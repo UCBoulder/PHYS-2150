@@ -222,7 +222,7 @@ class EQEExperimentModel(QObject):
             self.lockin.set_num_cycles(num_cycles)
             # No correction factor needed - software lock-in uses actual square wave reference!
             
-            self._notify_device_status("PicoScope Lock-in", True, f"Connected (Freq: {chopper_freq} Hz)")
+            self._notify_device_status("PicoScope Lock-in", True, f"Connected (Nominal freq: {chopper_freq} Hz)")
             self.logger.log(f"PicoScope lock-in initialized (Freq: {chopper_freq} Hz, Cycles: {num_cycles})")
         except PicoScopeError as e:
             self._notify_device_status("PicoScope Lock-in", False, str(e))

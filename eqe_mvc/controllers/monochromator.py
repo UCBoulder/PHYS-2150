@@ -38,6 +38,7 @@ class MonochromatorController:
         self._device: Optional[Cornerstone_Mono] = None
         self._is_connected = False
         self._serial_number: Optional[str] = None
+        self._current_filter: Optional[int] = None  # Track current filter position
     
     def connect(self, interface: str = "usb", timeout_msec: int = 29000) -> bool:
         """
@@ -160,11 +161,15 @@ class MonochromatorController:
     def set_filter(self, filter_number: int) -> None:
         """
         Set the filter position.
+        Only sends command if filter position has changed to avoid unnecessary filter wheel movement.
         
         Args:
             filter_number: Filter position (1, 2, 3, etc.)
         """
-        self.send_command(f"filter {filter_number}")
+        # Only send command if filter position has actually changed
+        if self._current_filter != filter_number:
+            self.send_command(f"filter {filter_number}")
+            self._current_filter = filter_number
     
     def open_shutter(self) -> None:
         """Open the monochromator shutter."""

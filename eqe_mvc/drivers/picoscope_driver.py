@@ -10,6 +10,10 @@ Date: October 2025
 import ctypes
 import numpy as np
 from scipy.signal import hilbert
+import os
+import sys
+import contextlib
+import platform
 
 class PicoScopeDriver:
     """
@@ -22,6 +26,153 @@ class PicoScopeDriver:
     - Software lock-in with Hilbert transform
     - Phase-locked triggering for 0.66% CV stability
     """
+    
+    @staticmethod
+    def hide_splash_windows():
+        """
+        Attempt to hide any PicoScope splash windows on Windows.
+        Uses Windows API to find and hide windows with specific titles.
+        """
+        if platform.system() != 'Windows':
+            return
+        
+        try:
+            import time
+            import threading
+            
+            # Define window titles that might be splash screens
+            splash_titles = [
+                'Pico Technology',
+                'PicoScope',
+                'PicoSDK',
+                'Pico SDK',
+                'PicoScope SDK',
+            ]
+            
+            def hide_window_thread():
+                """Background thread to hide splash windows"""
+                try:
+                    # Import Windows API functions
+                    user32 = ctypes.windll.user32
+                    
+                    # Constants for ShowWindow
+                    SW_HIDE = 0
+                    SW_MINIMIZE = 6
+                    
+                    # Check very frequently for splash windows (100 checks over 5 seconds)
+                    for i in range(100):
+                        # Don't sleep on first iteration to catch immediate windows
+                        if i > 0:
+                            time.sleep(0.05)  # 50ms intervals
+                        
+                        # Try to find and hide splash windows by exact title
+                        for title in splash_titles:
+                            hwnd = user32.FindWindowW(None, title)
+                            if hwnd:
+                                # Try to hide the window
+                                user32.ShowWindow(hwnd, SW_HIDE)
+                        
+                        # Also try to find windows by partial title match and window class
+                        def enum_windows_callback(hwnd, lparam):
+                            if user32.IsWindowVisible(hwnd):
+                                # Get window title
+                                length = user32.GetWindowTextLengthW(hwnd)
+                                window_title = ""
+                                if length > 0:
+                                    buff = ctypes.create_unicode_buffer(length + 1)
+                                    user32.GetWindowTextW(hwnd, buff, length + 1)
+                                    window_title = buff.value
+                                
+                                # Get window class name
+                                class_buff = ctypes.create_unicode_buffer(256)
+                                user32.GetClassNameW(hwnd, class_buff, 256)
+                                class_name = class_buff.value
+                                
+                                # Check if window title or class contains pico-related text
+                                search_text = (window_title + " " + class_name).lower()
+                                
+                                if 'pico' in search_text:
+                                    # Check if it's likely a splash/progress window:
+                                    # - Small windows (progress bars are typically small)
+                                    # - Contains common splash/init keywords
+                                    rect = ctypes.wintypes.RECT()
+                                    user32.GetWindowRect(hwnd, ctypes.byref(rect))
+                                    width = rect.right - rect.left
+                                    height = rect.bottom - rect.top
+                                    
+                                    # Splash windows are typically small (< 600x400)
+                                    # and contain keywords like progress, init, loading
+                                    keywords = ['progress', 'init', 'load', 'start', 'splash', 'opening']
+                                    is_small = width < 600 and height < 400
+                                    has_keyword = any(kw in search_text for kw in keywords)
+                                    
+                                    # Hide if it's small or has splash keywords
+                                    if is_small or has_keyword or len(window_title) < 50:
+                                        user32.ShowWindow(hwnd, SW_HIDE)
+                                        
+                            return True
+                        
+                        # Enumerate all windows
+                        EnumWindowsProc = ctypes.WINFUNCTYPE(
+                            ctypes.c_bool, ctypes.c_int, ctypes.POINTER(ctypes.c_int))
+                        user32.EnumWindows(EnumWindowsProc(enum_windows_callback), 0)
+                        
+                except Exception:
+                    pass  # Silently fail if we can't hide windows
+            
+            # Start background thread to hide windows
+            thread = threading.Thread(target=hide_window_thread, daemon=True)
+            thread.start()
+            
+        except Exception:
+            pass  # Silently fail if Windows API not available
+    
+    @staticmethod
+    @contextlib.contextmanager
+    def suppress_picoscope_splash():
+        """
+        Context manager to suppress PicoScope SDK splash window and messages.
+        On Windows, sets environment variables to disable PicoScope GUI elements.
+        Also redirects stdout/stderr to devnull during device initialization.
+        """
+        # Save original environment variables
+        original_env = {}
+        env_vars_to_set = {
+            'PICO_SUPPRESS_SPLASH': '1',
+            'PICO_NO_GUI': '1',
+            'PICO_SILENT': '1',
+        }
+        
+        # Set environment variables to suppress GUI (if on Windows)
+        if platform.system() == 'Windows':
+            for key, value in env_vars_to_set.items():
+                original_env[key] = os.environ.get(key)
+                os.environ[key] = value
+        
+        # Save original stdout/stderr
+        old_stdout = sys.stdout
+        old_stderr = sys.stderr
+        
+        # Redirect to devnull
+        devnull = open(os.devnull, 'w')
+        sys.stdout = devnull
+        sys.stderr = devnull
+        
+        try:
+            yield
+        finally:
+            # Restore stdout/stderr
+            sys.stdout = old_stdout
+            sys.stderr = old_stderr
+            devnull.close()
+            
+            # Restore environment variables
+            if platform.system() == 'Windows':
+                for key, original_value in original_env.items():
+                    if original_value is None:
+                        os.environ.pop(key, None)
+                    else:
+                        os.environ[key] = original_value
     
     def __init__(self, serial_number=None):
         """
@@ -45,6 +196,20 @@ class PicoScopeDriver:
             bool: True if connection successful, False otherwise
         """
         try:
+            # Start background thread to hide splash windows FIRST
+            # This ensures it's running before any SDK calls
+            self.hide_splash_windows()
+            
+            # Brief pause to let the window-hiding thread start
+            import time
+            time.sleep(0.01)  # 10ms to let thread initialize
+            
+            # Set environment variables before importing SDK to suppress splash
+            if platform.system() == 'Windows':
+                os.environ['PICO_SUPPRESS_SPLASH'] = '1'
+                os.environ['PICO_NO_GUI'] = '1'
+                os.environ['PICO_SILENT'] = '1'
+            
             # Try to import ps5000a first (for 5242D)
             try:
                 from picosdk.ps5000a import ps5000a as ps
@@ -65,45 +230,48 @@ class PicoScopeDriver:
             # Create chandle for connection
             self.chandle = ctypes.c_int16()
             
-            # Open device
-            if self.device_type == '5000a':
-                # PicoScope 5000a series (5242D)
-                # IMPORTANT: 16-bit mode only supports 1 channel
-                # Use 15-bit for 2-channel operation (still excellent resolution!)
-                resolution = ps.PS5000A_DEVICE_RESOLUTION["PS5000A_DR_15BIT"]
-                serial = ctypes.c_char_p(self.serial_number.encode() if self.serial_number else None)
-                self.status["openunit"] = ps.ps5000aOpenUnit(
-                    ctypes.byref(self.chandle), 
-                    serial, 
-                    resolution
-                )
-                print("Using 15-bit resolution for 2-channel lock-in operation")
-            else:
-                # PicoScope 2000a series (2204A)
-                serial = ctypes.c_char_p(self.serial_number.encode() if self.serial_number else None)
-                self.status["openunit"] = ps.ps2000aOpenUnit(
-                    ctypes.byref(self.chandle), 
-                    serial
-                )
-            
-            try:
-                assert_pico_ok(self.status["openunit"])
-            except:
-                # Handle power status for devices that need USB power
-                powerStatus = self.status["openunit"]
-                if powerStatus == 286 or powerStatus == 282:
-                    if self.device_type == '5000a':
-                        self.status["changePowerSource"] = ps.ps5000aChangePowerSource(
-                            self.chandle, powerStatus
-                        )
-                    else:
-                        self.status["changePowerSource"] = ps.ps2000aChangePowerSource(
-                            self.chandle, powerStatus
-                        )
-                    assert_pico_ok(self.status["changePowerSource"])
+            # Suppress PicoScope splash window during device opening
+            with self.suppress_picoscope_splash():
+                # Open device
+                if self.device_type == '5000a':
+                    # PicoScope 5000a series (5242D)
+                    # IMPORTANT: 16-bit mode only supports 1 channel
+                    # Use 15-bit for 2-channel operation (still excellent resolution!)
+                    resolution = ps.PS5000A_DEVICE_RESOLUTION["PS5000A_DR_15BIT"]
+                    serial = ctypes.c_char_p(self.serial_number.encode() if self.serial_number else None)
+                    self.status["openunit"] = ps.ps5000aOpenUnit(
+                        ctypes.byref(self.chandle), 
+                        serial, 
+                        resolution
+                    )
                 else:
-                    raise
+                    # PicoScope 2000a series (2204A)
+                    serial = ctypes.c_char_p(self.serial_number.encode() if self.serial_number else None)
+                    self.status["openunit"] = ps.ps2000aOpenUnit(
+                        ctypes.byref(self.chandle), 
+                        serial
+                    )
+                
+                try:
+                    assert_pico_ok(self.status["openunit"])
+                except:
+                    # Handle power status for devices that need USB power
+                    powerStatus = self.status["openunit"]
+                    if powerStatus == 286 or powerStatus == 282:
+                        if self.device_type == '5000a':
+                            self.status["changePowerSource"] = ps.ps5000aChangePowerSource(
+                                self.chandle, powerStatus
+                            )
+                        else:
+                            self.status["changePowerSource"] = ps.ps2000aChangePowerSource(
+                                self.chandle, powerStatus
+                            )
+                        assert_pico_ok(self.status["changePowerSource"])
+                    else:
+                        raise
             
+            # Print success messages after suppression is lifted
+            print("Using 15-bit resolution for 2-channel lock-in operation")
             self.connected = True
             
             # Get device info
