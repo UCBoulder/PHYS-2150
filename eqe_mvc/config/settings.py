@@ -43,6 +43,7 @@ POWER_MEASUREMENT_CONFIG = {
 CURRENT_MEASUREMENT_CONFIG = {
     "num_measurements": 5,         # Number of lock-in measurements to average
     "transimpedance_gain": 1e-6,  # Accounts for transimpedance amplifier (1 MΩ)
+    "stabilization_time": 0.2,    # seconds - wait time after wavelength change for photocell stabilization
 }
 
 # Phase adjustment configuration

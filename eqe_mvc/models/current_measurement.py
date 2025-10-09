@@ -122,7 +122,9 @@ class CurrentMeasurementModel:
         """
         try:
             # Read current using PicoScope software lock-in with robust averaging
-            current = self.lockin.read_current(num_measurements=5)
+            # Use configured number of measurements for stability
+            num_measurements = CURRENT_MEASUREMENT_CONFIG.get("num_measurements", 5)
+            current = self.lockin.read_current(num_measurements=num_measurements)
             
             if current is None:
                 raise CurrentMeasurementError("Failed to read current from PicoScope")
@@ -148,6 +150,10 @@ class CurrentMeasurementModel:
         try:
             # Configure devices
             confirmed_wavelength = self._configure_for_wavelength(wavelength)
+            
+            # Wait for photocell to stabilize after wavelength change
+            stabilization_time = CURRENT_MEASUREMENT_CONFIG.get("stabilization_time", 0.2)
+            time.sleep(stabilization_time)
             
             # Read current using software lock-in
             current = self._read_lockin_current()
