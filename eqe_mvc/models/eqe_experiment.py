@@ -304,7 +304,9 @@ class EQEExperimentModel(QObject):
         else:
             message = "Phase adjustment failed"
         self.logger.log(message)
-        self._notify_experiment_complete(success, message)
+        # Note: Phase adjustment is a sub-step, not full experiment completion
+        # Do NOT call _notify_experiment_complete here - it will reset the pixel number
+        # and prevent the automatic continuation to current measurement
     
     def is_initialized(self) -> bool:
         """Check if devices are initialized."""

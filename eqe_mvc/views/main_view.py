@@ -393,11 +393,12 @@ class MainApplicationView(QMainWindow):
             
             # Start phase adjustment first
             self._current_pixel_number = pixel_number
+            self._current_measurement_type = None  # Reset to ensure continuation logic works
             if self.experiment_model.start_phase_adjustment(pixel_number):
                 self.status_display.set_status_message(f"Starting phase adjustment for pixel {pixel_number}...")
                 
                 # Phase adjustment will complete, then we'll start current measurement
-                # This is handled in the completion callback
+                # This is handled in _update_status() which checks for phase completion
         
         except EQEExperimentError as e:
             self._show_error(f"Failed to start current measurement: {e}")
@@ -406,6 +407,14 @@ class MainApplicationView(QMainWindow):
         """Continue with current measurement after phase adjustment."""
         if not self.experiment_model or self._current_pixel_number is None:
             return
+        
+        # Check if we've already triggered continuation
+        if self._current_measurement_type == "current":
+            return
+        
+        # Mark that we're attempting to start current measurement
+        # This prevents multiple calls to this function
+        self._current_measurement_type = "current"
         
         try:
             # Update phase plot with results
@@ -422,12 +431,16 @@ class MainApplicationView(QMainWindow):
             
             # Start current measurement
             if self.experiment_model.start_current_measurement(self._current_pixel_number):
-                self._current_measurement_type = "current"
                 self.plot_widget.set_current_measuring(True)
-                
                 self.status_display.set_status_message(f"Starting current measurement for pixel {self._current_pixel_number}...")
+            else:
+                # Failed to start - reset flag so it can be retried
+                self._current_measurement_type = None
+                self._show_error("Failed to start current measurement")
         
         except EQEExperimentError as e:
+            # Failed to start - reset flag so it can be retried
+            self._current_measurement_type = None
             self._show_error(f"Failed to continue with current measurement: {e}")
     
     def _on_align_button_clicked(self) -> None:
@@ -487,7 +500,7 @@ class MainApplicationView(QMainWindow):
         if current_current_state != measurement_status['current_measuring']:
             self.plot_widget.set_current_measuring(measurement_status['current_measuring'])
         
-        # Handle phase adjustment completion
+        # Handle phase adjustment completion - automatically continue with current measurement
         if (self._current_pixel_number is not None and 
             not measurement_status['phase_adjusting'] and
             not measurement_status['current_measuring'] and
