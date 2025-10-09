@@ -179,10 +179,20 @@ class CurrentMeasurementModel:
             # Prepare monochromator
             self.monochromator.open_shutter()
             
-            # Set initial filter based on starting wavelength
-            if start_wavelength <= 400:
-                self.monochromator.set_filter(3)  # No filter
+            # Set initial filter based on starting wavelength and track current filter
+            # Filter positions: 1 = 400 nm filter, 2 = 780 nm filter, 3 = no filter
+            if start_wavelength <= 420:
+                current_filter = 3  # No filter
+                self.monochromator.set_filter(current_filter)
                 self.logger.log("Set filter to 3 (no filter)")
+            elif start_wavelength <= 800:
+                current_filter = 1  # 400 nm filter
+                self.monochromator.set_filter(current_filter)
+                self.logger.log("Set filter to 1 (400 nm)")
+            else:
+                current_filter = 2  # 780 nm filter
+                self.monochromator.set_filter(current_filter)
+                self.logger.log("Set filter to 2 (780 nm)")
             
             # PicoScope doesn't need parameter configuration (it's software-based)
             
@@ -198,12 +208,14 @@ class CurrentMeasurementModel:
             
             while current_wavelength <= end_wavelength and not self._stop_requested:
                 try:
-                    # Update filter if needed
-                    if current_wavelength > 420 and len(self.wavelengths) == 0:
-                        self.monochromator.set_filter(1)  # 400 nm filter
+                    # Update filter only when crossing thresholds
+                    if current_wavelength > 420 and current_filter == 3:
+                        current_filter = 1  # Switch to 400 nm filter
+                        self.monochromator.set_filter(current_filter)
                         self.logger.log("Set filter to 1 (400 nm)")
-                    elif current_wavelength > 800 and all(w <= 800 for w in self.wavelengths):
-                        self.monochromator.set_filter(2)  # 780 nm filter
+                    elif current_wavelength > 800 and current_filter == 1:
+                        current_filter = 2  # Switch to 780 nm filter
+                        self.monochromator.set_filter(current_filter)
                         self.logger.log("Set filter to 2 (780 nm)")
                     
                     # Measure current
@@ -233,6 +245,16 @@ class CurrentMeasurementModel:
                 self.logger.log(f"Current measurement completed for pixel {pixel_number}")
             else:
                 self.logger.log(f"Current measurement stopped for pixel {pixel_number}")
+            
+            # Set monochromator to green alignment dot position
+            try:
+                self.logger.log("Setting monochromator to green alignment position (532 nm)")
+                self.monochromator.set_filter(1)
+                self.monochromator.set_grating(1)
+                self.monochromator.set_wavelength(532.0)
+                self.monochromator.open_shutter()
+            except MonochromatorError as e:
+                self.logger.log(f"Warning: Failed to set alignment position: {e}", "WARNING")
             
             if self.completion_callback:
                 self.completion_callback(success)

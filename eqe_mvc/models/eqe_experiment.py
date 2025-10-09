@@ -9,6 +9,7 @@ import pyvisa as visa
 from typing import Optional, Dict, Any, Callable, Tuple, List
 import threading
 from contextlib import contextmanager
+from PySide6.QtCore import QObject, Signal
 
 from ..controllers.thorlabs_power_meter import ThorlabsPowerMeterController, ThorlabsPowerMeterError
 from ..controllers.monochromator import MonochromatorController, MonochromatorError
@@ -26,13 +27,18 @@ class EQEExperimentError(Exception):
     pass
 
 
-class EQEExperimentModel:
+class EQEExperimentModel(QObject):
     """
     High-level model for the complete EQE measurement experiment.
     
     This model coordinates all devices and measurement operations, providing
     a unified interface for the complete experimental workflow.
     """
+    
+    # Qt Signals for thread-safe GUI updates
+    device_status_changed = Signal(str, bool, str)  # device_name, is_connected, message
+    measurement_progress = Signal(str, dict)  # measurement_type, progress_data
+    experiment_complete = Signal(bool, str)  # success, message
     
     def __init__(self, logger: Optional[MeasurementDataLogger] = None):
         """
@@ -41,6 +47,8 @@ class EQEExperimentModel:
         Args:
             logger: Optional logger for experiment progress
         """
+        super().__init__()
+        
         self.logger = logger or MeasurementDataLogger()
         
         # VISA resource manager
@@ -66,7 +74,7 @@ class EQEExperimentModel:
         # Experiment parameters
         self.measurement_params = DEFAULT_MEASUREMENT_PARAMS.copy()
         
-        # Callbacks
+        # Legacy callbacks for backwards compatibility (will use signals instead)
         self.device_status_callback: Optional[Callable[[str, bool, str], None]] = None
         self.measurement_progress_callback: Optional[Callable[[str, Dict], None]] = None
         self.experiment_complete_callback: Optional[Callable[[bool, str], None]] = None
@@ -99,17 +107,29 @@ class EQEExperimentModel:
         self.experiment_complete_callback = callback
     
     def _notify_device_status(self, device_name: str, is_connected: bool, message: str = "") -> None:
-        """Notify device status change."""
+        """Notify device status change using Qt signal for thread safety."""
+        # Emit Qt signal (thread-safe)
+        self.device_status_changed.emit(device_name, is_connected, message)
+        
+        # Keep legacy callback for backwards compatibility
         if self.device_status_callback:
             self.device_status_callback(device_name, is_connected, message)
     
     def _notify_measurement_progress(self, measurement_type: str, progress_data: Dict) -> None:
-        """Notify measurement progress."""
+        """Notify measurement progress using Qt signal for thread safety."""
+        # Emit Qt signal (thread-safe)
+        self.measurement_progress.emit(measurement_type, progress_data)
+        
+        # Keep legacy callback for backwards compatibility
         if self.measurement_progress_callback:
             self.measurement_progress_callback(measurement_type, progress_data)
     
     def _notify_experiment_complete(self, success: bool, message: str) -> None:
-        """Notify experiment completion."""
+        """Notify experiment completion using Qt signal for thread safety."""
+        # Emit Qt signal (thread-safe)
+        self.experiment_complete.emit(success, message)
+        
+        # Keep legacy callback for backwards compatibility
         if self.experiment_complete_callback:
             self.experiment_complete_callback(success, message)
     

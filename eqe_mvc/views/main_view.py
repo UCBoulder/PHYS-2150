@@ -121,10 +121,14 @@ class MainApplicationView(QMainWindow):
         """
         self.experiment_model = model
         
-        # Connect model signals
-        model.set_device_status_callback(self._on_device_status_update)
-        model.set_measurement_progress_callback(self._on_measurement_progress)
-        model.set_experiment_complete_callback(self._on_experiment_complete)
+        # Connect model Qt signals with QueuedConnection for thread safety
+        # This ensures all GUI updates happen on the main thread
+        model.device_status_changed.connect(
+            self._on_device_status_update, Qt.QueuedConnection)
+        model.measurement_progress.connect(
+            self._on_measurement_progress, Qt.QueuedConnection)
+        model.experiment_complete.connect(
+            self._on_experiment_complete, Qt.QueuedConnection)
     
     def _show_initial_cell_number_dialog(self) -> None:
         """Show cell number input dialog on application startup."""

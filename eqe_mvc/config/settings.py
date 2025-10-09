@@ -26,7 +26,7 @@ class DeviceType(Enum):
 # Default measurement parameters
 DEFAULT_MEASUREMENT_PARAMS = {
     "start_wavelength": 350.0,  # nm
-    "end_wavelength": 850.0,    # nm
+    "end_wavelength": 750.0,    # nm
     "step_size": 10.0,          # nm
     "cell_number": "167",       # Three-digit cell number
     "pixel_number": 1,
