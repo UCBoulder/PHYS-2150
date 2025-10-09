@@ -8,16 +8,18 @@ all GUI components and provides the primary user interface.
 import sys
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QMessageBox, 
-    QFileDialog, QInputDialog, QApplication, QPushButton
+    QFileDialog, QInputDialog, QApplication, QPushButton, QTabWidget
 )
 from PySide6.QtCore import Qt, QTimer, Signal
 from typing import Optional, Dict, Any
+import logging
 
 from ..models.eqe_experiment import EQEExperimentModel, EQEExperimentError
+from ..models.stability_test import StabilityTestModel
 from ..utils.data_handling import DataHandler, DataValidationError
 from ..config.settings import GUI_CONFIG, ERROR_MESSAGES, FILE_NAMING
-from .plot_widgets import MultiPlotWidget
-from .control_widgets import ParameterInputWidget, StatusDisplayWidget
+from .measurement_tab import MeasurementTab
+from .stability_test_tab import StabilityTestTab
 import datetime
 
 
@@ -42,12 +44,20 @@ class MainApplicationView(QMainWindow):
         
         # Create main components
         self.experiment_model: Optional[EQEExperimentModel] = None
+        self.stability_model: Optional[StabilityTestModel] = None
         self.data_handler = DataHandler()
+        self.logger = logging.getLogger(__name__)
         
-        # Create GUI components
-        self.parameter_input = ParameterInputWidget()
-        self.status_display = StatusDisplayWidget()
-        self.plot_widget = MultiPlotWidget()
+        # Create tab widget
+        self.tab_widget = QTabWidget()
+        
+        # Create tabs
+        self.measurement_tab = MeasurementTab()
+        self.stability_tab = StabilityTestTab()
+        
+        # Add tabs
+        self.tab_widget.addTab(self.measurement_tab, "Measurements")
+        self.tab_widget.addTab(self.stability_tab, "Stability Tests")
         
         # Set up layouts and connections
         self._setup_layout()
@@ -73,37 +83,20 @@ class MainApplicationView(QMainWindow):
     
     def _setup_layout(self) -> None:
         """Set up the main window layout."""
-        # Create central widget
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        
-        # Main vertical layout
-        main_layout = QVBoxLayout()
-        main_layout.setSpacing(10)
-        
-        # Top row: Parameter input and Device Status side by side
-        top_row = QHBoxLayout()
-        top_row.addWidget(self.parameter_input)
-        top_row.addWidget(self.status_display)
-        main_layout.addLayout(top_row)
-        
-        # Middle section: Plots (takes most of the space, full width)
-        main_layout.addWidget(self.plot_widget, stretch=3)
-        
-        central_widget.setLayout(main_layout)
+        # Set tab widget as central widget
+        self.setCentralWidget(self.tab_widget)
     
     def _connect_signals(self) -> None:
         """Connect signals between GUI components."""
-        # Parameter input signals
-        self.parameter_input.parameters_changed.connect(self._on_parameters_changed)
+        # Measurement tab signals
+        self.measurement_tab.parameters_changed.connect(self._on_parameters_changed)
+        self.measurement_tab.power_measurement_requested.connect(self._start_power_measurement)
+        self.measurement_tab.current_measurement_requested.connect(self._start_current_measurement)
+        self.measurement_tab.stop_requested.connect(self._stop_measurement)
+        self.measurement_tab.alignment_requested.connect(self._on_align_button_clicked)
         
-        # Plot widget button signals
-        self.plot_widget.power_measurement_requested.connect(self._start_power_measurement)
-        self.plot_widget.current_measurement_requested.connect(self._start_current_measurement)
-        self.plot_widget.stop_requested.connect(self._stop_measurement)
-        
-        # Status display alignment button signal
-        self.status_display.alignment_requested.connect(self._on_align_button_clicked)
+        # Stability tab signals (placeholder for future expansion)
+        # Signals are handled internally by the stability tab and model
     
     def _setup_timers(self) -> None:
         """Set up periodic update timers."""
@@ -129,6 +122,28 @@ class MainApplicationView(QMainWindow):
             self._on_measurement_progress, Qt.QueuedConnection)
         model.experiment_complete.connect(
             self._on_experiment_complete, Qt.QueuedConnection)
+        
+        # Note: StabilityTestModel will be created after device initialization completes
+        # See initialize_stability_model() method
+    
+    def initialize_stability_model(self) -> None:
+        """
+        Initialize the stability test model after devices are connected.
+        
+        This must be called after device initialization is complete.
+        """
+        if not self.experiment_model:
+            return
+        
+        # Create and set up stability test model using same hardware controllers
+        self.stability_model = StabilityTestModel(
+            power_meter=self.experiment_model.power_meter,
+            monochromator=self.experiment_model.monochromator,
+            lockin=self.experiment_model.lockin,
+            logger=self.logger
+        )
+        self.stability_tab.set_stability_model(self.stability_model)
+        self.logger.info("Stability test model initialized with shared hardware controllers")
     
     def _show_initial_cell_number_dialog(self) -> None:
         """Show cell number input dialog on application startup."""
@@ -139,9 +154,9 @@ class MainApplicationView(QMainWindow):
         
         if ok and cell_number:
             if self.data_handler.validate_cell_number(cell_number):
-                current_params = self.parameter_input.get_parameters()
+                current_params = self.measurement_tab.get_parameters()
                 current_params['cell_number'] = cell_number
-                self.parameter_input.load_parameters(current_params)
+                self.measurement_tab.load_parameters(current_params)
             else:
                 QMessageBox.warning(self, "Invalid Input", ERROR_MESSAGES["invalid_cell_number"])
                 self._show_initial_cell_number_dialog()
@@ -171,14 +186,16 @@ class MainApplicationView(QMainWindow):
             is_connected: Connection status
             message: Status message
         """
-        self.status_display.update_device_status(device_name, is_connected, message)
+        self.measurement_tab.update_device_status(device_name, is_connected, message)
         
         # Update control button states based on overall device status
         if self.experiment_model:
             device_status = self.experiment_model.get_device_status()
             all_connected = all(device_status.values())
-            self.plot_widget.set_buttons_enabled(all_connected)
-            self.status_display.align_button.setEnabled(all_connected)
+            plot_widget = self.measurement_tab.get_plot_widget()
+            status_display = self.measurement_tab.get_status_display()
+            plot_widget.set_buttons_enabled(all_connected)
+            status_display.align_button.setEnabled(all_connected)
     
     def _on_measurement_progress(self, measurement_type: str, progress_data: Dict) -> None:
         """
@@ -202,11 +219,13 @@ class MainApplicationView(QMainWindow):
         progress_percent = progress_data.get('progress_percent', 0)
         
         # Update plot
-        power_plot = self.plot_widget.get_power_plot()
+        plot_widget = self.measurement_tab.get_plot_widget()
+        power_plot = plot_widget.get_power_plot()
         power_plot.add_power_point(wavelength, power)
         
         # Update status
-        self.status_display.update_progress(
+        status_display = self.measurement_tab.get_status_display()
+        status_display.update_progress(
             int(progress_percent),
             f"Power measurement: {wavelength:.1f} nm"
         )
@@ -218,11 +237,13 @@ class MainApplicationView(QMainWindow):
         progress_percent = progress_data.get('progress_percent', 0)
         
         # Update plot
-        current_plot = self.plot_widget.get_current_plot()
+        plot_widget = self.measurement_tab.get_plot_widget()
+        current_plot = plot_widget.get_current_plot()
         current_plot.add_current_point(wavelength, current)
         
         # Update status
-        self.status_display.update_progress(
+        status_display = self.measurement_tab.get_status_display()
+        status_display.update_progress(
             int(progress_percent),
             f"Current measurement: {wavelength:.1f} nm (Pixel {self._current_pixel_number})"
         )
@@ -233,11 +254,13 @@ class MainApplicationView(QMainWindow):
         signal = progress_data.get('signal', 0)
         
         # Update plot
-        phase_plot = self.plot_widget.get_phase_plot()
+        plot_widget = self.measurement_tab.get_plot_widget()
+        phase_plot = plot_widget.get_phase_plot()
         phase_plot.add_phase_point(phase, signal)
         
         # Update status
-        self.status_display.set_status_message(
+        status_display = self.measurement_tab.get_status_display()
+        status_display.set_status_message(
             f"Phase adjustment: {phase:.1f}° (Pixel {self._current_pixel_number})"
         )
     
@@ -250,12 +273,14 @@ class MainApplicationView(QMainWindow):
             message: Completion message
         """
         # Update status
-        self.status_display.clear_progress()
-        self.status_display.set_status_message(message)
+        status_display = self.measurement_tab.get_status_display()
+        status_display.clear_progress()
+        status_display.set_status_message(message)
         
         # Reset button states
-        self.plot_widget.set_power_measuring(False)
-        self.plot_widget.set_current_measuring(False)
+        plot_widget = self.measurement_tab.get_plot_widget()
+        plot_widget.set_power_measuring(False)
+        plot_widget.set_current_measuring(False)
         
         # Show completion message
         if success:
@@ -350,20 +375,23 @@ class MainApplicationView(QMainWindow):
         
         try:
             # Validate parameters
-            is_valid, error_msg = self.parameter_input.validate_parameters()
+            parameter_input = self.measurement_tab.get_parameter_input()
+            is_valid, error_msg = parameter_input.validate_parameters()
             if not is_valid:
                 self._show_error(error_msg)
                 return
             
             # Clear power plot
-            self.plot_widget.get_power_plot().clear_plot()
+            plot_widget = self.measurement_tab.get_plot_widget()
+            plot_widget.get_power_plot().clear_plot()
             
             # Start measurement
             if self.experiment_model.start_power_measurement():
                 self._current_measurement_type = "power"
-                self.plot_widget.set_power_measuring(True)
+                plot_widget.set_power_measuring(True)
                 
-                self.status_display.set_status_message("Starting power measurement...")
+                status_display = self.measurement_tab.get_status_display()
+                status_display.set_status_message("Starting power measurement...")
         
         except EQEExperimentError as e:
             self._show_error(f"Failed to start power measurement: {e}")
@@ -381,23 +409,26 @@ class MainApplicationView(QMainWindow):
         
         try:
             # Validate parameters
-            is_valid, error_msg = self.parameter_input.validate_parameters()
+            parameter_input = self.measurement_tab.get_parameter_input()
+            is_valid, error_msg = parameter_input.validate_parameters()
             if not is_valid:
                 self._show_error(error_msg)
                 return
             
             # Set pixel number in plots
-            self.plot_widget.set_pixel_number(pixel_number)
+            plot_widget = self.measurement_tab.get_plot_widget()
+            plot_widget.set_pixel_number(pixel_number)
             
             # Clear current and phase plots
-            self.plot_widget.get_current_plot().clear_plot()
-            self.plot_widget.get_phase_plot().clear_plot()
+            plot_widget.get_current_plot().clear_plot()
+            plot_widget.get_phase_plot().clear_plot()
             
             # Start phase adjustment first
             self._current_pixel_number = pixel_number
             self._current_measurement_type = None  # Reset to ensure continuation logic works
             if self.experiment_model.start_phase_adjustment(pixel_number):
-                self.status_display.set_status_message(f"Starting phase adjustment for pixel {pixel_number}...")
+                status_display = self.measurement_tab.get_status_display()
+                status_display.set_status_message(f"Starting phase adjustment for pixel {pixel_number}...")
                 
                 # Phase adjustment will complete, then we'll start current measurement
                 # This is handled in _update_status() which checks for phase completion
@@ -421,9 +452,10 @@ class MainApplicationView(QMainWindow):
         try:
             # Update phase plot with results
             phase_model = self.experiment_model.phase_model
+            plot_widget = self.measurement_tab.get_plot_widget()
             if phase_model:
                 phase_data = phase_model.get_adjustment_data()
-                phase_plot = self.plot_widget.get_phase_plot()
+                phase_plot = plot_widget.get_phase_plot()
                 phase_plot.update_phase_data(
                     phase_data['phase_data'],
                     phase_data['signal_data'],
@@ -433,8 +465,9 @@ class MainApplicationView(QMainWindow):
             
             # Start current measurement
             if self.experiment_model.start_current_measurement(self._current_pixel_number):
-                self.plot_widget.set_current_measuring(True)
-                self.status_display.set_status_message(f"Starting current measurement for pixel {self._current_pixel_number}...")
+                plot_widget.set_current_measuring(True)
+                status_display = self.measurement_tab.get_status_display()
+                status_display.set_status_message(f"Starting current measurement for pixel {self._current_pixel_number}...")
             else:
                 # Failed to start - reset flag so it can be retried
                 self._current_measurement_type = None
@@ -479,10 +512,12 @@ class MainApplicationView(QMainWindow):
             self.experiment_model.stop_all_measurements()
             
             # Reset button states
-            self.plot_widget.set_power_measuring(False)
-            self.plot_widget.set_current_measuring(False)
+            plot_widget = self.measurement_tab.get_plot_widget()
+            plot_widget.set_power_measuring(False)
+            plot_widget.set_current_measuring(False)
             
-            self.status_display.set_status_message("Measurement stopped")
+            status_display = self.measurement_tab.get_status_display()
+            status_display.set_status_message("Measurement stopped")
     
     def _update_status(self) -> None:
         """Periodic status update."""
@@ -492,15 +527,16 @@ class MainApplicationView(QMainWindow):
         # Update measurement status in plot widget buttons
         measurement_status = self.experiment_model.get_measurement_status()
         
+        plot_widget = self.measurement_tab.get_plot_widget()
         # Only update if states have changed to avoid flicker
-        current_power_state = self.plot_widget._power_measuring
-        current_current_state = self.plot_widget._current_measuring
+        current_power_state = plot_widget._power_measuring
+        current_current_state = plot_widget._current_measuring
         
         if current_power_state != measurement_status['power_measuring']:
-            self.plot_widget.set_power_measuring(measurement_status['power_measuring'])
+            plot_widget.set_power_measuring(measurement_status['power_measuring'])
         
         if current_current_state != measurement_status['current_measuring']:
-            self.plot_widget.set_current_measuring(measurement_status['current_measuring'])
+            plot_widget.set_current_measuring(measurement_status['current_measuring'])
         
         # Handle phase adjustment completion - automatically continue with current measurement
         if (self._current_pixel_number is not None and 
