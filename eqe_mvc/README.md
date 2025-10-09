@@ -11,9 +11,8 @@ This application provides a clean, maintainable solution for EQE measurements by
 ### Controllers (`controllers/`)
 Device drivers that handle low-level hardware communication:
 - **ThorlabsPowerMeterController**: Power measurements and wavelength calibration
-- **Keithley2110Controller**: Voltage and current measurements via VISA
 - **MonochromatorController**: Wavelength selection and filter management
-- **SR510Controller**: Lock-in amplifier control for photocurrent measurements
+- **PicoScopeController**: Software lock-in amplifier for photocurrent measurements using PicoScope oscilloscope
 
 ### Models (`models/`)
 Experiment logic and measurement workflows:
@@ -43,7 +42,8 @@ User interface components with no direct device access:
 3. Ensure hardware-specific libraries are available:
    - Thorlabs power meter drivers (TLPMX)
    - Cornerstone monochromator library
-   - Appropriate VISA drivers for Keithley instruments
+   - PicoSDK drivers (from Pico Technology website)
+   - Appropriate VISA drivers for USB devices
 
 ## Usage
 
@@ -74,14 +74,16 @@ also work for quick testing.
 
 ## Device Configuration
 
-Default settings are in `config/settings.py`. Modify device addresses and parameters as needed:
+Default settings are in `config/settings.py`. Modify device parameters as needed:
 
 ```python
-DEVICE_CONFIG = {
-    'keithley_address': 'USB0::0x05E6::0x2110::9203835::INSTR',
-    'sr510_port': 'COM3',
-    'sr510_baudrate': 9600,
-    # ... other settings
+DEVICE_CONFIGS = {
+    DeviceType.PICOSCOPE_LOCKIN: {
+        "default_chopper_freq": 81,    # Hz
+        "default_num_cycles": 100,     # Integration cycles
+        "correction_factor": 0.45,
+    },
+    # ... other device settings
 }
 ```
 
@@ -112,9 +114,13 @@ eqe_mvc/
 ├── controllers/         # Device drivers
 │   ├── __init__.py
 │   ├── thorlabs_power_meter.py
-│   ├── keithley_2110.py
 │   ├── monochromator.py
-│   └── sr510_lockin.py
+│   └── picoscope_lockin.py
+├── drivers/            # Low-level device drivers
+│   ├── __init__.py
+│   ├── cornerstone_mono.py
+│   ├── picoscope_driver.py
+│   └── TLPMX.py
 ├── models/             # Experiment logic
 │   ├── __init__.py
 │   ├── power_measurement.py
@@ -146,9 +152,27 @@ To extend the application:
 
 ## Troubleshooting
 
-- **Device Connection Issues**: Check VISA addresses and COM ports in settings
+- **PicoScope Connection Issues**: 
+  - Ensure PicoScope is connected via USB
+  - Install PicoSDK drivers from Pico Technology website
+  - Install Python package: `pip install picosdk`
+  - Check that no other application is using the PicoScope
 - **Import Errors**: Ensure all dependencies are installed via requirements.txt
 - **GUI Issues**: Verify PySide6 installation and matplotlib backend compatibility
+- **Low Signal Quality**: Check lamp is on, chopper is running at 81 Hz, and connections are secure
+
+## Recent Changes (October 2025)
+
+### PicoScope Integration
+The application has been updated to use a PicoScope oscilloscope as a software lock-in amplifier, replacing the previous SR510 lock-in and Keithley 2110 combination. Key improvements:
+
+- **Simplified Setup**: One device (PicoScope) instead of two (SR510 + Keithley)
+- **Better Stability**: 0.66% CV through phase-locked acquisition
+- **No Clipping**: ±20V input range handles all signal levels
+- **Software Lock-in**: Hilbert transform for phase-independent magnitude measurement
+- **Robust Averaging**: Trimmed mean rejects outliers from lamp flicker
+
+See `PICOSCOPE_INTEGRATION.md` for detailed technical documentation.
 
 ## Original Application
 

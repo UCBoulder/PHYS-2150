@@ -11,9 +11,8 @@ import threading
 from contextlib import contextmanager
 
 from ..controllers.thorlabs_power_meter import ThorlabsPowerMeterController, ThorlabsPowerMeterError
-from ..controllers.keithley_2110 import Keithley2110Controller, Keithley2110Error
 from ..controllers.monochromator import MonochromatorController, MonochromatorError
-from ..controllers.sr510_lockin import SR510Controller, SR510Error
+from ..controllers.picoscope_lockin import PicoScopeController, PicoScopeError
 from ..models.power_measurement import PowerMeasurementModel, PowerMeasurementError
 from ..models.current_measurement import CurrentMeasurementModel, CurrentMeasurementError
 from ..models.phase_adjustment import PhaseAdjustmentModel, PhaseAdjustmentError
@@ -48,9 +47,8 @@ class EQEExperimentModel:
         
         # Device controllers
         self.power_meter: Optional[ThorlabsPowerMeterController] = None
-        self.keithley: Optional[Keithley2110Controller] = None
         self.monochromator: Optional[MonochromatorController] = None
-        self.lockin: Optional[SR510Controller] = None
+        self.lockin: Optional[PicoScopeController] = None
         
         # Measurement models
         self.power_model: Optional[PowerMeasurementModel] = None
@@ -132,7 +130,6 @@ class EQEExperimentModel:
             
             # Initialize device controllers
             self._initialize_power_meter()
-            self._initialize_keithley()
             self._initialize_monochromator()
             self._initialize_lockin()
             
@@ -158,16 +155,7 @@ class EQEExperimentModel:
             self._notify_device_status("Thorlabs Power Meter", False, str(e))
             raise EQEExperimentError(f"Failed to initialize power meter: {e}")
     
-    def _initialize_keithley(self) -> None:
-        """Initialize Keithley 2110 multimeter."""
-        try:
-            self.keithley = Keithley2110Controller(self._rm)
-            self.keithley.connect()
-            self._notify_device_status("Keithley 2110", True, "Connected")
-            self.logger.log("Keithley 2110 initialized")
-        except Keithley2110Error as e:
-            self._notify_device_status("Keithley 2110", False, str(e))
-            raise EQEExperimentError(f"Failed to initialize Keithley: {e}")
+
     
     def _initialize_monochromator(self) -> None:
         """Initialize monochromator."""
@@ -186,18 +174,28 @@ class EQEExperimentModel:
             raise EQEExperimentError(f"Failed to initialize monochromator: {e}")
     
     def _initialize_lockin(self) -> None:
-        """Initialize SR510 lock-in amplifier."""
+        """Initialize PicoScope software lock-in amplifier."""
         try:
-            config = DEVICE_CONFIGS[DeviceType.SR510_LOCKIN]
-            self.lockin = SR510Controller()
-            self.lockin.connect(
-                baudrate=config["baudrate"],
-                timeout=config["timeout"]
-            )
-            self._notify_device_status("SR510 Lock-in", True, "Connected")
-            self.logger.log("SR510 lock-in amplifier initialized")
-        except SR510Error as e:
-            self._notify_device_status("SR510 Lock-in", False, str(e))
+            config = DEVICE_CONFIGS[DeviceType.PICOSCOPE_LOCKIN]
+            self.lockin = PicoScopeController()
+            
+            # Connect to PicoScope
+            if not self.lockin.connect():
+                raise PicoScopeError("Failed to connect to PicoScope")
+            
+            # Configure with default parameters
+            chopper_freq = config.get("default_chopper_freq", 81)
+            num_cycles = config.get("default_num_cycles", 100)
+            correction_factor = config.get("correction_factor", 0.45)
+            
+            self.lockin.set_reference_frequency(chopper_freq)
+            self.lockin.set_num_cycles(num_cycles)
+            self.lockin.set_correction_factor(correction_factor)
+            
+            self._notify_device_status("PicoScope Lock-in", True, f"Connected (Freq: {chopper_freq} Hz)")
+            self.logger.log(f"PicoScope lock-in initialized (Freq: {chopper_freq} Hz, Cycles: {num_cycles})")
+        except PicoScopeError as e:
+            self._notify_device_status("PicoScope Lock-in", False, str(e))
             raise EQEExperimentError(f"Failed to initialize lock-in: {e}")
     
     def _create_measurement_models(self) -> None:
@@ -211,9 +209,8 @@ class EQEExperimentModel:
         self.power_model.set_progress_callback(self._on_power_progress)
         self.power_model.set_completion_callback(self._on_power_complete)
         
-        # Current measurement model
+        # Current measurement model (uses PicoScope lock-in only)
         self.current_model = CurrentMeasurementModel(
-            keithley=self.keithley,
             lockin=self.lockin,
             monochromator=self.monochromator,
             logger=self.logger

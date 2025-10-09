@@ -16,9 +16,8 @@ class MeasurementType(Enum):
 class DeviceType(Enum):
     """Types of devices in the system."""
     THORLABS_POWER_METER = "thorlabs_power_meter"
-    KEITHLEY_2110 = "keithley_2110"
     MONOCHROMATOR = "monochromator"
-    SR510_LOCKIN = "sr510_lockin"
+    PICOSCOPE_LOCKIN = "picoscope_lockin"
 
 
 # Default measurement parameters
@@ -39,17 +38,15 @@ POWER_MEASUREMENT_CONFIG = {
 
 # Current measurement configuration
 CURRENT_MEASUREMENT_CONFIG = {
-    "num_voltage_readings": 100,
-    "transimpedance_gain": 1e-6,  # Accounts for transimpedance amplifier
-    "voltage_threshold": 10.0,    # Voltage threshold for sensitivity adjustment
+    "num_measurements": 5,         # Number of lock-in measurements to average
+    "transimpedance_gain": 1e-6,  # Accounts for transimpedance amplifier (1 MΩ)
 }
 
 # Phase adjustment configuration
 PHASE_ADJUSTMENT_CONFIG = {
-    "num_phase_points": 7,        # Number of phase points to sample
-    "phase_range": (0, 360),      # Phase range in degrees
-    "alignment_wavelength": 532,   # nm
-    "min_r_squared": 0.90,        # Minimum acceptable R² for phase fit
+    "alignment_wavelength": 532,   # nm - wavelength for phase adjustment
+    "min_r_squared": 0.90,        # Minimum acceptable R² for phase fit visualization
+    "num_visualization_points": 37,  # Number of points for phase response visualization
 }
 
 # Device-specific configurations
@@ -57,18 +54,16 @@ DEVICE_CONFIGS = {
     DeviceType.THORLABS_POWER_METER: {
         "timeout": 5.0,
     },
-    DeviceType.KEITHLEY_2110: {
-        "timeout": 5.0,
-    },
     DeviceType.MONOCHROMATOR: {
         "interface": "usb",
         "timeout_msec": 29000,
         "grating_wavelength_threshold": 685,  # nm - switch to grating 2 above this
     },
-    DeviceType.SR510_LOCKIN: {
-        "baudrate": 19200,
-        "timeout": 2.0,
-        "com_port_description": "Prolific PL2303GT USB Serial COM Port",
+    DeviceType.PICOSCOPE_LOCKIN: {
+        "default_chopper_freq": 81,    # Hz - default chopper frequency
+        "default_num_cycles": 100,     # Number of cycles for lock-in integration
+        "num_measurements": 5,         # Number of measurements to average for stability
+        "correction_factor": 0.45,     # Default correction factor (overridden by monochromator S/N)
     }
 }
 

@@ -1,7 +1,7 @@
 """
 Phase Adjustment Model
 
-This model implements the logic for phase adjustment using the SR510 lock-in amplifier
+This model implements the logic for phase adjustment using the PicoScope software lock-in
 and monochromator. It handles automatic phase optimization through signal measurement.
 """
 
@@ -10,7 +10,7 @@ import numpy as np
 from typing import List, Tuple, Optional, Callable, Dict, Any
 import threading
 
-from ..controllers.sr510_lockin import SR510Controller, SR510Error
+from ..controllers.picoscope_lockin import PicoScopeController, PicoScopeError
 from ..controllers.monochromator import MonochromatorController, MonochromatorError
 from ..config.settings import PHASE_ADJUSTMENT_CONFIG
 from ..utils.data_handling import MeasurementDataLogger
@@ -26,17 +26,17 @@ class PhaseAdjustmentModel:
     """
     Model for phase adjustment operations.
     
-    This model implements the experiment logic for optimizing the lock-in amplifier
-    phase by sampling phase response and fitting a sine wave.
+    This model implements the experiment logic for optimizing the software lock-in
+    phase measurement and visualizing phase response using the PicoScope.
     """
     
-    def __init__(self, lockin: SR510Controller, monochromator: MonochromatorController,
+    def __init__(self, lockin: PicoScopeController, monochromator: MonochromatorController,
                  logger: Optional[MeasurementDataLogger] = None):
         """
         Initialize the phase adjustment model.
         
         Args:
-            lockin: SR510 lock-in amplifier controller
+            lockin: PicoScope software lock-in controller
             monochromator: Monochromator controller
             logger: Optional logger for measurement progress
         """
@@ -100,67 +100,83 @@ class PhaseAdjustmentModel:
         self.monochromator.send_command(f"gowave {alignment_wavelength}")
         self.monochromator.send_command("shutter o")
         
-        # Configure lock-in amplifier
-        self.lockin.configure_standard_parameters()
+        # Wait for light to stabilize
+        time.sleep(1.0)
         
         self.logger.log(f"Prepared for phase adjustment on pixel {pixel_number}")
     
     def _sample_phase_response(self) -> Tuple[np.ndarray, np.ndarray]:
         """
-        Sample phase response at multiple phase points.
+        Sample phase response using software lock-in.
+        
+        Uses PicoScope software lock-in to measure signal and determine optimal phase.
+        The software lock-in calculates X, Y components and finds the phase that
+        maximizes the signal magnitude.
         
         Returns:
-            Tuple[np.ndarray, np.ndarray]: (phases, signals)
+            Tuple[np.ndarray, np.ndarray]: (phases, signals) for visualization
             
         Raises:
             PhaseAdjustmentError: If sampling fails
         """
         try:
-            num_points = PHASE_ADJUSTMENT_CONFIG["num_phase_points"]
-            phase_range = PHASE_ADJUSTMENT_CONFIG["phase_range"]
+            self.logger.log("Performing software lock-in measurement for phase optimization")
             
-            phases = np.linspace(phase_range[0], phase_range[1], num_points)
+            # Perform software lock-in measurement
+            result = self.lockin.perform_lockin_measurement()
+            
+            if result is None:
+                raise PhaseAdjustmentError("Failed to perform lock-in measurement")
+            
+            # Extract results
+            X = result['X']
+            Y = result['Y']
+            R = result['R']
+            theta_deg = result['theta']
+            measured_freq = result['freq']
+            
+            self.logger.log(f"Lock-in results:")
+            self.logger.log(f"  X (in-phase):    {X:+.6f} V")
+            self.logger.log(f"  Y (quadrature):  {Y:+.6f} V")
+            self.logger.log(f"  R (magnitude):   {R:+.6f} V")
+            self.logger.log(f"  Phase:           {theta_deg:+.1f}°")
+            self.logger.log(f"  Measured freq:   {measured_freq:.2f} Hz")
+            
+            # Create visualization of projected signal vs phase
+            # This shows how signal varies with assumed phase
+            test_phases = np.linspace(0, 360, 37)
             signals = []
             
-            self.logger.log(f"Sampling phase response at {num_points} points")
+            for test_phase in test_phases:
+                # Calculate what the signal would be if we rotated by this phase
+                phase_rad = np.deg2rad(test_phase)
+                rotated_signal = X * np.cos(phase_rad) + Y * np.sin(phase_rad)
+                signals.append(rotated_signal)
             
-            for i, phase in enumerate(phases):
-                if self._stop_requested:
-                    raise PhaseAdjustmentError("Phase adjustment stopped by user")
-                
-                # Set phase
-                self.lockin.set_phase(phase)
-                
-                # Read signal
-                signal = self.lockin.read_output()
-                signals.append(signal)
-                
-                self.logger.log(f"Phase: {phase:.1f}°, Signal: {signal:.6f}")
-                
-                if self.progress_callback:
-                    self.progress_callback(phase, signal)
+            return test_phases, np.array(signals)
             
-            return phases, np.array(signals)
-            
-        except SR510Error as e:
+        except PicoScopeError as e:
             raise PhaseAdjustmentError(f"Failed to sample phase response: {e}")
     
     def _fit_sine_wave(self, phases: np.ndarray, signals: np.ndarray) -> Tuple[float, float, float]:
         """
-        Fit sine wave to phase response data.
+        Fit sine wave to phase response data and extract optimal phase.
+        
+        For PicoScope software lock-in, we also directly compute the optimal phase
+        from the X and Y components measured earlier.
         
         Args:
             phases: Phase values in degrees
             signals: Signal values
             
         Returns:
-            Tuple[float, float, float]: (optimal_phase, optimal_signal, r_squared)
+            Tuple[float, float, float]: (optimal_phase, signal_magnitude, quality_metric)
             
         Raises:
             PhaseAdjustmentError: If fitting fails
         """
         try:
-            # Fit sine wave
+            # Fit sine wave for visualization
             fit_params = MathUtils.fit_sine_wave(phases, signals)
             if fit_params is None:
                 raise PhaseAdjustmentError("Failed to fit sine wave to phase response")
@@ -170,7 +186,7 @@ class PhaseAdjustmentModel:
             if r_squared is None:
                 raise PhaseAdjustmentError("Failed to calculate R-squared")
             
-            # Find optimal phase
+            # Find optimal phase from fit
             optimal_phase = MathUtils.find_optimal_phase(fit_params, prefer_positive=True)
             
             # Generate fit curve for visualization
@@ -178,44 +194,52 @@ class PhaseAdjustmentModel:
             self.fit_phases = fit_phases.tolist()
             self.fit_signals = fit_signals.tolist()
             
-            self.logger.log(f"Sine wave fit completed: R² = {r_squared:.4f}")
+            # Get the actual signal magnitude from the software lock-in
+            # (this is more accurate than the fit baseline)
+            result = self.lockin.perform_lockin_measurement()
+            if result:
+                signal_magnitude = result['R']
+                actual_phase = result['theta'] % 360
+                # Use the actual measured phase instead of fit phase
+                optimal_phase = actual_phase
+            else:
+                signal_magnitude = np.max(np.abs(signals))
             
-            return optimal_phase, fit_params[2], r_squared  # Return phase, offset (baseline), R²
+            self.logger.log(f"Phase analysis: Optimal phase = {optimal_phase:.1f}°, R² = {r_squared:.4f}")
+            
+            return optimal_phase, signal_magnitude, r_squared
             
         except Exception as e:
             raise PhaseAdjustmentError(f"Failed to fit sine wave: {e}")
     
     def _set_optimal_phase(self, optimal_phase: float) -> float:
         """
-        Set the optimal phase and measure final signal.
+        Measure final signal at optimal phase.
+        
+        For PicoScope software lock-in, the phase is already determined by the measurement.
+        This function is kept for API compatibility and returns the magnitude.
         
         Args:
             optimal_phase: Optimal phase angle in degrees
             
         Returns:
-            float: Final signal at optimal phase
+            float: Final signal magnitude
         """
         try:
-            # Set optimal phase
-            self.lockin.set_phase(optimal_phase)
+            # Perform another lock-in measurement to confirm signal
+            result = self.lockin.perform_lockin_measurement()
             
-            # Read final signal
-            final_signal = self.lockin.read_output()
+            if result is None:
+                raise PhaseAdjustmentError("Failed to measure final signal")
             
-            # If signal is negative, try adding 180 degrees
-            if final_signal < 0:
-                adjusted_phase = (optimal_phase + 180) % 360
-                self.logger.log(f"Signal negative, adjusting phase to {adjusted_phase:.1f}°")
-                self.lockin.set_phase(adjusted_phase)
-                final_signal = self.lockin.read_output()
-                optimal_phase = adjusted_phase
+            final_signal = result['R']  # Use magnitude
             
-            self.logger.log(f"Set optimal phase to {optimal_phase:.1f}°, final signal: {final_signal:.6f}")
+            self.logger.log(f"Optimal phase: {optimal_phase:.1f}°, signal magnitude: {final_signal:.6f} V")
             
             return final_signal
             
-        except SR510Error as e:
-            raise PhaseAdjustmentError(f"Failed to set optimal phase: {e}")
+        except PicoScopeError as e:
+            raise PhaseAdjustmentError(f"Failed to measure final signal: {e}")
     
     def _adjustment_worker(self, pixel_number: int) -> None:
         """

@@ -1,17 +1,16 @@
 """
 Current Measurement Model
 
-This model implements the logic for current measurements using the Keithley multimeter,
-SR510 lock-in amplifier, and monochromator. It coordinates device operations and handles
-the photocurrent measurement workflow.
+This model implements the logic for current measurements using the PicoScope
+software lock-in amplifier and monochromator. It coordinates device operations
+and handles the photocurrent measurement workflow.
 """
 
 import time
 from typing import List, Tuple, Optional, Callable
 import threading
 
-from ..controllers.keithley_2110 import Keithley2110Controller, Keithley2110Error
-from ..controllers.sr510_lockin import SR510Controller, SR510Error
+from ..controllers.picoscope_lockin import PicoScopeController, PicoScopeError
 from ..controllers.monochromator import MonochromatorController, MonochromatorError
 from ..config.settings import CURRENT_MEASUREMENT_CONFIG, MONOCHROMATOR_CORRECTION_FACTORS
 from ..utils.data_handling import MeasurementDataLogger
@@ -27,23 +26,21 @@ class CurrentMeasurementModel:
     Model for current measurement operations.
     
     This model implements the experiment logic for measuring photocurrent
-    across a wavelength range using the Keithley multimeter, lock-in amplifier,
+    across a wavelength range using the PicoScope software lock-in amplifier
     and monochromator.
     """
     
-    def __init__(self, keithley: Keithley2110Controller, lockin: SR510Controller,
+    def __init__(self, lockin: PicoScopeController,
                  monochromator: MonochromatorController,
                  logger: Optional[MeasurementDataLogger] = None):
         """
         Initialize the current measurement model.
         
         Args:
-            keithley: Keithley 2110 multimeter controller
-            lockin: SR510 lock-in amplifier controller
+            lockin: PicoScope software lock-in controller
             monochromator: Monochromator controller
             logger: Optional logger for measurement progress
         """
-        self.keithley = keithley
         self.lockin = lockin
         self.monochromator = monochromator
         self.logger = logger or MeasurementDataLogger()
@@ -109,53 +106,26 @@ class CurrentMeasurementModel:
         
         return confirmed_wavelength
     
-    def _read_lock_in_with_keithley_check(self) -> float:
+    def _read_lockin_current(self) -> float:
         """
-        Read lock-in amplifier output with Keithley voltage monitoring.
+        Read current using PicoScope software lock-in amplifier.
         
         Returns:
-            float: Processed current value
+            float: Measured current in Amps
             
         Raises:
             CurrentMeasurementError: If measurement fails
         """
         try:
-            # Check lock-in status
-            while True:
-                # Flush input and check status
-                self.lockin.flush_input()
-                status = self.lockin.get_status()
-                
-                if status['locked'] and status['has_reference'] and not status['overloaded']:
-                    # Get sensitivity
-                    sensitivity_code, sensitivity_value = self.lockin.get_sensitivity()
+            # Read current using PicoScope software lock-in with robust averaging
+            current = self.lockin.read_current(num_measurements=5)
+            
+            if current is None:
+                raise CurrentMeasurementError("Failed to read current from PicoScope")
+            
+            return current
                     
-                    # Read Keithley voltage
-                    num_readings = CURRENT_MEASUREMENT_CONFIG["num_voltage_readings"]
-                    average_voltage = self.keithley.measure_voltage_average(num_readings)
-                    
-                    # Check if voltage is too high and adjust sensitivity
-                    voltage_threshold = CURRENT_MEASUREMENT_CONFIG["voltage_threshold"]
-                    if average_voltage > voltage_threshold:
-                        self.logger.log(f"Voltage {average_voltage:.2f}V > threshold, increasing sensitivity")
-                        self.lockin.increase_sensitivity()
-                        continue
-                    
-                    # Calculate adjusted current
-                    correction_factor = self.get_correction_factor()
-                    adjusted_voltage = (average_voltage * sensitivity_value / 10) / correction_factor
-                    
-                    # Convert to current (accounts for transimpedance amplifier gain)
-                    transimpedance_gain = CURRENT_MEASUREMENT_CONFIG["transimpedance_gain"]
-                    current = adjusted_voltage * transimpedance_gain
-                    
-                    return current
-                else:
-                    self.logger.log("Lock-in not ready or overloaded, retrying...")
-                    time.sleep(1)
-                    continue
-                    
-        except (Keithley2110Error, SR510Error) as e:
+        except PicoScopeError as e:
             raise CurrentMeasurementError(f"Failed to read current: {e}")
     
     def measure_current_at_wavelength(self, wavelength: float) -> Tuple[float, float]:
@@ -175,8 +145,8 @@ class CurrentMeasurementModel:
             # Configure devices
             confirmed_wavelength = self._configure_for_wavelength(wavelength)
             
-            # Read current with lock-in and Keithley
-            current = self._read_lock_in_with_keithley_check()
+            # Read current using software lock-in
+            current = self._read_lockin_current()
             
             self.logger.log(f"Current at {confirmed_wavelength:.1f} nm: {current:.6e} A")
             
@@ -210,8 +180,7 @@ class CurrentMeasurementModel:
                 self.monochromator.set_filter(3)  # No filter
                 self.logger.log("Set filter to 3 (no filter)")
             
-            # Configure lock-in parameters
-            self.lockin.configure_standard_parameters()
+            # PicoScope doesn't need parameter configuration (it's software-based)
             
             # Calculate total number of measurements for progress
             total_measurements = int((end_wavelength - start_wavelength) / step_size) + 1
@@ -291,8 +260,7 @@ class CurrentMeasurementModel:
         if self._is_measuring:
             raise CurrentMeasurementError("Measurement already in progress")
         
-        if not (self.keithley.is_connected() and self.lockin.is_connected() 
-                and self.monochromator.is_connected()):
+        if not (self.lockin.is_connected() and self.monochromator.is_connected()):
             raise CurrentMeasurementError("Devices not connected")
         
         if start_wavelength >= end_wavelength:
