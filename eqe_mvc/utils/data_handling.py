@@ -145,23 +145,23 @@ class DataHandler:
                     df = pd.read_csv(file_path)
                     # Handle legacy format
                     if "Pixel #" not in df.columns:
-                        # Convert from legacy format
+                        # Convert from legacy format (6 pixels)
                         legacy_data = df[["set angle", "signal", "r-value"]].values
                         df = pd.DataFrame({
-                            "Pixel #": [1, 2, 3, 4, 5, 6],
-                            "Set Angle": [None] * 6,
-                            "Signal": [None] * 6,
-                            "R^2 Value": [None] * 6
+                            "Pixel #": [1, 2, 3, 4, 5, 6, 7, 8],
+                            "Set Angle": [None] * 8,
+                            "Signal": [None] * 8,
+                            "R^2 Value": [None] * 8
                         })
-                        # Fill in legacy data
+                        # Fill in legacy data (only first 6 pixels)
                         for i, row in enumerate(legacy_data[:6]):
                             df.at[i, "Set Angle"] = row[0]
                             df.at[i, "Signal"] = row[1]
                             df.at[i, "R^2 Value"] = row[2]
                     else:
-                        # Ensure all pixels are present
+                        # Ensure all 8 pixels are present
                         existing_pixels = df["Pixel #"].tolist()
-                        for i in range(1, 7):
+                        for i in range(1, 9):
                             if i not in existing_pixels:
                                 df = pd.concat([df, pd.DataFrame({
                                     "Pixel #": [i],
@@ -169,22 +169,22 @@ class DataHandler:
                                     "Signal": [None],
                                     "R^2 Value": [None]
                                 })], ignore_index=True)
-                        df = df[df["Pixel #"].isin([1, 2, 3, 4, 5, 6])].sort_values("Pixel #").reset_index(drop=True)
+                        df = df[df["Pixel #"].isin([1, 2, 3, 4, 5, 6, 7, 8])].sort_values("Pixel #").reset_index(drop=True)
                 except Exception:
                     # Create new dataframe if reading fails
                     df = pd.DataFrame({
-                        "Pixel #": [1, 2, 3, 4, 5, 6],
-                        "Set Angle": [None] * 6,
-                        "Signal": [None] * 6,
-                        "R^2 Value": [None] * 6
+                        "Pixel #": [1, 2, 3, 4, 5, 6, 7, 8],
+                        "Set Angle": [None] * 8,
+                        "Signal": [None] * 8,
+                        "R^2 Value": [None] * 8
                     })
             else:
                 # Create new dataframe
                 df = pd.DataFrame({
-                    "Pixel #": [1, 2, 3, 4, 5, 6],
-                    "Set Angle": [None] * 6,
-                    "Signal": [None] * 6,
-                    "R^2 Value": [None] * 6
+                    "Pixel #": [1, 2, 3, 4, 5, 6, 7, 8],
+                    "Set Angle": [None] * 8,
+                    "Signal": [None] * 8,
+                    "R^2 Value": [None] * 8
                 })
             
             # Update data for the specific pixel

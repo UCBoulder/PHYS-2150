@@ -64,7 +64,7 @@ class ParameterInputWidget(QGroupBox):
         self.step_size.setStyleSheet(f"font-size: {font_size}px;")
         
         # Cell number input
-        self.cell_number.setPlaceholderText("e.g., C60_01 or 2501-04")
+        self.cell_number.setPlaceholderText("e.g., 167, 001, 999")
         self.cell_number.setStyleSheet(f"font-size: {font_size}px;")
     
     def _setup_layout(self) -> None:
@@ -233,13 +233,25 @@ class ControlButtonWidget(QWidget):
         """Connect button signals."""
         self.power_button.clicked.connect(self._on_power_button_clicked)
         self.current_button.clicked.connect(self._on_current_button_clicked)
-        self.align_button.clicked.connect(self.alignment_requested.emit)
+        self.align_button.clicked.connect(self._on_align_button_clicked)
     
     def _on_power_button_clicked(self) -> None:
         """Handle power measurement button click."""
         if self._power_measuring:
             self.stop_requested.emit()
         else:
+            # Check if in offline mode
+            from ..config import settings
+            if settings.OFFLINE_MODE:
+                from PySide6.QtWidgets import QMessageBox
+                QMessageBox.warning(
+                    self, 
+                    "Offline Mode",
+                    "Cannot perform measurements in OFFLINE mode.\n\n"
+                    "Restart the application without the --offline flag to use hardware."
+                )
+                return
+            
             self.power_measurement_requested.emit()
     
     def _on_current_button_clicked(self) -> None:
@@ -247,18 +259,46 @@ class ControlButtonWidget(QWidget):
         if self._current_measuring:
             self.stop_requested.emit()
         else:
+            # Check if in offline mode
+            from ..config import settings
+            if settings.OFFLINE_MODE:
+                from PySide6.QtWidgets import QMessageBox
+                QMessageBox.warning(
+                    self, 
+                    "Offline Mode",
+                    "Cannot perform measurements in OFFLINE mode.\n\n"
+                    "Restart the application without the --offline flag to use hardware."
+                )
+                return
+            
             # Get pixel number from user
             pixel_number = self._get_pixel_number()
             if pixel_number is not None:
                 self.current_measurement_requested.emit(pixel_number)
+    
+    def _on_align_button_clicked(self) -> None:
+        """Handle alignment button click."""
+        # Check if in offline mode
+        from ..config import settings
+        if settings.OFFLINE_MODE:
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.warning(
+                self, 
+                "Offline Mode",
+                "Cannot control hardware in OFFLINE mode.\n\n"
+                "Restart the application without the --offline flag to use hardware."
+            )
+            return
+        
+        self.alignment_requested.emit()
     
     def _get_pixel_number(self) -> Optional[int]:
         """Get pixel number from user input."""
         from PySide6.QtWidgets import QInputDialog
         
         pixel_number, ok = QInputDialog.getInt(
-            self, "Pixel Selection", "Enter pixel number (1-6):",
-            value=1, min=1, max=6
+            self, "Pixel Selection", "Enter pixel number (1-8):",
+            1, 1, 8  # value, minValue, maxValue
         )
         
         if ok:

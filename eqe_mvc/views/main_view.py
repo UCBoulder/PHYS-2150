@@ -129,7 +129,7 @@ class MainApplicationView(QMainWindow):
         """Show cell number input dialog on application startup."""
         cell_number, ok = QInputDialog.getText(
             self, "Enter Cell Number",
-            "Enter Cell Number (e.g., C60_01, 2501-04):"
+            "Enter Cell Number (three digits, e.g., 167, 001):"
         )
         
         if ok and cell_number:

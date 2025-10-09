@@ -336,8 +336,8 @@ class PhaseAdjustmentModel:
         if not self.lockin.is_connected() or not self.monochromator.is_connected():
             raise PhaseAdjustmentError("Devices not connected")
         
-        if not (1 <= pixel_number <= 6):
-            raise PhaseAdjustmentError("Pixel number must be between 1 and 6")
+        if not (1 <= pixel_number <= 8):
+            raise PhaseAdjustmentError("Pixel number must be between 1 and 8")
         
         # Start adjustment thread
         self._is_adjusting = True

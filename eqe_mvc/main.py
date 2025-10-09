@@ -329,9 +329,14 @@ class EQEApplication:
             self.logger.log("Starting application cleanup")
             
             # Stop any running initialization
-            if self.init_thread and self.init_thread.isRunning():
-                self.init_thread.quit()
-                self.init_thread.wait(5000)  # Wait up to 5 seconds
+            # Wrap in try-except since Qt may have already deleted the thread
+            try:
+                if self.init_thread and self.init_thread.isRunning():
+                    self.init_thread.quit()
+                    self.init_thread.wait(5000)  # Wait up to 5 seconds
+            except RuntimeError:
+                # Thread already deleted by Qt, ignore
+                pass
             
             # Cleanup experiment model
             if self.experiment_model:

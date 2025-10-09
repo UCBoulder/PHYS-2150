@@ -28,7 +28,7 @@ DEFAULT_MEASUREMENT_PARAMS = {
     "start_wavelength": 350.0,  # nm
     "end_wavelength": 850.0,    # nm
     "step_size": 10.0,          # nm
-    "cell_number": "C60_01",
+    "cell_number": "167",       # Three-digit cell number
     "pixel_number": 1,
 }
 
@@ -132,15 +132,15 @@ DATA_EXPORT_CONFIG = {
 
 # Validation patterns
 VALIDATION_PATTERNS = {
-    "cell_number": r'^(C60_\d+|\d+-\d+)$',  # e.g., C60_01 or 2501-04
-    "pixel_range": (1, 6),  # Valid pixel numbers
+    "cell_number": r'^\d{3}$',  # Three-digit cell number (e.g., 167, 001, 999)
+    "pixel_range": (1, 8),  # Valid pixel numbers (now 8 pixels per cell)
 }
 
 # Error messages
 ERROR_MESSAGES = {
     "device_not_found": "Device not found. Please check the connection.",
-    "invalid_cell_number": "Cell number must be in format C60_XX or XXXX-XX (e.g., C60_01, 2501-04).",
-    "invalid_pixel_number": "Pixel number must be between 1 and 6.",
+    "invalid_cell_number": "Cell number must be a three-digit number (e.g., 167, 001, 999).",
+    "invalid_pixel_number": "Pixel number must be between 1 and 8.",
     "measurement_failed": "Measurement failed. Please check device connections.",
     "file_save_failed": "Failed to save file. Please check permissions and disk space.",
     "low_r_squared": "Is the lamp on? If it is, pixel {pixel} might be dead. Check in with a TA.",

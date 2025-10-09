@@ -253,7 +253,7 @@ class CurrentMeasurementModel:
             start_wavelength: Starting wavelength in nm
             end_wavelength: Ending wavelength in nm
             step_size: Step size in nm
-            pixel_number: Pixel number (1-6)
+            pixel_number: Pixel number (1-8)
             
         Returns:
             bool: True if measurement started successfully
@@ -273,8 +273,8 @@ class CurrentMeasurementModel:
         if step_size <= 0:
             raise CurrentMeasurementError("Step size must be positive")
         
-        if not (1 <= pixel_number <= 6):
-            raise CurrentMeasurementError("Pixel number must be between 1 and 6")
+        if not (1 <= pixel_number <= 8):
+            raise CurrentMeasurementError("Pixel number must be between 1 and 8")
         
         # Start measurement thread
         self._is_measuring = True

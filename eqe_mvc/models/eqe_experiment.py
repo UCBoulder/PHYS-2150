@@ -300,14 +300,12 @@ class EQEExperimentModel:
         if not self._devices_initialized:
             return {
                 'power_meter': False,
-                'keithley': False,
                 'monochromator': False,
                 'lockin': False
             }
         
         return {
             'power_meter': self.power_meter.is_connected() if self.power_meter else False,
-            'keithley': self.keithley.is_connected() if self.keithley else False,
             'monochromator': self.monochromator.is_connected() if self.monochromator else False,
             'lockin': self.lockin.is_connected() if self.lockin else False
         }
@@ -566,8 +564,6 @@ class EQEExperimentModel:
             # Disconnect devices
             if self.power_meter:
                 self.power_meter.disconnect()
-            if self.keithley:
-                self.keithley.disconnect()
             if self.monochromator:
                 self.monochromator.disconnect()
             if self.lockin:
