@@ -116,3 +116,32 @@ Both provide ±20V input range - no clipping issues!
 ## Recent Changes
 
 **October 2025:** Migrated to PicoScope 5242D with software lock-in amplifier. Achieved 0.66% CV stability (15× better than 10% target) through optimized acquisition parameters and phase-locked triggering at 2.5V threshold. System validated with long-term stability testing over multiple wavelength points.
+
+## License
+
+This software is released under the **MIT License**. See [LICENSE](LICENSE) for details.
+
+### Third-Party Dependencies
+
+This software uses several third-party libraries with their own licenses:
+
+- **PicoScope SDK** - Proprietary (Pico Technology Limited) - For use with Pico products only
+- **PySide6** - LGPL v3 (The Qt Company)
+- **matplotlib, NumPy, SciPy, pandas** - BSD-style licenses
+- **PyVISA, pyserial** - MIT/BSD licenses
+
+See the [LICENSE](LICENSE) file for complete third-party notices.
+
+### Usage Restrictions
+
+The PicoScope SDK is proprietary software by Pico Technology Limited and may only be used with Pico Technology hardware products. This software is designed specifically for use with PicoScope oscilloscopes and Thorlabs/Newport laboratory equipment.
+
+## Citation
+
+If you use this software in your research, please cite:
+
+```
+EQE Measurement System
+University of Colorado Boulder
+https://github.com/UCBoulder/PHYS-2150
+```
