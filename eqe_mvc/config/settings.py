@@ -115,7 +115,8 @@ GUI_CONFIG = {
         "start_button": "#CCDDAA",
         "stop_button": "#FFCCCC",
         "plot_line": "#0077BB",
-    }
+    },
+    "prompt_phase_data_save": False,  # Set to True to enable phase data save prompt after current measurements
 }
 
 # Data export configuration

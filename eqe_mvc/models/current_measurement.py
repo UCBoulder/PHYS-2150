@@ -246,7 +246,11 @@ class CurrentMeasurementModel:
             else:
                 self.logger.log(f"Current measurement stopped for pixel {pixel_number}")
             
-            # Set monochromator to green alignment dot position
+            # Notify completion first (triggers save dialog)
+            if self.completion_callback:
+                self.completion_callback(success)
+            
+            # Set monochromator to green alignment dot position (happens during/after save dialog)
             try:
                 self.logger.log("Setting monochromator to green alignment position (532 nm)")
                 self.monochromator.set_filter(1)
@@ -255,9 +259,6 @@ class CurrentMeasurementModel:
                 self.monochromator.open_shutter()
             except MonochromatorError as e:
                 self.logger.log(f"Warning: Failed to set alignment position: {e}", "WARNING")
-            
-            if self.completion_callback:
-                self.completion_callback(success)
                 
         except Exception as e:
             self.logger.log(f"Current measurement failed: {e}", "ERROR")

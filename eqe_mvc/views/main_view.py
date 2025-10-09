@@ -304,8 +304,10 @@ class MainApplicationView(QMainWindow):
                     self.experiment_model.save_current_data(file_path)
                     QMessageBox.information(self, "Data Saved", f"Current data saved to {file_path}")
                     
-                    # Also offer to save phase data if available
-                    self._offer_phase_data_save(cell_number)
+                    # Offer to save phase data if enabled in config
+                    from ..config.settings import GUI_CONFIG
+                    if GUI_CONFIG.get("prompt_phase_data_save", False):
+                        self._offer_phase_data_save(cell_number)
             
         except (EQEExperimentError, DataValidationError) as e:
             self._show_error(f"Failed to save data: {e}")
