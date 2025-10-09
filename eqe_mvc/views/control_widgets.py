@@ -359,6 +359,9 @@ class ControlButtonWidget(QWidget):
 class StatusDisplayWidget(QWidget):
     """Widget for displaying system status and progress."""
     
+    # Signal for alignment button
+    alignment_requested = Signal()
+    
     def __init__(self, parent=None):
         """Initialize the status display widget."""
         super().__init__(parent)
@@ -367,9 +370,11 @@ class StatusDisplayWidget(QWidget):
         self.device_status = QTextEdit()
         self.progress_bar = QProgressBar()
         self.status_label = QLabel("Ready")
+        self.align_button = QPushButton("Enable Green Alignment Dot")
         
         self._setup_components()
         self._setup_layout()
+        self._connect_signals()
     
     def _setup_components(self) -> None:
         """Configure status display components."""
@@ -386,6 +391,14 @@ class StatusDisplayWidget(QWidget):
         font_size = GUI_CONFIG["font_sizes"]["label"]
         self.status_label.setStyleSheet(f"font-size: {font_size}px; font-weight: bold;")
         self.status_label.setAlignment(Qt.AlignCenter)
+        
+        # Alignment button
+        button_font_size = GUI_CONFIG["font_sizes"]["button"]
+        start_color = GUI_CONFIG["colors"]["start_button"]
+        self.align_button.setStyleSheet(
+            f"font-size: {button_font_size}px; background-color: {start_color}; "
+            f"color: black; min-height: 40px;"
+        )
     
     def _setup_layout(self) -> None:
         """Set up the widget layout."""
@@ -397,11 +410,12 @@ class StatusDisplayWidget(QWidget):
         device_layout.addWidget(self.device_status)
         device_group.setLayout(device_layout)
         
-        # Progress group
+        # Progress group with alignment button
         progress_group = QGroupBox("Progress")
         progress_layout = QVBoxLayout()
         progress_layout.addWidget(self.status_label)
         progress_layout.addWidget(self.progress_bar)
+        progress_layout.addWidget(self.align_button)
         progress_group.setLayout(progress_layout)
         
         layout.addWidget(device_group)
@@ -409,6 +423,14 @@ class StatusDisplayWidget(QWidget):
         layout.addStretch()
         
         self.setLayout(layout)
+    
+    def _connect_signals(self) -> None:
+        """Connect button signals."""
+        self.align_button.clicked.connect(self._on_align_button_clicked)
+    
+    def _on_align_button_clicked(self) -> None:
+        """Handle alignment button click."""
+        self.alignment_requested.emit()
     
     def update_device_status(self, device_name: str, is_connected: bool, message: str = "") -> None:
         """

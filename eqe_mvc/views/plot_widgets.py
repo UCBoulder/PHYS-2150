@@ -9,7 +9,10 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout
+from PySide6.QtWidgets import (
+    QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QInputDialog, QMessageBox,
+    QSizePolicy
+)
 from PySide6.QtCore import Qt, Signal, QObject
 from typing import List, Optional, Tuple
 import numpy as np
@@ -46,23 +49,23 @@ class BasePlotWidget(QWidget):
         self.signals = PlotSignals()
         
         # Create matplotlib figure and axes
-        self.figure = Figure(figsize=(8, 8), dpi=100)
+        self.figure = Figure(figsize=(8, 6), dpi=100)
         self.axes = self.figure.add_subplot(111)
         self.canvas = FigureCanvas(self.figure)
         
-        # Set size constraints
-        plot_size = GUI_CONFIG["plot_size"]
-        plot_max_size = GUI_CONFIG["plot_max_size"]
-        self.canvas.setMinimumSize(*plot_size)
-        self.canvas.setMaximumSize(*plot_max_size)
+        # Allow canvas to expand and fill available space
+        self.canvas.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Expanding
+        )
         
         # Create navigation toolbar
         self.toolbar = NavigationToolbar(self.canvas, self)
         
         # Set up layout
         layout = QVBoxLayout()
-        layout.addWidget(self.canvas, alignment=Qt.AlignHCenter)
-        layout.addWidget(self.toolbar, alignment=Qt.AlignHCenter)
+        layout.addWidget(self.canvas)  # Remove alignment, let it expand
+        layout.addWidget(self.toolbar)
         self.setLayout(layout)
         
         # Configure plot
@@ -341,11 +344,16 @@ class PhasePlotWidget(BasePlotWidget):
 
 class MultiPlotWidget(QWidget):
     """
-    Widget containing multiple plots in a horizontal layout.
+    Widget containing multiple plots in a vertical layout.
     
-    This is useful for the main application window that displays
-    power, current, and phase plots side by side.
+    This widget displays power, current, and phase plots stacked vertically,
+    with control buttons positioned below their respective plots.
     """
+    
+    # Signals for button actions
+    power_measurement_requested = Signal()
+    current_measurement_requested = Signal(int)  # pixel number
+    stop_requested = Signal()
     
     def __init__(self, parent=None):
         """Initialize the multi-plot widget."""
@@ -356,20 +364,173 @@ class MultiPlotWidget(QWidget):
         self.current_plot = CurrentPlotWidget()
         self.phase_plot = PhasePlotWidget()
         
-        # Set up horizontal layout
-        layout = QHBoxLayout()
-        layout.addWidget(self.power_plot)
-        layout.addWidget(self.current_plot)
-        layout.addWidget(self.phase_plot)
-        self.setLayout(layout)
+        # Create control buttons
+        self.power_button = QPushButton("Start Power Measurement")
+        self.current_button = QPushButton("Start Current Measurement")
         
-        # Connect signals for coordinated updates
-        self._connect_plot_signals()
+        # Button states
+        self._power_measuring = False
+        self._current_measuring = False
+        
+        # Set up layout and styling
+        self._setup_buttons()
+        self._setup_layout()
+        self._connect_signals()
     
-    def _connect_plot_signals(self) -> None:
-        """Connect plot signals for coordinated behavior."""
-        # You can add cross-plot coordination here if needed
-        pass
+    def _setup_buttons(self) -> None:
+        """Configure button properties."""
+        font_size = GUI_CONFIG["font_sizes"]["button"]
+        button_height = 40
+        start_color = GUI_CONFIG["colors"]["start_button"]
+        
+        # Power measurement button
+        self.power_button.setStyleSheet(
+            f"font-size: {font_size}px; background-color: {start_color}; "
+            f"color: black; min-height: {button_height}px;"
+        )
+        
+        # Current measurement button
+        self.current_button.setStyleSheet(
+            f"font-size: {font_size}px; background-color: {start_color}; "
+            f"color: black; min-height: {button_height}px;"
+        )
+    
+    def _setup_layout(self) -> None:
+        """Set up the widget layout."""
+        main_layout = QHBoxLayout()
+        main_layout.setSpacing(10)
+        
+        # Power plot section with button below
+        power_section = QVBoxLayout()
+        power_section.addWidget(self.power_plot, stretch=1)  # Allow plot to expand
+        power_section.addWidget(self.power_button, stretch=0)  # Button stays fixed
+        main_layout.addLayout(power_section, stretch=1)  # Equal width for each section
+        
+        # Current plot section with button below
+        current_section = QVBoxLayout()
+        current_section.addWidget(self.current_plot, stretch=1)  # Allow plot to expand
+        current_section.addWidget(self.current_button, stretch=0)  # Button stays fixed
+        main_layout.addLayout(current_section, stretch=1)  # Equal width for each section
+        
+        # Phase plot section (no button, add spacer to match button height)
+        phase_section = QVBoxLayout()
+        phase_section.addWidget(self.phase_plot, stretch=1)  # Allow plot to expand
+        # Add invisible spacer widget with same height as buttons to keep plots aligned
+        spacer = QWidget()
+        spacer.setMinimumHeight(40)  # Match button height
+        spacer.setMaximumHeight(40)
+        phase_section.addWidget(spacer, stretch=0)  # Spacer stays fixed
+        main_layout.addLayout(phase_section, stretch=1)  # Equal width for each section
+        
+        self.setLayout(main_layout)
+    
+    def _connect_signals(self) -> None:
+        """Connect button signals."""
+        self.power_button.clicked.connect(self._on_power_button_clicked)
+        self.current_button.clicked.connect(self._on_current_button_clicked)
+    
+    def _on_power_button_clicked(self) -> None:
+        """Handle power measurement button click."""
+        if self._power_measuring:
+            self.stop_requested.emit()
+        else:
+            # Check if in offline mode
+            from ..config import settings
+            if settings.OFFLINE_MODE:
+                QMessageBox.warning(
+                    self, 
+                    "Offline Mode",
+                    "Cannot perform measurements in OFFLINE mode.\n\n"
+                    "Restart the application without the --offline flag to use hardware."
+                )
+                return
+            
+            self.power_measurement_requested.emit()
+    
+    def _on_current_button_clicked(self) -> None:
+        """Handle current measurement button click."""
+        if self._current_measuring:
+            self.stop_requested.emit()
+        else:
+            # Check if in offline mode
+            from ..config import settings
+            if settings.OFFLINE_MODE:
+                QMessageBox.warning(
+                    self, 
+                    "Offline Mode",
+                    "Cannot perform measurements in OFFLINE mode.\n\n"
+                    "Restart the application without the --offline flag to use hardware."
+                )
+                return
+            
+            # Get pixel number from user
+            pixel_number = self._get_pixel_number()
+            if pixel_number is not None:
+                self.current_measurement_requested.emit(pixel_number)
+    
+    def _get_pixel_number(self) -> Optional[int]:
+        """Get pixel number from user input."""
+        pixel_number, ok = QInputDialog.getInt(
+            self, "Pixel Selection", "Enter pixel number (1-8):",
+            1, 1, 8  # value, minValue, maxValue
+        )
+        
+        if ok:
+            return pixel_number
+        return None
+    
+    def set_power_measuring(self, measuring: bool) -> None:
+        """
+        Update power measurement button state.
+        
+        Args:
+            measuring: True if measurement is in progress
+        """
+        self._power_measuring = measuring
+        
+        if measuring:
+            self.power_button.setText("Stop Power Measurement")
+            self.power_button.setStyleSheet(
+                f"font-size: {GUI_CONFIG['font_sizes']['button']}px; "
+                f"background-color: {GUI_CONFIG['colors']['stop_button']}; "
+                f"color: black; min-height: 40px;"
+            )
+        else:
+            self.power_button.setText("Start Power Measurement")
+            self.power_button.setStyleSheet(
+                f"font-size: {GUI_CONFIG['font_sizes']['button']}px; "
+                f"background-color: {GUI_CONFIG['colors']['start_button']}; "
+                f"color: black; min-height: 40px;"
+            )
+    
+    def set_current_measuring(self, measuring: bool) -> None:
+        """
+        Update current measurement button state.
+        
+        Args:
+            measuring: True if measurement is in progress
+        """
+        self._current_measuring = measuring
+        
+        if measuring:
+            self.current_button.setText("Stop Current Measurement")
+            self.current_button.setStyleSheet(
+                f"font-size: {GUI_CONFIG['font_sizes']['button']}px; "
+                f"background-color: {GUI_CONFIG['colors']['stop_button']}; "
+                f"color: black; min-height: 40px;"
+            )
+        else:
+            self.current_button.setText("Start Current Measurement")
+            self.current_button.setStyleSheet(
+                f"font-size: {GUI_CONFIG['font_sizes']['button']}px; "
+                f"background-color: {GUI_CONFIG['colors']['start_button']}; "
+                f"color: black; min-height: 40px;"
+            )
+    
+    def set_buttons_enabled(self, enabled: bool) -> None:
+        """Enable or disable measurement buttons."""
+        self.power_button.setEnabled(enabled)
+        self.current_button.setEnabled(enabled)
     
     def get_power_plot(self) -> PowerPlotWidget:
         """Get the power plot widget."""

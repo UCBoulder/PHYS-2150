@@ -225,8 +225,7 @@ class EQEApplication:
         
         # Update view status - this is safe since we're on the main thread
         try:
-            status_display = self.main_view.control_panel.get_status_display()
-            status_display.set_status_message("Initializing devices...")
+            self.main_view.status_display.set_status_message("Initializing devices...")
         except Exception as e:
             print(f"Warning: Could not update status display: {e}")
     
@@ -238,8 +237,7 @@ class EQEApplication:
             message: Progress message
         """
         try:
-            status_display = self.main_view.control_panel.get_status_display()
-            status_display.set_status_message(message)
+            self.main_view.status_display.set_status_message(message)
             # Use print instead of logger to avoid thread issues
             print(f"Initialization progress: {message}")
         except Exception as e:
@@ -254,18 +252,16 @@ class EQEApplication:
             message: Completion message
         """
         try:
-            status_display = self.main_view.control_panel.get_status_display()
-            
             if success:
-                status_display.set_status_message("Ready for measurements")
+                self.main_view.status_display.set_status_message("Ready for measurements")
                 print("Device initialization completed successfully")
                 
                 # Enable controls
-                control_buttons = self.main_view.control_panel.get_control_buttons()
-                control_buttons.setEnabled(True)
+                self.main_view.plot_widget.set_buttons_enabled(True)
+                self.main_view.status_display.align_button.setEnabled(True)
                 
             else:
-                status_display.set_status_message("Initialization failed")
+                self.main_view.status_display.set_status_message("Initialization failed")
                 print(f"Device initialization failed: {message}")
                 
                 # Show error dialog
@@ -277,8 +273,8 @@ class EQEApplication:
                 )
                 
                 # Disable controls
-                control_buttons = self.main_view.control_panel.get_control_buttons()
-                control_buttons.setEnabled(False)
+                self.main_view.plot_widget.set_buttons_enabled(False)
+                self.main_view.status_display.align_button.setEnabled(False)
         except Exception as e:
             print(f"Error in initialization completion handler: {e}")
     
