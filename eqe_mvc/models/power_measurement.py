@@ -82,8 +82,12 @@ class PowerMeasurementModel:
         """
         Get correction factor based on monochromator serial number.
         
+        NOTE: The MONOCHROMATOR_CORRECTION_FACTORS were actually SR510 lock-in
+        corrections (0.45), not optical corrections. Now returns 1.0 for all.
+        Method kept for API compatibility but effectively does nothing.
+        
         Returns:
-            float: Correction factor
+            float: Correction factor (always 1.0)
         """
         serial_number = self.monochromator.serial_number
         return MONOCHROMATOR_CORRECTION_FACTORS.get(serial_number, 1.0)

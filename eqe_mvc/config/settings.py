@@ -63,15 +63,21 @@ DEVICE_CONFIGS = {
         "default_chopper_freq": 81,    # Hz - default chopper frequency
         "default_num_cycles": 100,     # Number of cycles for lock-in integration
         "num_measurements": 5,         # Number of measurements to average for stability
-        "correction_factor": 0.45,     # Default correction factor (overridden by monochromator S/N)
+        # Note: No correction factor needed for software lock-in!
+        # Digital lock-in uses actual square wave reference, preserving all harmonics
+        # SR510's 0.45 factor was needed due to sine wave reference losing harmonic content
     }
 }
 
 # Monochromator correction factors by serial number
+# NOTE: The previous 0.45 factors were for SR510 analog lock-in harmonic loss,
+# not for monochromator optical efficiency. With PicoScope software lock-in,
+# no correction is needed (uses actual square wave reference, preserving harmonics).
+# If optical corrections are needed in the future, they should be measured separately.
 MONOCHROMATOR_CORRECTION_FACTORS = {
-    "130B5203": 0.45,  # EQE2
-    "130B5201": 0.45,  # EQE3
-    "130B5202": 0.45,  # EQE1
+    "130B5203": 1.0,  # EQE2 - no correction needed with software lock-in
+    "130B5201": 1.0,  # EQE3 - no correction needed with software lock-in
+    "130B5202": 1.0,  # EQE1 - no correction needed with software lock-in
 }
 
 # Filter configuration for monochromator

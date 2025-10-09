@@ -186,11 +186,10 @@ class EQEExperimentModel:
             # Configure with default parameters
             chopper_freq = config.get("default_chopper_freq", 81)
             num_cycles = config.get("default_num_cycles", 100)
-            correction_factor = config.get("correction_factor", 0.45)
             
             self.lockin.set_reference_frequency(chopper_freq)
             self.lockin.set_num_cycles(num_cycles)
-            self.lockin.set_correction_factor(correction_factor)
+            # No correction factor needed - software lock-in uses actual square wave reference!
             
             self._notify_device_status("PicoScope Lock-in", True, f"Connected (Freq: {chopper_freq} Hz)")
             self.logger.log(f"PicoScope lock-in initialized (Freq: {chopper_freq} Hz, Cycles: {num_cycles})")

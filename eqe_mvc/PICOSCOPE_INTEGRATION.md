@@ -127,7 +127,9 @@ The PicoScope implementation uses a sophisticated software lock-in amplifier:
 - **Chopper Frequency**: 81 Hz (configurable)
 - **Integration Cycles**: 100 cycles (optimal for stability vs. speed)
 - **Averaging**: 5 measurements with trimmed mean
-- **Correction Factor**: 0.45 (monochromator-specific)
+- **Correction Factor**: 1.0 (no correction needed - software lock-in uses actual square wave reference)
+  - Note: Previous SR510 lock-in required 0.45 correction for harmonic loss with sine reference
+  - MONOCHROMATOR_CORRECTION_FACTORS now all set to 1.0
 
 ## Migration Notes
 

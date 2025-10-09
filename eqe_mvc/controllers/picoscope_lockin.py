@@ -40,7 +40,7 @@ class PicoScopeController:
         self._is_connected = False
         self._reference_freq = 81.0  # Default chopper frequency in Hz
         self._num_cycles = 100  # Default number of cycles for lock-in integration
-        self._correction_factor = 0.45  # Default correction factor (will be set externally)
+        # Note: No correction factor needed! Software lock-in uses actual square wave reference
         
     def connect(self) -> bool:
         """
@@ -126,23 +126,10 @@ class PicoScopeController:
         """
         return self._num_cycles
     
-    def set_correction_factor(self, factor: float) -> None:
-        """
-        Set the correction factor for the measurement system.
-        
-        Args:
-            factor: Correction factor (typically 0.45 for this setup)
-        """
-        self._correction_factor = factor
-    
-    def get_correction_factor(self) -> float:
-        """
-        Get the current correction factor.
-        
-        Returns:
-            float: Correction factor
-        """
-        return self._correction_factor
+    # Correction factor methods removed - not needed for software lock-in!
+    # The digital lock-in uses the actual square wave reference from the chopper,
+    # which preserves all harmonic content. The SR510's 0.45 factor was needed
+    # because it multiplied with an internal sine oscillator, losing harmonics.
     
     def perform_lockin_measurement(self) -> Optional[Dict[str, float]]:
         """
@@ -255,10 +242,12 @@ class PicoScopeController:
             if abs(average_signal) > 0.95:
                 print(f"Warning: Signal near saturation ({average_signal:.3f} V)")
             
-            # Apply correction factor and transimpedance amplifier gain
+            # Apply transimpedance amplifier gain
+            # Note: No correction factor needed for software lock-in!
+            # The digital lock-in uses the actual square wave reference,
+            # preserving all harmonic content (unlike analog SR510)
             # Assuming 1 MΩ transimpedance gain (adjust as needed)
-            adjusted_voltage = average_signal / self._correction_factor
-            current = adjusted_voltage * 10 ** -6  # Convert to Amps (from V with 1MΩ gain)
+            current = average_signal * 10 ** -6  # Convert to Amps (from V with 1MΩ gain)
             
             return current
             

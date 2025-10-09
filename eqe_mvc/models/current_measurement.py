@@ -85,8 +85,12 @@ class CurrentMeasurementModel:
         """
         Get correction factor based on monochromator serial number.
         
+        NOTE: Previously returned 0.45 for SR510 analog lock-in harmonic loss.
+        With PicoScope software lock-in, no correction needed (returns 1.0).
+        Method kept for API compatibility but effectively does nothing.
+        
         Returns:
-            float: Correction factor
+            float: Correction factor (always 1.0 with PicoScope)
         """
         serial_number = self.monochromator.serial_number
         return MONOCHROMATOR_CORRECTION_FACTORS.get(serial_number, 1.0)
