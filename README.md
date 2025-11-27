@@ -19,6 +19,13 @@ uv sync
 uv run python launcher.py
 ```
 
+> **Windows Note:** If `uv` is not recognized, use `python -m uv` instead:
+>
+> ```bash
+> python -m uv sync
+> python -m uv run python launcher.py
+> ```
+
 ### Installation with pip
 
 ```bash
