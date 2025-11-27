@@ -1,397 +1,413 @@
-# EQE System Troubleshooting Guide
+# PHYS-2150 Troubleshooting Guide
+
+Comprehensive troubleshooting for both J-V and EQE measurement systems.
 
 ## Table of Contents
-1. [PicoScope Connection Issues](#picoscope-connection-issues)
-2. [Stability Problems](#stability-problems)
-3. [Signal Issues](#signal-issues)
+
+1. [General Issues](#general-issues)
+2. [J-V Measurement Issues](#j-v-measurement-issues)
+3. [EQE Measurement Issues](#eqe-measurement-issues)
 4. [Hardware Problems](#hardware-problems)
 5. [Software Errors](#software-errors)
-6. [Data Quality Issues](#data-quality-issues)
+6. [Diagnostic Tools](#diagnostic-tools)
+7. [Performance Benchmarks](#performance-benchmarks)
 
 ---
 
-## PicoScope Connection Issues
+## General Issues
 
-### Problem: "Failed to connect to PicoScope"
+### Application Won't Start
 
-**Possible Causes:**
-1. PicoScope not connected via USB
-2. PicoSDK drivers not installed
-3. Python picosdk package not installed
-4. USB power issue
-5. Device in use by another application
+**Symptoms:** Error on launch, window doesn't appear
 
 **Solutions:**
-```powershell
-# Check if picosdk is installed
-pip list | findstr picosdk
 
-# Install if missing
-pip install picosdk
+```bash
+# Check Python version (requires 3.10+)
+python --version
 
-# Check PicoScope is detected by Windows
-# (Device Manager → Sound, video and game controllers → PicoScope)
+# Reinstall dependencies
+pip install -r requirements.txt
+
+# Or with UV
+uv sync
 ```
 
-**Additional steps:**
-- Try a different USB port (USB 3.0 recommended)
-- Restart PicoScope (unplug/replug USB)
-- Close PicoScope 6 software if running
-- Reboot computer if persistent
+### GUI Freezes
 
-### Problem: "Using 15-bit resolution for 2-channel operation"
-
-**This is NORMAL:** The PicoScope 5242D uses 15-bit resolution when capturing 2 channels simultaneously. This is a hardware limitation and still provides excellent performance (32,768 levels).
-
-**Not an error** - just informational.
-
----
-
-## Stability Problems
-
-### Problem: High Coefficient of Variation (CV > 10%)
-
-**Expected Performance:** CV should be < 5% (typically 0.66-2%)
-
-**Diagnostic Steps:**
-
-1. **Check trigger threshold:**
-   ```powershell
-   python check_reference.py
-   ```
-   - Look at "Midpoint (for trigger)" value
-   - Should be ~2.5V for 0-5V square wave
-   - If different, update `picoscope_driver.py` line 454:
-     ```python
-     threshold = 2500  # mV - adjust to match your reference midpoint
-     ```
-
-2. **Verify reference signal:**
-   - Check reference waveform is clean square wave
-   - Amplitude should be 0-5V (TTL logic levels)
-   - Frequency should match chopper (typically 81 Hz)
-   - No noise or ringing on edges
-
-3. **Run stability test:**
-   ```powershell
-   python test_picoscope_stability.py
-   ```
-   - Should show CV < 5%
-   - If CV > 10%, check:
-     - Lamp stability (warm up 10-15 minutes)
-     - Chopper running smoothly
-     - All cables securely connected
-     - No vibrations or air currents
-
-4. **Check for saturation:**
-   - Lock-in output should be 0.1-0.9V
-   - If near ±1V, signal may be saturating
-   - Reduce light intensity or change transimpedance gain
-
-### Problem: Measurements drifting over time
-
-**Symptoms:** First half of measurement different from second half
-
-**Causes:**
-1. Lamp not warmed up (wait 15+ minutes)
-2. Temperature changes in room
-3. Loose connections
-4. Chopper speed drift
+**Cause:** Long operation blocking main thread
 
 **Solutions:**
-- Let system warm up fully before measurements
-- Control room temperature
-- Check all cable connections
-- Verify chopper speed with oscilloscope
-- Run long-term stability test to quantify drift:
-  ```powershell
-  python test_longterm_stability.py
-  ```
+
+1. Wait for current operation to complete
+2. Check console for error messages
+3. Restart application
+4. Try offline mode: `python -m jv --offline` or `python -m eqe --offline`
 
 ---
 
-## Signal Issues
+## J-V Measurement Issues
 
-### Problem: Very low signal (< 0.01V)
+### Device Not Found
 
-**Possible Causes:**
-1. No light reaching detector
-2. Wrong wavelength
-3. Chopper off
-4. Detector not biased correctly
-5. Transimpedance amplifier issue
+```text
+Keithley 2450 device not found.
+```
 
 **Checks:**
-- Verify lamp is on and warmed up
-- Check monochromator is at correct wavelength
-- Confirm chopper is running (visual check)
-- Verify detector bias voltage
-- Check transimpedance amplifier output with oscilloscope
 
-### Problem: Signal saturating (near ±20V)
+1. USB cable connected?
+2. Device powered on?
+3. NI-VISA Runtime installed?
 
-**Cause:** Too much light or transimpedance gain too high
+**Diagnostic:**
 
-**Solutions:**
-- Reduce light intensity (add ND filter)
-- Reduce transimpedance amplifier gain
-- Check for stray light entering detector
-
-### Problem: Noisy signal (large variations)
-
-**Possible Causes:**
-1. Lamp flicker
-2. Loose connections
-3. Ground loops
-4. Electrical interference
+```python
+import pyvisa
+rm = pyvisa.ResourceManager()
+print(rm.list_resources())
+# Should show USB0::0x05E6::0x2450::...
+```
 
 **Solutions:**
-- Use lamp with stable power supply
-- Check and tighten all BNC connections
-- Use proper grounding (star ground configuration)
-- Shield signal cables
-- Keep power cables away from signal cables
+
+- Open NI MAX to verify device appears
+- Try different USB port
+- Restart Keithley 2450
+- Reinstall NI-VISA Runtime
+
+### Unstable Current Readings
+
+**Symptoms:** Noisy, jumping values
+
+**Checks:**
+
+1. 4-wire connections secure?
+2. Cell contacts clean?
+3. Cables properly shielded?
+
+**Solutions:**
+
+- Increase dwell time in `jv/config/settings.py`:
+
+  ```python
+  "dwell_time_ms": 1000,  # Increase from 500
+  ```
+
+- Use 4-wire sensing (enabled by default)
+- Check for ground loops
+- Shield from light fluctuations
+
+### Current Compliance Reached
+
+**Symptoms:** Current plateaus at unexpected value
+
+**Cause:** Cell current exceeds safety limit (default 1A)
+
+**Solutions:**
+
+1. Increase compliance in config (carefully):
+
+   ```python
+   "current_compliance": 2,  # Amps
+   ```
+
+2. Reduce illumination intensity
+3. Check for short circuit in cell
+
+### Large Hysteresis (>20%)
+
+**Symptoms:** Forward and reverse scans differ significantly
+
+**Causes:**
+
+1. Perovskite ion migration
+2. Measurement too fast
+3. Cell degradation
+
+**Solutions:**
+
+- Increase dwell time (500ms → 1000ms)
+- Increase inter-sweep delay
+- Let cell stabilize before measurement
+- Check cell condition
+
+### No Data File Created
+
+**Checks:**
+
+1. Valid cell number? (must be 3 digits)
+2. Write permissions on folder?
+3. Disk space available?
+
+---
+
+## EQE Measurement Issues
+
+### PicoScope Connection Failed
+
+```text
+Failed to connect to PicoScope
+```
+
+**Checks:**
+
+1. PicoScope connected via USB
+2. PicoSDK drivers installed
+3. `picosdk` Python package installed
+
+**Solutions:**
+
+```bash
+pip install picosdk
+```
+
+- Try USB 3.0 port
+- Close PicoScope 6 software if running
+- Restart computer
+
+### High CV (>10%)
+
+**Expected:** CV < 5% (typically 0.66-2%)
+
+**Diagnostic steps:**
+
+1. **Check trigger threshold** - Should be 2500 mV for 0-5V TTL reference
+2. **Verify reference signal** - Clean 0-5V square wave at 81 Hz
+3. **Check lamp** - Warmed up 15+ minutes?
+4. **Check connections** - All cables secure?
+
+**Solutions:**
+
+- Adjust trigger threshold in `eqe/drivers/picoscope_driver.py`
+- Let lamp warm up longer
+- Tighten all BNC connections
+- Check chopper is running smoothly
+
+### Measurements Drifting
+
+**Symptoms:** Values change over measurement duration
+
+**Causes:**
+
+1. Lamp not fully warmed (wait 15+ min)
+2. Temperature changes
+3. Chopper speed drift
+
+**Solutions:**
+
+- Extended lamp warm-up
+- Control room temperature
+- Verify chopper frequency
+
+### Very Low Signal (<0.01V)
+
+**Checks:**
+
+1. Lamp on?
+2. Chopper running?
+3. Correct wavelength?
+4. Beam aligned?
+5. Preamp powered?
+
+### Signal Saturating (>1V)
+
+**Cause:** Too much light or preamp gain too high
+
+**Solutions:**
+
+- Add neutral density filter
+- Reduce preamp gain
+- Check for stray light
+
+### EQE > 100%
+
+**Causes:**
+
+1. Power calibration at wrong position
+2. Stray light during current measurement
+3. Wrong transimpedance gain in config
+4. Mismatched data files
+
+**Solutions:**
+
+- Recalibrate power at sample position
+- Block stray light
+- Check `transimpedance_gain` in settings
+- Verify using same wavelength range
 
 ---
 
 ## Hardware Problems
 
-### Problem: Monochromator not responding
+### Monochromator Not Responding
 
 **Checks:**
-1. USB-to-Serial adapter connected and powered
-2. Correct COM port selected
-3. Drivers installed properly
 
-**Solutions:**
-```powershell
-# List available COM ports
-python -c "import serial.tools.list_ports; print([p.device for p in serial.tools.list_ports.comports()])"
+1. USB-to-Serial adapter connected
+2. Correct COM port
+3. Drivers installed
+
+**Find COM port:**
+
+```python
+import serial.tools.list_ports
+print([p.device for p in serial.tools.list_ports.comports()])
 ```
 
-- Try different COM port
-- Check Device Manager for COM port number
-- Reinstall USB-to-Serial driver
-- Try different USB port
-
-### Problem: Power meter not reading
+### Power Meter Not Reading
 
 **Checks:**
-1. Power meter powered on
-2. USB cable connected
-3. Wavelength set correctly on power meter
-4. Sensor connected properly
+
+1. Device powered on
+2. Sensor head attached securely
+3. USB connected
+4. Wavelength set correctly
 
 **Solutions:**
-- Verify sensor head is plugged in securely
-- Set wavelength on power meter to match monochromator
-- Check power meter displays reading in manual mode
-- Reinstall Thorlabs OPM software
 
-### Problem: Chopper not detected
+- Test in standalone Thorlabs OPM software
+- Reinstall Thorlabs drivers
 
-**Symptoms:** Reference signal flat or noisy
+### Chopper Reference Missing
+
+**Symptoms:** No trigger, flat reference signal
 
 **Checks:**
+
 1. Chopper powered on
 2. TTL output connected to PicoScope CH B
-3. Chopper speed set correctly (81 Hz typical)
+3. Speed set to 81 Hz
 
 **Solutions:**
-- Check reference signal with oscilloscope
-- Verify 0-5V square wave at chopper frequency
-- Clean TTL output signal may need pull-up resistor
-- Check ground connection between chopper and PicoScope
+
+- Check reference with oscilloscope
+- Verify 0-5V square wave
+- Check ground connection
 
 ---
 
 ## Software Errors
 
-### Problem: "ImportError: No module named 'picosdk'"
+### Import Errors
 
-**Solution:**
-```powershell
-pip install picosdk
+```python
+ImportError: No module named 'PySide6'
 ```
 
-### Problem: "ImportError: No module named 'PySide6'"
-
 **Solution:**
-```powershell
-pip install PySide6
+
+```bash
+pip install PySide6 numpy scipy pandas matplotlib pyvisa picosdk
 ```
 
-### Problem: "VISA resource not found"
-
-**Symptoms:** Error when connecting to Keithley or other VISA instruments
+### VISA Resource Not Found
 
 **Solution:**
-```powershell
-# Install NI-VISA or Keysight IO Libraries
-# Then install Python VISA wrapper
-pip install pyvisa
-```
 
-### Problem: GUI freezes during measurement
+1. Install NI-VISA Runtime
+2. `pip install pyvisa`
 
-**Cause:** Threading issue or measurement taking too long
+### Qt Platform Error
+
+**Symptoms:** `qt.qpa.plugin: Could not load the Qt platform plugin`
 
 **Solutions:**
-- Close and restart GUI
-- Check no errors in terminal/console output
-- Reduce number of wavelength points for testing
-- Check all devices responding (test individually)
 
-### Problem: "Error reading from PicoScope"
-
-**Check:**
-1. PicoScope still connected (USB cable)
-2. Device not in error state
-3. Memory not full
-4. Timeout settings appropriate
-
-**Solutions:**
-- Reconnect PicoScope
-- Restart application
-- Check Windows Event Viewer for USB errors
-- Try different USB port
-
----
-
-## Data Quality Issues
-
-### Problem: EQE values unrealistically high (> 100%)
-
-**Possible Causes:**
-1. Incorrect power calibration
-2. Wrong wavelength units
-3. Stray light
-4. Calculation error
-
-**Checks:**
-- Verify power measurement was done at same wavelengths
-- Check units (nm vs μm, A vs μA)
-- Block light and verify current goes to zero
-- Recalculate EQE manually for one point
-
-### Problem: EQE spectrum has unexpected features
-
-**Possible Causes:**
-1. Filter changes not handled correctly
-2. Grating changes not handled correctly
-3. Stray light at certain wavelengths
-4. Detector artifacts
-
-**Solutions:**
-- Check filter transitions (420 nm, 800 nm)
-- Verify grating change (685 nm)
-- Run power measurement to characterize lamp spectrum
-- Compare to expected spectrum for device type
-
-### Problem: Phase adjustment fails (R² < 0.9)
-
-**Symptoms:** Warning dialog appears during phase adjustment
-
-**Causes:**
-1. Very low signal (below noise floor)
-2. No chopper signal
-3. Detector not working
-4. Wrong wavelength
-
-**Solutions:**
-- Check signal level is reasonable (> 0.01V)
-- Verify chopper is running
-- Test at wavelength with known response (e.g., 550 nm for Si)
-- Increase light intensity temporarily for phase adjustment
+- Reinstall PySide6
+- Check for conflicting Qt installations (PyQt5, PyQt6)
 
 ---
 
 ## Diagnostic Tools
 
-### Check Reference Signal
-```powershell
-python check_reference.py
-```
-**Use when:** Debugging trigger or stability issues  
-**Output:** Reference signal statistics and recommended trigger threshold
+### Test VISA Connection
 
-### Quick Stability Test (1 minute)
-```powershell
-python test_picoscope_stability.py
+```python
+import pyvisa
+rm = pyvisa.ResourceManager()
+print(rm.list_resources())
 ```
-**Use when:** Quick check of measurement stability  
-**Output:** CV from 20 consecutive measurements
 
-### Long-term Stability Test (2-10 minutes)
-```powershell
-python test_longterm_stability.py
-```
-**Use when:** Validating system before important measurements  
-**Output:** Comprehensive stability analysis with drift detection
+### Test Keithley
 
-### Plot Stability Results
-```powershell
-python plot_stability.py longterm_stability_YYYYMMDD_HHMMSS.csv
+```python
+from jv.controllers.keithley_2450 import Keithley2450Controller
+k = Keithley2450Controller()
+k.connect()
+print(k.get_identification())
 ```
-**Use when:** Analyzing stability test results  
-**Output:** Publication-quality plots and statistics
+
+### Test PicoScope
+
+```python
+from eqe.drivers.picoscope_driver import PicoScopeDriver
+p = PicoScopeDriver()
+p.connect()
+print(f"Connected: {p.connected}, Type: {p.device_type}")
+```
+
+### Offline Mode
+
+Test GUI without hardware:
+
+```bash
+python -m jv --offline
+python -m eqe --offline
+```
 
 ---
 
 ## Performance Benchmarks
 
-### Expected Performance
-- **CV:** < 5% (typically 0.66-2%)
-- **Drift:** < 2% over 10 minutes
-- **Signal range:** 0.01V to 1V (no saturation)
-- **Phase adjustment R²:** > 0.95
+### J-V Expected Performance
+
+| Metric | Expected |
+|--------|----------|
+| Full sweep time | ~30 seconds |
+| Voltage resolution | 0.001V |
+| Current noise | <1 µA |
+| Hysteresis | <10% (perovskites may be higher) |
+
+### EQE Expected Performance
+
+| Metric | Expected |
+|--------|----------|
+| CV | <5% (typical 0.66%) |
+| Drift | <2% over 10 min |
+| Signal range | 0.01-1.0V |
+| Phase R² | >0.95 |
 
 ### Red Flags
-- CV > 10% → Investigate stability
-- Drift > 5% → Check lamp/temperature
-- Signal < 0.001V → Too low (increase light/gain)
-- Signal > 1V → Approaching saturation (reduce light/gain)
-- R² < 0.9 → Phase adjustment problem
+
+| Issue | Threshold | Action |
+|-------|-----------|--------|
+| J-V noise | >10 µA | Check connections |
+| EQE CV | >10% | Check trigger/reference |
+| Drift | >5% | Check lamp/temperature |
+| Signal | <0.001V | Increase light/gain |
+| Signal | >1V | Reduce light/gain |
 
 ---
 
 ## Getting Help
 
 ### Information to Collect
-When reporting issues, include:
-1. Error message (full text from console)
-2. CV value from stability test
-3. Reference signal characteristics (from check_reference.py)
-4. Hardware configuration (PicoScope model, software versions)
-5. When problem started (after what change?)
 
-### Log Files
-Application log file location:
-```
-eqe_mvc/eqe_application.log
-```
-
-Check for error messages and timestamps matching when problem occurred.
-
----
-
-## Quick Reference: Common Parameter Values
-
-### Typical Operating Parameters
-- **Chopper frequency:** 81 Hz
-- **Trigger threshold:** 2500 mV (for 0-5V reference)
-- **Decimation:** 1024 (fixed)
-- **Sampling rate:** 97,656 Hz
-- **Samples per measurement:** ~120,563
-- **Measurements per wavelength:** 5
-- **Cycles per measurement:** 100
+1. Full error message from console
+2. What operation was being performed
+3. Hardware configuration
+4. Software versions (`pip list`)
+5. Recent changes to setup
 
 ### File Locations
-- **Main GUI:** `eqe/eqeguicombined-filters-pyside.py`
-- **Driver:** `eqe/picoscope_driver.py`
-- **Diagnostics:** `eqe/check_reference.py`, `eqe/test_*_stability.py`
 
-### Important Settings
-- **Trigger threshold:** `picoscope_driver.py` line 454
-- **Decimation:** `picoscope_driver.py` line 294
-- **Measurements:** `eqeguicombined-filters-pyside.py` line 302
+| File | Purpose |
+|------|---------|
+| `jv/config/settings.py` | J-V parameters |
+| `eqe/config/settings.py` | EQE parameters |
+| `eqe/drivers/picoscope_driver.py` | PicoScope settings |
+
+### Report Issues
+
+[GitHub Issues](https://github.com/UCBoulder/PHYS-2150/issues)

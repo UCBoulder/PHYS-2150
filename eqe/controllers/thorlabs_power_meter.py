@@ -7,7 +7,7 @@ It handles device initialization, configuration, and measurement operations.
 
 from ctypes import c_double, byref, c_uint32, create_string_buffer, c_bool
 from typing import Optional, List
-from ..drivers.TLPMX import TLPMX, TLPM_DEFAULT_CHANNEL
+from common.drivers.TLPMX import TLPMX, TLPM_DEFAULT_CHANNEL
 
 
 class ThorlabsPowerMeterError(Exception):
