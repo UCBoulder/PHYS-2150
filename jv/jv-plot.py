@@ -4,7 +4,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # Directory containing the CSV files
-directory = 'C:/Users/krbu4353/GitHub/PHYS-2150/jv/data/2025_09_10/'
+# Default to current working directory - users should change this to their data directory
+# or pass directory as command line argument
+import sys
+if len(sys.argv) > 1:
+    directory = sys.argv[1]
+else:
+    directory = os.getcwd()
+    print(f"Usage: python jv-plot.py <data_directory>")
+    print(f"No directory specified, using current directory: {directory}")
 
 # Initialize a plot
 plt.figure(figsize=(10, 6))
