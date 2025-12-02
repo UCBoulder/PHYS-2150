@@ -136,31 +136,57 @@ The average is ½, not 1. The factor of 2 recovers the original amplitude.
 
 ## Acquisition Parameters
 
-### Optimized for Stability
+The driver automatically optimizes parameters based on the PicoScope model:
 
-After extensive testing, these parameters achieve 0.66% CV:
+### PicoScope 5242D Parameters
 
 | Parameter | Value | Rationale |
 |-----------|-------|-----------|
 | Decimation | 1024 | ~97.6 kHz sampling rate |
-| Samples/cycle | ~1205 | Good Hilbert transform resolution |
-| Cycles | 100 | Sufficient averaging |
-| Total samples | ~120,563 | ~1.2 seconds integration |
+| Samples/cycle | ~1205 | Excellent Hilbert transform resolution |
+| Max samples | 200,000 | Large buffer allows many cycles |
+| Typical cycles | 100 | ~1.2 seconds integration |
 
-### Why These Values?
+**Why These Values (5242D):**
 
-**Decimation = 1024:**
-- PicoScope 5242D base rate: 100 MS/s
+- Base rate: 100 MS/s
 - Effective rate: 100 MS/s ÷ 1024 = 97,656 Hz
 - At 81 Hz chopper: 97,656 ÷ 81 ≈ 1205 samples/cycle
 - Hilbert transform needs ~10+ samples/cycle for accuracy
 - 1205 samples/cycle provides excellent resolution
 
-**100 Cycles Integration:**
+### PicoScope 2204A Parameters
+
+| Parameter | Value | Rationale |
+|-----------|-------|-----------|
+| Timebase | 12 | ~24.4 kHz sample rate (40960 ns/sample) |
+| Samples/cycle | ~301 | Adequate for Hilbert transform |
+| Max samples | 2000 | Limited buffer in dual-channel mode |
+| Typical cycles | 6 | ~82 ms of data per acquisition |
+
+**Why These Values (2204A):**
+
+- The 2204A has limited buffer memory (~8 KB total, ~4 KB per channel)
+- With both channels enabled, max samples ≈ 4000 per channel
+- We use 2000 to stay safely within limits
+- Timebase 12 provides slower sampling to capture more cycles
+- At 81 Hz chopper: 24,414 ÷ 81 ≈ 301 samples/cycle
+- Still sufficient for accurate Hilbert transform (needs ~10+)
+
+**2204A Limitations:**
+
+- Fewer samples per acquisition means less averaging per measurement
+- The EQE controller compensates by taking multiple acquisitions
+- CV is slightly higher than 5242D but still adequate for measurements
+
+### Common Parameters
+
+**Cycles Integration:**
+
 - More cycles = better noise averaging
-- 100 cycles at 81 Hz = 1.23 seconds
+- PicoScope 5242D: ~100 cycles at 81 Hz = 1.23 seconds
+- PicoScope 2204A: ~6 cycles at 81 Hz = 74 ms (driver takes multiple readings)
 - Balances accuracy vs measurement time
-- Lock-in equivalent time constant: ~1 second
 
 ## Phase-Locked Triggering
 
@@ -254,6 +280,7 @@ This removes the highest and lowest values, providing robust averaging against o
 | Max sample rate | 125 MS/s |
 | Input range | ±20V |
 | Memory | 128 MS |
+| SDK | `ps5000a` |
 
 ### PicoScope 2204A (Alternative)
 
@@ -261,11 +288,14 @@ This removes the highest and lowest values, providing robust averaging against o
 |--------------|-------|
 | Resolution | 8-bit |
 | Bandwidth | 10 MHz |
-| Max sample rate | 50 MS/s |
+| Max sample rate | 100 MS/s (single), 50 MS/s (dual) |
 | Input range | ±20V |
-| Memory | 8 kS |
+| Memory | 8 KB (shared between channels) |
+| SDK | `ps2000` (NOT ps2000a!) |
 
 Both provide ±20V input range - no clipping issues.
+
+> **Important:** The 2204A uses the `ps2000` SDK with a different API than newer models. The driver handles this automatically, selecting the correct SDK based on what's available. See [TROUBLESHOOTING.md](../TROUBLESHOOTING.md#picoscope-2204a-specific-issues) for 2204A-specific issues.
 
 ### Channel Configuration
 
@@ -351,3 +381,5 @@ eqe/
 - Hilbert Transform: scipy.signal.hilbert documentation
 - PicoScope SDK Programmer's Guide
 - Stanford Research SR510 Manual (for comparison)
+- [Official ps2000 Python examples](https://github.com/picotech/picosdk-python-wrappers/tree/master/ps2000Examples) - Reference for 2204A implementation
+- [PicoScope 2000 Series Programmer's Guide](https://www.picotech.com/download/manuals/picoscope-2000-series-a-api-programmers-guide.pdf)

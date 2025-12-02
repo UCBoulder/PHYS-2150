@@ -163,8 +163,77 @@ pip install picosdk
 ```
 
 - Try USB 3.0 port
-- Close PicoScope 6 software if running
+- Close PicoScope 7 software if running (it locks the device)
 - Restart computer
+
+### PicoScope 2204A Specific Issues
+
+The PicoScope 2204A uses a **different SDK** than newer models. This is a common source of connection problems.
+
+#### PICO_NOT_FOUND or PICO_OPEN_OPERATION_IN_PROGRESS (Error 3)
+
+**Symptom:** Connection fails with status code 3, or device not found even though PicoScope software works.
+
+**Root Cause:** The 2204A uses `ps2000` SDK, NOT `ps2000a`. The API is different:
+
+| Feature | ps2000 (2204A) | ps2000a (newer) |
+|---------|----------------|-----------------|
+| Open function | Returns handle directly | Returns via pointer |
+| Assertion | `assert_pico2000_ok()` | `assert_pico_ok()` |
+| Success value | Non-zero = success | Zero = success |
+
+**Solution:** The driver automatically tries ps2000 first. If you're writing custom code:
+
+```python
+# CORRECT for PicoScope 2204A
+from picosdk.ps2000 import ps2000 as ps
+from picosdk.functions import assert_pico2000_ok
+
+# Open returns handle directly (not via pointer!)
+handle_value = ps.ps2000_open_unit()
+if handle_value > 0:
+    chandle = ctypes.c_int16(handle_value)
+    print(f"Connected with handle: {handle_value}")
+```
+
+**Reference:** [Official ps2000 examples](https://github.com/picotech/picosdk-python-wrappers/tree/master/ps2000Examples)
+
+#### Timebase Query Fails with Dual Channels
+
+**Symptom:** `ps2000_get_timebase` returns status 0 (failure) when both channels are enabled.
+
+**Cause:** The 2204A has limited buffer memory (~8KB total). With both channels, each gets ~4KB. Requesting too many samples fails.
+
+**Solution:** Limit sample count to 2000 for dual-channel mode:
+
+```python
+# Max samples for dual-channel on 2204A
+num_samples = min(num_samples, 2000)
+```
+
+#### USB Disconnect/Reconnect Sounds
+
+**Symptom:** Windows plays USB disconnect/connect sounds when PicoScope software opens.
+
+**Cause:** This is normal! The 2204A uploads firmware on each connection. The splash screen indicates firmware upload is in progress.
+
+**Solution:** Wait for the splash screen to close before attempting API calls. The driver handles this automatically.
+
+#### PicoScope Software Works, Python Doesn't
+
+**Symptom:** PicoScope 7 software connects fine, but Python code fails.
+
+**Causes:**
+
+1. PicoScope software is still running (locks the device)
+2. Using wrong SDK (ps2000a instead of ps2000)
+3. Calling `ps2000_open_unit()` multiple times
+
+**Solutions:**
+
+1. Close PicoScope 7 completely
+2. Wait 5-10 seconds after closing
+3. Ensure only one call to `open_unit()` per session
 
 ### High CV (>10%)
 

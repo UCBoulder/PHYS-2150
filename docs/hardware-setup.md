@@ -38,23 +38,51 @@ NI-VISA provides the communication layer for USB/GPIB instruments (Keithley 2450
 
 The PicoScope SDK provides drivers for the PicoScope oscilloscope used in EQE measurements.
 
+**Supported Models:**
+
+| Model | SDK | Software | Notes |
+|-------|-----|----------|-------|
+| PicoScope 5242D | ps5000a | PicoScope 6/7 | Higher resolution (15-bit), more memory |
+| PicoScope 2204A | ps2000 | PicoScope 7 | Basic model, uses different API |
+
+> **Important:** The 2204A uses the `ps2000` SDK, which has a different API than `ps2000a`. The driver handles this automatically, but custom code must use the correct SDK.
+
 **Download:**
+
 - Visit: https://www.picotech.com/downloads
-- Select your PicoScope model (5000A series or 2000A series)
-- Download "PicoScope 6" or "PicoSDK" for Windows
+- Select your PicoScope model (5000A series or 2000 series)
+- Download "PicoScope 7" (recommended) or "PicoSDK" for Windows
 
 **Installation:**
+
 1. Run the downloaded installer
 2. Install the full SDK (includes drivers and libraries)
 3. Reboot if prompted
 
 **Verification:**
+
 1. Connect the PicoScope via USB
-2. Open PicoScope 6 software
+2. Open PicoScope 7 software
 3. The scope should connect and display live waveforms
+4. **Important:** Close PicoScope 7 before running Python code (it locks the device)
 
 **Python Bindings:**
+
 The Python SDK (`picosdk` package) is installed automatically with the application dependencies. It requires the native SDK to be installed first.
+
+```bash
+pip install picosdk
+```
+
+**2204A Firmware Upload:**
+
+The PicoScope 2204A uploads firmware on each connection. You may notice:
+
+- USB disconnect/reconnect sounds when connecting
+- A brief splash screen during initialization
+- Status code 3 (PICO_OPEN_OPERATION_IN_PROGRESS) during firmware upload
+
+This is normal behavior. The driver waits for initialization to complete.
 
 ### 3. Thorlabs OPM (Optical Power Meter)
 
@@ -179,9 +207,16 @@ If VISA communication fails:
 
 If the PicoScope doesn't connect:
 
-1. Close PicoScope 6 software (it may be holding the device)
-2. Unplug and replug the USB cable
-3. Check that PicoSDK is properly installed (look for `ps5000a.dll` in System32)
+1. Close PicoScope 7 software (it locks the device exclusively)
+2. Wait 5-10 seconds after closing the software
+3. Unplug and replug the USB cable
+4. Check that PicoSDK is properly installed
+
+**For PicoScope 5242D:** Look for `ps5000a.dll` in System32
+
+**For PicoScope 2204A:** Look for `ps2000.dll` in System32 (note: NOT ps2000a.dll)
+
+See [TROUBLESHOOTING.md](../TROUBLESHOOTING.md#picoscope-2204a-specific-issues) for 2204A-specific issues.
 
 ### Power Meter Issues
 
@@ -229,19 +264,31 @@ If the Thorlabs power meter isn't detected:
 - Interface: USB-Serial
 - Used for: Order-sorting filters
 
-#### PicoScope 5242D
+#### PicoScope 5242D (Recommended)
 
 - Bandwidth: 60 MHz
 - Resolution: 15-bit (2 channels)
 - Sampling rate: 125 MS/s
 - Input range: ±20V (no clipping)
+- Buffer memory: 128 MS
+- SDK: `ps5000a`
 
-#### PicoScope 2204A (alternative)
+#### PicoScope 2204A (Alternative)
 
 - Bandwidth: 10 MHz
 - Resolution: 8-bit
-- Sampling rate: 50 MS/s
-- Interface: USB
+- Sampling rate: 100 MS/s (single channel), 50 MS/s (dual channel)
+- Input range: ±20V
+- Buffer memory: 8 KB (shared between channels)
+- SDK: `ps2000` (NOT ps2000a!)
+- Interface: USB 2.0
+
+**2204A Limitations for EQE:**
+
+- Limited to ~2000 samples per acquisition in dual-channel mode
+- Lower sample rate means fewer samples per chopper cycle (~300 at 81 Hz)
+- Still provides adequate performance for EQE measurements
+- Driver automatically adjusts parameters for this model
 
 #### Thorlabs PM100USB with S120VC Sensor
 
