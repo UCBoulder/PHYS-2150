@@ -501,10 +501,13 @@ class MainApplicationView(QMainWindow):
         
         try:
             self.experiment_model.align_monochromator()
-            self.status_display.set_status_message("Monochromator aligned at 532 nm")
-        
+            status_display = self.measurement_tab.get_status_display()
+            status_display.set_status_message("Monochromator aligned at 532 nm")
+
         except EQEExperimentError as e:
             self._show_error(f"Failed to align monochromator: {e}")
+        except Exception as e:
+            self._show_error(f"Unexpected error during alignment: {e}")
     
     def _stop_measurement(self) -> None:
         """Stop current measurement."""
