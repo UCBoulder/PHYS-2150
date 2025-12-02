@@ -65,11 +65,18 @@ class MainApplicationView(QMainWindow):
         
         # Initialize timers for periodic updates
         self._setup_timers()
-        
+
         # Track current measurement state
         self._current_measurement_type: Optional[str] = None
         self._current_pixel_number: Optional[int] = None
-        
+
+        # Track device initialization state
+        self._devices_initialized = False
+
+        # Disable all interactive buttons until device initialization completes
+        # This prevents focus issues when native PicoScope splash screen is shown
+        self._disable_buttons_during_init()
+
         # Show cell number input on startup
         QTimer.singleShot(1000, self._show_initial_cell_number_dialog)
     
@@ -104,6 +111,23 @@ class MainApplicationView(QMainWindow):
         self.status_timer = QTimer()
         self.status_timer.timeout.connect(self._update_status)
         self.status_timer.start(1000)  # Update every second
+
+    def _disable_buttons_during_init(self) -> None:
+        """
+        Disable all interactive buttons during device initialization.
+
+        This prevents a bug where clicking on the application window while
+        the PicoScope 2204A firmware upload splash screen is visible can
+        cause buttons to become permanently unresponsive. The native Windows
+        splash dialog interferes with Qt's event handling when clicked.
+
+        Buttons are re-enabled in _on_device_status_update when all devices
+        are connected (all_connected = True).
+        """
+        plot_widget = self.measurement_tab.get_plot_widget()
+        status_display = self.measurement_tab.get_status_display()
+        plot_widget.set_buttons_enabled(False)
+        status_display.align_button.setEnabled(False)
     
     def set_experiment_model(self, model: EQEExperimentModel) -> None:
         """
@@ -180,14 +204,14 @@ class MainApplicationView(QMainWindow):
     def _on_device_status_update(self, device_name: str, is_connected: bool, message: str) -> None:
         """
         Handle device status updates from the experiment model.
-        
+
         Args:
             device_name: Name of the device
             is_connected: Connection status
             message: Status message
         """
         self.measurement_tab.update_device_status(device_name, is_connected, message)
-        
+
         # Update control button states based on overall device status
         if self.experiment_model:
             device_status = self.experiment_model.get_device_status()
@@ -196,6 +220,10 @@ class MainApplicationView(QMainWindow):
             status_display = self.measurement_tab.get_status_display()
             plot_widget.set_buttons_enabled(all_connected)
             status_display.align_button.setEnabled(all_connected)
+
+            # Track that devices are initialized (fixes button responsiveness)
+            if all_connected:
+                self._devices_initialized = True
     
     def _on_measurement_progress(self, measurement_type: str, progress_data: Dict) -> None:
         """
