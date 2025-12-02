@@ -174,19 +174,37 @@ class PicoScopeController:
         except Exception as e:
             raise PicoScopeError(f"Failed to perform lock-in measurement: {e}")
     
+    def read_lockin_current(self, num_measurements: int = 1) -> Optional[float]:
+        """
+        Read a single photocurrent measurement using software lock-in.
+
+        This is an alias for read_current() with num_measurements=1, provided
+        for compatibility with stability test code that expects this method name.
+
+        Args:
+            num_measurements: Number of measurements to average (default: 1)
+
+        Returns:
+            Optional[float]: Measured current in Amps, or None if error
+
+        Raises:
+            PicoScopeError: If measurement fails
+        """
+        return self.read_current(num_measurements=num_measurements)
+
     def read_current(self, num_measurements: int = 5) -> Optional[float]:
         """
         Read photocurrent using software lock-in with robust averaging.
-        
+
         This performs multiple lock-in measurements and uses trimmed mean
         averaging to reject outliers from lamp flicker and chopper variations.
-        
+
         Args:
             num_measurements: Number of measurements to average (default: 5)
-            
+
         Returns:
             Optional[float]: Measured current in Amps, or None if error
-            
+
         Raises:
             PicoScopeError: If measurement fails
         """

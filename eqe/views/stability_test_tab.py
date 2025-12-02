@@ -145,6 +145,8 @@ class StabilityTestTab(QWidget):
         # Plot canvas
         self.figure = Figure(figsize=(10, 6))
         self.canvas = FigureCanvas(self.figure)
+        # Prevent canvas from capturing focus - allows buttons to receive clicks
+        self.canvas.setFocusPolicy(Qt.NoFocus)
         self.ax_time = self.figure.add_subplot(121)
         self.ax_hist = self.figure.add_subplot(122)
         
@@ -243,10 +245,18 @@ class StabilityTestTab(QWidget):
         is_current_test = self.current_radio.isChecked()
         self.pixel_label.setVisible(is_current_test)
         self.pixel_input.setVisible(is_current_test)
+
+    def _set_inputs_enabled(self, enabled: bool) -> None:
+        """Enable or disable all input widgets (but not control buttons)."""
+        self.power_radio.setEnabled(enabled)
+        self.current_radio.setEnabled(enabled)
+        self.wavelength_input.setEnabled(enabled)
+        self.duration_input.setEnabled(enabled)
+        self.interval_input.setEnabled(enabled)
+        self.pixel_input.setEnabled(enabled)
     
     def _on_start_clicked(self) -> None:
         """Handle start button click."""
-        print(f"DEBUG: Start clicked, stability_model = {self.stability_model}")
         if not self.stability_model:
             QMessageBox.warning(self, "Error", "Stability model not initialized. Please wait for device initialization to complete.")
             return
@@ -283,29 +293,25 @@ class StabilityTestTab(QWidget):
         self.wavelength = wavelength
         
         # Update UI state
+        # Disable individual input widgets instead of config_group
+        # (disabling config_group would also disable the stop button!)
         self.start_button.setEnabled(False)
         self.stop_button.setEnabled(True)
         self.save_button.setEnabled(False)
-        self.config_group.setEnabled(False)
+        self._set_inputs_enabled(False)
         
         # Start test
         self.test_started.emit(self.test_type)
-        
-        print(f"DEBUG: Starting {self.test_type} test with wavelength={wavelength}, duration={duration}, interval={interval}")
+
         if self.test_type == "power":
-            print("DEBUG: Calling start_power_test")
             self.stability_model.start_power_test(wavelength, duration, interval)
-            print("DEBUG: start_power_test returned")
         else:
-            print("DEBUG: Calling start_current_test")
             self.stability_model.start_current_test(wavelength, duration, interval, pixel_number)
-            print("DEBUG: start_current_test returned")
     
     def _on_stop_clicked(self) -> None:
         """Handle stop button click."""
         if self.stability_model:
             self.stability_model.stop_test()
-        
         self.stop_button.setEnabled(False)
     
     def _on_save_clicked(self) -> None:
@@ -361,14 +367,12 @@ class StabilityTestTab(QWidget):
             timestamp: Time since test start (seconds)
             value: Measured value
         """
-        print(f"DEBUG: Measurement update received: t={timestamp:.1f}s, v={value:.6e}")
         self.timestamps.append(timestamp)
         self.values.append(value)
-        
+
         # Update plot and statistics
         self._update_plot()
         self._update_statistics()
-        print(f"DEBUG: Plot updated, total points: {len(self.timestamps)}")
     
     @Slot()
     def _on_test_complete(self) -> None:
@@ -378,15 +382,11 @@ class StabilityTestTab(QWidget):
         Note: timestamps and values are already stored as instance variables
         by the threadsafe wrapper before this signal is emitted.
         """
-        print("DEBUG: Test complete - re-enabling controls")
-        
         # Update UI state
         self.start_button.setEnabled(True)
         self.stop_button.setEnabled(False)
         self.save_button.setEnabled(True)
-        self.config_group.setEnabled(True)
-        
-        print(f"DEBUG: Config group enabled = {self.config_group.isEnabled()}")
+        self._set_inputs_enabled(True)
         
         # Final plot update
         self._update_plot()
@@ -415,8 +415,8 @@ class StabilityTestTab(QWidget):
         # Update UI state
         self.start_button.setEnabled(True)
         self.stop_button.setEnabled(False)
-        self.config_group.setEnabled(True)
-        
+        self._set_inputs_enabled(True)
+
         self.status_label.setText(f"Error: {error_message}")
         self.status_label.setStyleSheet("font-weight: bold; color: red;")
         
@@ -430,7 +430,6 @@ class StabilityTestTab(QWidget):
         Args:
             status: Status message
         """
-        print(f"DEBUG: _on_status_update called with: {status}")
         self.status_label.setText(status)
         self.status_label.setStyleSheet("font-weight: bold; color: #555;")
     
@@ -514,7 +513,7 @@ class StabilityTestTab(QWidget):
         self.figure.tight_layout()
         self.canvas.draw_idle()
         self.canvas.flush_events()
-    
+
     def _update_statistics(self) -> None:
         """Update the statistics display."""
         if not self.values:

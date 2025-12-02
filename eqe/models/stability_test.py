@@ -91,34 +91,27 @@ class StabilityTestModel:
             duration_min: Test duration in minutes
             interval_sec: Interval between measurements in seconds
         """
-        print(f"DEBUG: start_power_test called, _is_running={self._is_running}")
-        
         if self._is_running:
-            print("DEBUG: Test already running, returning")
             if self.error_callback:
                 self.error_callback("Test already running")
             return
-            
+
         if not self.power_meter or not self.monochromator:
-            print("DEBUG: Hardware not available, returning")
             if self.error_callback:
                 self.error_callback("Power meter or monochromator not available")
             return
-        
-        print("DEBUG: Setting up thread")
+
         self._is_running = True
         self._stop_requested = False
         self.test_type = "power"
-        
+
         # Start test in background thread
         self._test_thread = threading.Thread(
             target=self._run_power_test,
             args=(wavelength, duration_min, interval_sec),
             daemon=True
         )
-        print("DEBUG: Starting thread")
         self._test_thread.start()
-        print("DEBUG: Thread started, returning from start_power_test")
     
     def start_current_test(self, wavelength: float, duration_min: float,
                           interval_sec: float, pixel_number: int = 1) -> None:
@@ -169,17 +162,13 @@ class StabilityTestModel:
             duration_min: Duration in minutes
             interval_sec: Interval in seconds
         """
-        print(f"DEBUG: _run_power_test thread started")
         timestamps = []
         power_values = []
-        
+
         try:
-            print(f"DEBUG: About to call status_callback")
             # Configure monochromator
             if self.status_callback:
-                print(f"DEBUG: Calling status_callback")
                 self.status_callback(f"Configuring monochromator to {wavelength} nm...")
-                print(f"DEBUG: status_callback returned")
             
             confirmed_wavelength = self.monochromator.configure_for_wavelength(wavelength)
             
