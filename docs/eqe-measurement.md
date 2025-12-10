@@ -367,6 +367,65 @@ eqe/
 See [architecture.md](architecture.md) for MVC pattern details.
 See [software-lockin.md](software-lockin.md) for lock-in implementation details.
 
+## Stability Test
+
+The EQE application includes a built-in stability test for validating system performance and troubleshooting measurement issues.
+
+### Purpose
+
+The stability test measures power or current at a fixed wavelength over time to assess:
+
+- **Lamp stability** - Is the light source output consistent?
+- **Lock-in performance** - Is the software lock-in providing stable readings?
+- **System drift** - Are measurements drifting over the test duration?
+- **Coefficient of variation (CV)** - Overall measurement precision
+
+### Accessing the Stability Test
+
+The stability test is available as a separate tab in the EQE application GUI.
+
+### Test Parameters
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| Test Type | Current | Power test (lamp) or Current test (lock-in) |
+| Wavelength | 550 nm | Fixed wavelength for all measurements |
+| Duration | 5 min | Total test duration |
+| Interval | 2 s | Time between measurements |
+| Pixel # | 1 | Pixel number (current test only) |
+
+### Interpreting Results
+
+The stability test displays real-time statistics:
+
+| Metric | Good | Warning | Poor |
+|--------|------|---------|------|
+| CV (Coefficient of Variation) | <1% | 1-3% | >3% |
+
+**CV interpretation:**
+- **<1% (green)**: Excellent stability - system is performing optimally
+- **1-3% (orange)**: Acceptable - may indicate minor issues
+- **>3% (red)**: Poor stability - troubleshooting needed
+
+### Output
+
+Results are displayed as:
+- **Time series plot**: Measurement values vs. time with mean and ±1σ bands
+- **Histogram**: Distribution of measured values
+- **Statistics**: Mean, std dev, CV%, count, range
+
+Results can be saved to CSV with the "Save Results" button. A PNG plot is also saved automatically.
+
+### When to Use
+
+Run a stability test when:
+- Setting up the system for the first time
+- After optical realignment
+- If EQE measurements seem noisy or inconsistent
+- To validate system performance (target: CV <1%)
+
+---
+
 ## Best Practices
 
 ### Before Measurement

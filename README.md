@@ -204,11 +204,13 @@ See [docs/developer-setup.md](docs/developer-setup.md) for complete build instru
 | Document | Description |
 |----------|-------------|
 | [hardware-setup.md](docs/hardware-setup.md) | Driver installation and hardware connections |
-| [developer-setup.md](docs/developer-setup.md) | Development environment setup |
+| [developer-setup.md](docs/developer-setup.md) | Development environment, offline mode, controller API |
 | [architecture.md](docs/architecture.md) | MVC pattern and code organization |
 | [jv-measurement.md](docs/jv-measurement.md) | J-V measurement theory and workflow |
-| [eqe-measurement.md](docs/eqe-measurement.md) | EQE measurement theory and workflow |
+| [eqe-measurement.md](docs/eqe-measurement.md) | EQE measurement theory, workflow, and stability test |
 | [software-lockin.md](docs/software-lockin.md) | PicoScope software lock-in implementation |
+| [CHANGELOG.md](CHANGELOG.md) | Version history and release notes |
+| [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | Common issues and solutions |
 
 ## Performance
 

@@ -264,6 +264,39 @@ If the Thorlabs power meter isn't detected:
 - Interface: USB-Serial
 - Used for: Order-sorting filters
 
+##### Filter Configuration
+
+The filter wheel is configured with order-sorting filters to block second-order diffraction from the monochromator grating:
+
+| Position | Filter | Wavelength Range | Purpose |
+|----------|--------|------------------|---------|
+| 1 | 400 nm longpass | 420-800 nm | Blocks UV second-order |
+| 2 | 780 nm longpass | 800+ nm | Blocks visible second-order |
+| 3 | No filter (open) | 0-420 nm | UV/blue measurements |
+
+**Why order-sorting filters are needed:**
+
+Diffraction gratings produce multiple orders. At 800 nm (1st order), the grating also passes 400 nm light (2nd order). Without filtering:
+- Measuring at 800 nm would include 400 nm contamination
+- EQE values would be artificially high in the red/NIR
+
+**Automatic filter switching:**
+
+The software automatically selects the appropriate filter based on wavelength:
+- λ < 420 nm → Position 3 (no filter)
+- 420 nm ≤ λ < 800 nm → Position 1 (400 nm longpass)
+- λ ≥ 800 nm → Position 2 (780 nm longpass)
+
+**Configuration location:** `eqe/config/settings.py`
+
+```python
+FILTER_CONFIG = {
+    1: {"name": "400 nm filter", "wavelength_range": (420, 800)},
+    2: {"name": "780 nm filter", "wavelength_range": (800, float('inf'))},
+    3: {"name": "no filter", "wavelength_range": (0, 420)},
+}
+```
+
 #### PicoScope 5242D (Recommended)
 
 - Bandwidth: 60 MHz
