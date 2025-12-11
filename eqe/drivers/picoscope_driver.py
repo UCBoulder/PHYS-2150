@@ -648,20 +648,25 @@ class PicoScopeDriver:
             print(f"ERROR stopping AWG: {e}")
             return False
 
-    def software_lockin(self, reference_freq, num_cycles=100):
+    def software_lockin(self, reference_freq, num_cycles=100, algorithm="hilbert",
+                        correction_factor=0.5):
         """
         Perform software lock-in amplifier measurement
-        
+
         This is the main measurement function that:
         1. Acquires waveforms from both channels
-        2. Performs Hilbert transform for quadrature generation
-        3. Mixes signal with reference
-        4. Returns magnitude and phase
-        
+        2. Processes using selected algorithm
+        3. Returns magnitude and phase
+
         Args:
             reference_freq: Frequency of chopper in Hz (e.g., 81 Hz)
             num_cycles: Number of cycles to integrate over (default 100)
-        
+            algorithm: "hilbert" (default) or "synthesized"
+                - hilbert: Uses Hilbert transform, requires correction_factor
+                - synthesized: Uses synthesized sine reference, no correction needed
+            correction_factor: Scaling correction for hilbert algorithm (default 0.5)
+                Validated via AWG testing - see docs/lockin_validation_plan.md
+
         Returns:
             dict: {
                 'X': float - In-phase component (V)
@@ -676,97 +681,190 @@ class PicoScopeDriver:
         # Calculate acquisition parameters based on device type
         if self.device_type == '2000':
             # PicoScope 2204A parameters
-            # Timebase 8 = 2560ns per sample = ~390 kHz sample rate
-            # With 2000 samples, we get ~5ms of data
-            # At 81 Hz, that's about 0.4 cycles - so we need higher timebase (slower rate)
             # Timebase 12 = 40960ns = ~24 kHz, gives ~300 samples/cycle at 81 Hz
-            # With 2000 samples, we get about 6.6 cycles
             fs = 1e9 / 40960  # Sample rate at timebase 12 (~24.4 kHz)
             decimation = 1  # Not used for ps2000, just for compatibility
-            samples_per_cycle = fs / reference_freq  # ~301 samples/cycle at 81 Hz
+            samples_per_cycle = fs / reference_freq
             num_samples = min(int(num_cycles * samples_per_cycle), 2000)
-            # Ensure at least 1 cycle
             if num_samples < samples_per_cycle:
                 num_samples = min(int(samples_per_cycle * 2), 2000)
         else:
             # PicoScope 5000 series parameters
-            # CRITICAL: Optimized parameters for stability (0.66% CV)
-            # Decimation = 1024 gives ~97.6 kSPS sampling rate
-            # This provides ~1200 samples/cycle at 81 Hz (good for Hilbert transform)
             base_rate = 100e6  # 100 MS/s
             decimation = 1024  # FIXED decimation for stability
             fs = base_rate / decimation  # 97,656 Hz
-            samples_per_cycle = fs / reference_freq  # ~1205 samples/cycle at 81 Hz
+            samples_per_cycle = fs / reference_freq
             num_samples = min(int(num_cycles * samples_per_cycle), 200000)
 
         # Calculate actual cycles that will be captured
         actual_cycles = max(1, int(num_samples / samples_per_cycle))
-        
+
         # Acquire waveforms
         signal_data, reference_data = self._acquire_block(num_samples, decimation)
-        
+
         if signal_data is None or reference_data is None:
             print("ERROR: Failed to acquire data")
             return None
-        
+
         # Calculate actual sampling rate
         actual_samples_per_cycle = len(signal_data) / actual_cycles
         print(f"Lock-in: {len(signal_data)} samples, {actual_samples_per_cycle:.1f} samples/cycle @ {reference_freq} Hz ({actual_cycles} cycles)")
-        
-        # SOFTWARE LOCK-IN ALGORITHM
-        # Digital lock-in with Hilbert transform for quadrature generation
-        
+
+        # Run selected algorithm
+        if algorithm == "synthesized":
+            result = self._lockin_synthesized(signal_data, reference_data, fs, reference_freq)
+        else:
+            # Default: hilbert algorithm with correction factor
+            result = self._lockin_hilbert(signal_data, reference_data, fs, reference_freq,
+                                          correction_factor)
+
+        if result is None:
+            return None
+
+        # Add raw data to result
+        result['signal_data'] = signal_data
+        result['reference_data'] = reference_data
+
+        return result
+
+    def _lockin_hilbert(self, signal_data, reference_data, fs, reference_freq,
+                        correction_factor=0.5):
+        """
+        Lock-in algorithm using Hilbert transform for quadrature generation.
+
+        This is the original algorithm. Requires a correction factor of 0.5
+        due to RMS normalization of square wave reference doubling the result.
+
+        Args:
+            signal_data: Signal channel data (volts)
+            reference_data: Reference channel data (volts)
+            fs: Sample rate in Hz
+            reference_freq: Expected reference frequency in Hz
+            correction_factor: Scaling correction (default 0.5, validated via AWG)
+
+        Returns:
+            dict: {X, Y, R, theta, freq} or None on error
+        """
         # Remove DC offsets
         signal_normalized = signal_data - np.mean(signal_data)
         ref_normalized = reference_data - np.mean(reference_data)
-        
-        # Normalize reference signal
+
+        # Normalize reference signal to unit RMS
         ref_rms = np.sqrt(np.mean(ref_normalized**2))
         if ref_rms > 0:
             ref_normalized = ref_normalized / ref_rms
         else:
             print("ERROR: Reference signal has zero amplitude!")
             return None
-        
+
         # Create quadrature reference using Hilbert transform
         analytic_signal = hilbert(ref_normalized)
         ref_cos = ref_normalized  # In-phase reference
         ref_sin = np.imag(analytic_signal)  # Quadrature reference (90° shifted)
-        
+
         # Mix signal with reference
         mixed_cos = signal_normalized * ref_cos
         mixed_sin = signal_normalized * ref_sin
-        
+
         # Low-pass filter by averaging
         X = 2 * np.mean(mixed_cos)  # In-phase component (factor of 2 for RMS)
         Y = 2 * np.mean(mixed_sin)  # Quadrature component
-        
+
+        # Apply correction factor (validated via AWG testing)
+        X *= correction_factor
+        Y *= correction_factor
+
         # Calculate magnitude and phase
         R = np.sqrt(X**2 + Y**2)
         theta = np.arctan2(Y, X)
         theta_deg = np.rad2deg(theta)
-        
+
         # Measure actual reference frequency using FFT
-        freqs = np.fft.rfftfreq(len(reference_data), 1/fs)
-        fft_ref = np.fft.rfft(reference_data)
-        freq_range = (reference_freq * 0.5, reference_freq * 1.5)
-        mask = (freqs >= freq_range[0]) & (freqs <= freq_range[1])
-        
-        if np.any(mask):
-            peak_idx = np.argmax(np.abs(fft_ref[mask]))
-            measured_freq = freqs[mask][peak_idx]
-        else:
-            measured_freq = freqs[np.argmax(np.abs(fft_ref[1:]))+1]  # Skip DC
-        
+        measured_freq = self._measure_frequency(reference_data, fs, reference_freq)
+
         return {
             'X': X,
             'Y': Y,
             'R': R,
             'theta': theta_deg,
-            'freq': measured_freq,
-            'signal_data': signal_data,
-            'reference_data': reference_data
+            'freq': measured_freq
         }
+
+    def _lockin_synthesized(self, signal_data, reference_data, fs, reference_freq):
+        """
+        Lock-in algorithm using synthesized sine reference.
+
+        Instead of using the actual square wave reference, this measures
+        the reference frequency and synthesizes clean sine/cosine references.
+
+        Advantages:
+        - No correction factor needed (R = signal amplitude at fundamental)
+        - Better harmonic rejection (only measures fundamental frequency)
+        - No Hilbert transform edge effects
+
+        Args:
+            signal_data: Signal channel data (volts)
+            reference_data: Reference channel data (volts)
+            fs: Sample rate in Hz
+            reference_freq: Expected reference frequency in Hz
+
+        Returns:
+            dict: {X, Y, R, theta, freq} or None on error
+        """
+        # Measure reference frequency from actual signal
+        measured_freq = self._measure_frequency(reference_data, fs, reference_freq)
+
+        # Generate synthesized sine/cosine reference (clean, no harmonics)
+        t = np.arange(len(signal_data)) / fs
+        ref_cos = np.cos(2 * np.pi * measured_freq * t)
+        ref_sin = np.sin(2 * np.pi * measured_freq * t)
+
+        # Remove DC from signal
+        signal_ac = signal_data - np.mean(signal_data)
+
+        # Mix with synthesized references
+        mixed_cos = signal_ac * ref_cos
+        mixed_sin = signal_ac * ref_sin
+
+        # Low-pass filter by averaging (factor of 2 for amplitude recovery)
+        X = 2 * np.mean(mixed_cos)
+        Y = 2 * np.mean(mixed_sin)
+
+        # Calculate magnitude and phase
+        R = np.sqrt(X**2 + Y**2)
+        theta = np.arctan2(Y, X)
+        theta_deg = np.rad2deg(theta)
+
+        return {
+            'X': X,
+            'Y': Y,
+            'R': R,
+            'theta': theta_deg,
+            'freq': measured_freq
+        }
+
+    def _measure_frequency(self, reference_data, fs, expected_freq):
+        """
+        Measure the fundamental frequency of the reference signal using FFT.
+
+        Args:
+            reference_data: Reference signal data
+            fs: Sample rate in Hz
+            expected_freq: Expected frequency for search window
+
+        Returns:
+            float: Measured frequency in Hz
+        """
+        freqs = np.fft.rfftfreq(len(reference_data), 1/fs)
+        fft_ref = np.fft.rfft(reference_data)
+        freq_range = (expected_freq * 0.5, expected_freq * 1.5)
+        mask = (freqs >= freq_range[0]) & (freqs <= freq_range[1])
+
+        if np.any(mask):
+            peak_idx = np.argmax(np.abs(fft_ref[mask]))
+            return freqs[mask][peak_idx]
+        else:
+            return freqs[np.argmax(np.abs(fft_ref[1:]))+1]  # Skip DC
     
     def _acquire_block(self, num_samples, decimation):
         """

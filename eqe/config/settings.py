@@ -67,9 +67,14 @@ DEVICE_CONFIGS = {
         "default_chopper_freq": 81,    # Hz - default chopper frequency
         "default_num_cycles": 100,     # Number of cycles for lock-in integration
         "num_measurements": 5,         # Number of measurements to average for stability
-        # Note: No correction factor needed for software lock-in!
-        # Digital lock-in uses actual square wave reference, preserving all harmonics
-        # SR510's 0.45 factor was needed due to sine wave reference losing harmonic content
+        # Lock-in algorithm selection: "hilbert" (default) or "synthesized"
+        # - hilbert: Uses Hilbert transform for quadrature, requires correction factor
+        # - synthesized: Uses synthesized sine reference, no correction needed
+        "algorithm": "hilbert",
+        # Correction factor for hilbert algorithm (validated via AWG testing)
+        # The 2x factor comes from RMS normalization of square wave reference
+        # See docs/lockin_validation_plan.md for details
+        "hilbert_correction_factor": 0.5,
     }
 }
 
