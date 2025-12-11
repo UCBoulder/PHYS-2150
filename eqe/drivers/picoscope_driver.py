@@ -439,12 +439,209 @@ class PicoScopeDriver:
         """
         Store reference frequency for lock-in calculations
         (PicoScope doesn't need this for acquisition, but kept for API compatibility)
-        
+
         Args:
             frequency: Reference frequency in Hz
         """
         self.reference_freq = frequency
-    
+
+    # =========================================================================
+    # AWG (Arbitrary Waveform Generator) Control
+    # =========================================================================
+
+    def set_awg(self, frequency: float, amplitude_vpp: float,
+                waveform: str = 'square', offset_v: float = 0) -> bool:
+        """
+        Configure and start the built-in signal generator (AWG).
+
+        PicoScope 2204A AWG Specifications:
+        - Frequency: 0 Hz to 100 kHz
+        - Amplitude: 0 to 4 Vpp (into high impedance)
+        - Waveforms: sine, square, triangle
+        - Output: Separate BNC connector
+
+        Args:
+            frequency: Output frequency in Hz (0 to 100000)
+            amplitude_vpp: Peak-to-peak amplitude in volts (0 to 4.0)
+            waveform: 'sine', 'square', or 'triangle'
+            offset_v: DC offset in volts (-2 to +2)
+
+        Returns:
+            bool: True if AWG configured successfully
+        """
+        if not self.connected:
+            print("ERROR: Not connected to PicoScope")
+            return False
+
+        if self.device_type == '2000':
+            return self._set_awg_2000(frequency, amplitude_vpp, waveform, offset_v)
+        elif self.device_type == '5000a':
+            return self._set_awg_5000a(frequency, amplitude_vpp, waveform, offset_v)
+        else:
+            print(f"ERROR: AWG not supported for device type {self.device_type}")
+            return False
+
+    def _set_awg_2000(self, frequency: float, amplitude_vpp: float,
+                      waveform: str, offset_v: float) -> bool:
+        """
+        Configure AWG for PS2000 series (2204A).
+
+        ps2000_set_sig_gen_built_in parameters:
+        - handle: Device handle
+        - offsetVoltage: Offset in microvolts (µV)
+        - pkToPk: Peak-to-peak in microvolts (µV)
+        - waveType: 0=sine, 1=square, 2=triangle
+        - startFrequency: Start frequency in Hz
+        - stopFrequency: Stop frequency in Hz (same as start for fixed freq)
+        - increment: Frequency increment (0 for fixed)
+        - dwellTime: Time at each frequency in seconds (0 for fixed)
+        - sweepType: 0=up, 1=down, 2=updown, 3=downup
+        - sweeps: Number of sweeps (0 for continuous)
+        """
+        ps = self.ps
+
+        # Convert to microvolts
+        offset_uv = int(offset_v * 1e6)
+        pk_to_pk_uv = int(amplitude_vpp * 1e6)
+
+        # Wave type mapping
+        wave_types = {
+            'sine': 0,
+            'square': 1,
+            'triangle': 2
+        }
+        wave_type = wave_types.get(waveform.lower(), 1)  # Default to square
+
+        # Validate parameters
+        if pk_to_pk_uv > 4000000:  # 4V max
+            print(f"WARNING: Amplitude {amplitude_vpp}V exceeds 4V max, clamping")
+            pk_to_pk_uv = 4000000
+
+        if frequency > 100000:  # 100 kHz max
+            print(f"WARNING: Frequency {frequency}Hz exceeds 100kHz max, clamping")
+            frequency = 100000
+
+        try:
+            # ps2000_set_sig_gen_built_in(handle, offsetVoltage, pkToPk, waveType,
+            #                            startFrequency, stopFrequency, increment,
+            #                            dwellTime, sweepType, sweeps)
+            self.status["setSigGen"] = ps.ps2000_set_sig_gen_built_in(
+                self.chandle,
+                offset_uv,       # Offset in µV
+                pk_to_pk_uv,     # Peak-to-peak in µV
+                wave_type,       # 0=sine, 1=square, 2=triangle
+                frequency,       # Start frequency
+                frequency,       # Stop frequency (same = fixed freq)
+                0,               # Increment (0 = no sweep)
+                0,               # Dwell time (0 = no sweep)
+                0,               # Sweep type (0 = up)
+                0                # Sweeps (0 = continuous)
+            )
+            self.assert_pico_ok(self.status["setSigGen"])
+
+            print(f"AWG: {frequency} Hz, {amplitude_vpp} Vpp {waveform}")
+            return True
+
+        except Exception as e:
+            print(f"ERROR setting AWG: {e}")
+            return False
+
+    def _set_awg_5000a(self, frequency: float, amplitude_vpp: float,
+                       waveform: str, offset_v: float) -> bool:
+        """
+        Configure AWG for PS5000a series (5242D).
+
+        Note: PS5000a has a more capable AWG with arbitrary waveforms,
+        but we use the built-in waveforms for simplicity.
+        """
+        ps = self.ps
+
+        # Convert to microvolts
+        offset_uv = int(offset_v * 1e6)
+        pk_to_pk_uv = int(amplitude_vpp * 1e6)
+
+        # Wave type mapping for PS5000a
+        wave_types = {
+            'sine': 0,       # PS5000A_SINE
+            'square': 1,     # PS5000A_SQUARE
+            'triangle': 2,   # PS5000A_TRIANGLE
+        }
+        wave_type = wave_types.get(waveform.lower(), 1)
+
+        try:
+            # ps5000aSetSigGenBuiltIn(handle, offsetVoltage, pkToPk, waveType,
+            #                         startFrequency, stopFrequency, increment,
+            #                         dwellTime, sweepType, operation, shots,
+            #                         sweeps, triggerType, triggerSource, extInThreshold)
+            self.status["setSigGen"] = ps.ps5000aSetSigGenBuiltIn(
+                self.chandle,
+                offset_uv,       # Offset in µV
+                pk_to_pk_uv,     # Peak-to-peak in µV
+                wave_type,       # Wave type
+                frequency,       # Start frequency
+                frequency,       # Stop frequency
+                0,               # Increment
+                0,               # Dwell time
+                0,               # Sweep type
+                0,               # Operation (0 = normal)
+                0,               # Shots (0 = continuous)
+                0,               # Sweeps
+                0,               # Trigger type (0 = rising)
+                0,               # Trigger source (0 = none)
+                0                # External trigger threshold
+            )
+            self.assert_pico_ok(self.status["setSigGen"])
+
+            print(f"AWG: {frequency} Hz, {amplitude_vpp} Vpp {waveform}")
+            return True
+
+        except Exception as e:
+            print(f"ERROR setting AWG: {e}")
+            return False
+
+    def stop_awg(self) -> bool:
+        """
+        Stop the AWG output.
+
+        Sets amplitude to 0 to effectively disable the signal generator.
+
+        Returns:
+            bool: True if AWG stopped successfully
+        """
+        if not self.connected:
+            return False
+
+        try:
+            if self.device_type == '2000':
+                # Set amplitude to 0 to stop output
+                self.status["stopSigGen"] = self.ps.ps2000_set_sig_gen_built_in(
+                    self.chandle,
+                    0,    # Offset
+                    0,    # Peak-to-peak (0 = off)
+                    0,    # Wave type
+                    0,    # Start freq
+                    0,    # Stop freq
+                    0,    # Increment
+                    0,    # Dwell
+                    0,    # Sweep type
+                    0     # Sweeps
+                )
+                self.assert_pico_ok(self.status["stopSigGen"])
+
+            elif self.device_type == '5000a':
+                self.status["stopSigGen"] = self.ps.ps5000aSetSigGenBuiltIn(
+                    self.chandle,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                )
+                self.assert_pico_ok(self.status["stopSigGen"])
+
+            print("AWG stopped")
+            return True
+
+        except Exception as e:
+            print(f"ERROR stopping AWG: {e}")
+            return False
+
     def software_lockin(self, reference_freq, num_cycles=100):
         """
         Perform software lock-in amplifier measurement
