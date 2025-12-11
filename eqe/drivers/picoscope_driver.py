@@ -14,10 +14,16 @@ IMPORTANT NOTES:
 4. See: https://github.com/picotech/picosdk-python-wrappers/tree/master/ps2000Examples
 """
 
+import os
 import ctypes
+
+# Add PicoSDK DLL path to PATH (Windows) - must be done before importing picosdk
+if os.name == 'nt':
+    sdk_path = r"C:\Program Files\Pico Technology\SDK\lib"
+    if os.path.exists(sdk_path) and sdk_path not in os.environ.get('PATH', ''):
+        os.environ['PATH'] = os.environ['PATH'] + ';' + sdk_path
 import numpy as np
 from scipy.signal import hilbert
-import os
 import sys
 import contextlib
 import platform
