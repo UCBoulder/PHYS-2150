@@ -11,6 +11,7 @@ from typing import Optional, Dict, Tuple
 import numpy as np
 
 from ..drivers.picoscope_driver import PicoScopeDriver
+from ..config.settings import DEVICE_CONFIGS, DeviceType
 
 
 class PicoScopeError(Exception):
@@ -32,15 +33,20 @@ class PicoScopeController:
     def __init__(self, serial_number: Optional[str] = None):
         """
         Initialize the controller.
-        
+
         Args:
             serial_number: Optional serial number to connect to specific device
         """
         self._driver = PicoScopeDriver(serial_number=serial_number)
         self._is_connected = False
-        self._reference_freq = 81.0  # Default chopper frequency in Hz
-        self._num_cycles = 100  # Default number of cycles for lock-in integration
-        # Note: No correction factor needed! Software lock-in uses actual square wave reference
+
+        # Load configuration from settings
+        config = DEVICE_CONFIGS[DeviceType.PICOSCOPE_LOCKIN]
+        self._reference_freq = config.get("default_chopper_freq", 81.0)
+        self._num_cycles = config.get("default_num_cycles", 100)
+        # Correction factor compensates for RMS normalization in Hilbert algorithm
+        # Value of 0.5 validated via AWG testing - see docs/lockin_validation_handoff.md
+        self._correction_factor = config.get("correction_factor", 0.5)
         
     def connect(self) -> bool:
         """
@@ -125,12 +131,16 @@ class PicoScopeController:
             int: Number of cycles
         """
         return self._num_cycles
-    
-    # Correction factor methods removed - not needed for software lock-in!
-    # The digital lock-in uses the actual square wave reference from the chopper,
-    # which preserves all harmonic content. The SR510's 0.45 factor was needed
-    # because it multiplied with an internal sine oscillator, losing harmonics.
-    
+
+    def get_correction_factor(self) -> float:
+        """
+        Get the correction factor for lock-in amplitude scaling.
+
+        Returns:
+            float: Correction factor (typically 0.5 for Hilbert algorithm)
+        """
+        return self._correction_factor
+
     def perform_lockin_measurement(self) -> Optional[Dict[str, float]]:
         """
         Perform a software lock-in measurement.
@@ -157,9 +167,10 @@ class PicoScopeController:
         try:
             result = self._driver.software_lockin(
                 self._reference_freq,
-                num_cycles=self._num_cycles
+                num_cycles=self._num_cycles,
+                correction_factor=self._correction_factor
             )
-            
+
             if result is None:
                 raise PicoScopeError("Lock-in measurement returned None")
             
@@ -261,10 +272,9 @@ class PicoScopeController:
                 print(f"Warning: Signal near saturation ({average_signal:.3f} V)")
             
             # Apply transimpedance amplifier gain
-            # Note: No correction factor needed for software lock-in!
-            # The digital lock-in uses the actual square wave reference,
-            # preserving all harmonic content (unlike analog SR510)
-            # Assuming 1 MΩ transimpedance gain (adjust as needed)
+            # Note: The correction factor (0.5) is already applied in perform_lockin_measurement
+            # via the driver. Here we just convert voltage to current using TIA gain.
+            # Assuming 1 MΩ transimpedance gain (see settings.py transimpedance_gain)
             current = average_signal * 10 ** -6  # Convert to Amps (from V with 1MΩ gain)
             
             return current

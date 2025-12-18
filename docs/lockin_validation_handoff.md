@@ -9,6 +9,18 @@ This document provides context for continuing lock-in amplifier validation on th
 
 ---
 
+## VALIDATION COMPLETE
+
+**Final Decision:** The **Hilbert algorithm** with **0.5 correction factor** has been validated and selected as the production algorithm. The synthesized algorithm was removed after testing showed the Hilbert method provides better phase stability with the physical chopper reference.
+
+**Key Validation Results:**
+
+- TIA gain: 1.004 MΩ (0.4% error)
+- Lock-in stability: 0.49% CV
+- Frequency detection: Fixed to use zero-crossing (accurate to ±0.1 Hz)
+
+---
+
 ## What Was Done
 
 ### 1. Validation Framework Created
@@ -16,8 +28,9 @@ This document provides context for continuing lock-in amplifier validation on th
 New module at `eqe/validation/` with:
 - `lockin_simulator.py` - Synthetic signal testing (no hardware)
 - `lockin_tester.py` - PicoScope AWG validation
-- `keysight_awg_test.py` - External AWG validation (EDU33212A)
-- `improved_lockin.py` - Algorithm experiments
+- `tia_gain_test.py` - TIA gain verification with Keithley 2450
+- `lockin_live_test.py` - Real-time lock-in testing
+- `check_reference_signal.py` - Frequency diagnostics
 
 ### 2. Lock-In Algorithm Corrected
 

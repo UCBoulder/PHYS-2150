@@ -67,14 +67,10 @@ DEVICE_CONFIGS = {
         "default_chopper_freq": 81,    # Hz - default chopper frequency
         "default_num_cycles": 100,     # Number of cycles for lock-in integration
         "num_measurements": 5,         # Number of measurements to average for stability
-        # Lock-in algorithm selection: "hilbert" (default) or "synthesized"
-        # - hilbert: Uses Hilbert transform for quadrature, requires correction factor
-        # - synthesized: Uses synthesized sine reference, no correction needed
-        "algorithm": "hilbert",
-        # Correction factor for hilbert algorithm (validated via AWG testing)
-        # The 2x factor comes from RMS normalization of square wave reference
-        # See docs/lockin_validation_plan.md for details
-        "hilbert_correction_factor": 0.5,
+        # Correction factor for Hilbert lock-in algorithm (validated via AWG testing)
+        # The 0.5 factor compensates for RMS normalization of square wave reference
+        # See docs/lockin_validation_plan.md for validation details
+        "correction_factor": 0.5,
     }
 }
 
