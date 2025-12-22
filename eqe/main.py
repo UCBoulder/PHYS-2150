@@ -267,11 +267,12 @@ class EQEApplication:
                 # Enable controls
                 plot_widget.set_buttons_enabled(True)
                 status_display.align_button.setEnabled(True)
-                
+                status_display.live_monitor_button.setEnabled(True)
+
             else:
                 status_display.set_status_message("Initialization failed")
                 print(f"Device initialization failed: {message}")
-                
+
                 # Show error dialog
                 QMessageBox.critical(
                     self.main_view,
@@ -279,10 +280,11 @@ class EQEApplication:
                     f"Failed to initialize devices:\n\n{message}\n\n"
                     "Please check device connections and try restarting the application."
                 )
-                
+
                 # Disable controls
                 plot_widget.set_buttons_enabled(False)
                 status_display.align_button.setEnabled(False)
+                status_display.live_monitor_button.setEnabled(False)
         except Exception as e:
             print(f"Error in initialization completion handler: {e}")
     

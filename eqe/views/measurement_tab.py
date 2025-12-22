@@ -28,6 +28,7 @@ class MeasurementTab(QWidget):
     current_measurement_requested = Signal(int)  # pixel_number
     stop_requested = Signal()
     alignment_requested = Signal()
+    live_monitor_requested = Signal(bool)  # True to start, False to stop
     
     def __init__(self):
         """Initialize the measurement tab."""
@@ -74,9 +75,11 @@ class MeasurementTab(QWidget):
         self.plot_widget.stop_requested.connect(
             self.stop_requested.emit)
         
-        # Forward status display alignment button signal
+        # Forward status display signals
         self.status_display.alignment_requested.connect(
             self.alignment_requested.emit)
+        self.status_display.live_monitor_requested.connect(
+            self.live_monitor_requested.emit)
     
     # Public methods for external control
     
@@ -137,3 +140,11 @@ class MeasurementTab(QWidget):
     def get_parameter_input(self) -> ParameterInputWidget:
         """Get the parameter input widget."""
         return self.parameter_input
+
+    def update_live_signal(self, current_nA: float) -> None:
+        """Update the live signal display with current reading."""
+        self.status_display.update_live_signal(current_nA)
+
+    def stop_live_monitor(self) -> None:
+        """Stop live monitoring UI state."""
+        self.status_display.stop_live_monitor()

@@ -203,6 +203,49 @@ class PicoScopeController:
         """
         return self.read_current(num_measurements=num_measurements)
 
+    def read_current_fast(self, num_cycles: int = 20) -> Optional[float]:
+        """
+        Read photocurrent with reduced cycles for fast live monitoring.
+
+        Uses fewer integration cycles for faster updates (~0.3s vs ~1.5s).
+        Less accurate but suitable for alignment and quick checks.
+
+        Args:
+            num_cycles: Number of cycles to integrate (default: 20 for speed)
+
+        Returns:
+            Optional[float]: Measured current in Amps, or None if error
+
+        Raises:
+            PicoScopeError: If measurement fails
+        """
+        if not self._is_connected:
+            raise PicoScopeError("Device not connected")
+
+        # Temporarily use fewer cycles
+        original_cycles = self._num_cycles
+        self._num_cycles = num_cycles
+
+        try:
+            result = self.perform_lockin_measurement()
+            if result is None:
+                return None
+
+            # Convert R (voltage) to current using TIA gain
+            # R is in volts, TIA gain is 1 MΩ, so I = V / R_tia = V * 1e-6
+            from ..config.settings import CURRENT_MEASUREMENT_CONFIG
+            tia_gain = CURRENT_MEASUREMENT_CONFIG.get("transimpedance_gain", 1e-6)
+            current = result['R'] * tia_gain
+
+            return current
+
+        except Exception as e:
+            raise PicoScopeError(f"Fast current measurement failed: {e}")
+
+        finally:
+            # Restore original cycles
+            self._num_cycles = original_cycles
+
     def read_current(self, num_measurements: int = 5) -> Optional[float]:
         """
         Read photocurrent using software lock-in with robust averaging.

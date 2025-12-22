@@ -101,7 +101,8 @@ class MainApplicationView(QMainWindow):
         self.measurement_tab.current_measurement_requested.connect(self._start_current_measurement)
         self.measurement_tab.stop_requested.connect(self._stop_measurement)
         self.measurement_tab.alignment_requested.connect(self._on_align_button_clicked)
-        
+        self.measurement_tab.live_monitor_requested.connect(self._on_live_monitor_requested)
+
         # Stability tab signals (placeholder for future expansion)
         # Signals are handled internally by the stability tab and model
     
@@ -128,6 +129,7 @@ class MainApplicationView(QMainWindow):
         status_display = self.measurement_tab.get_status_display()
         plot_widget.set_buttons_enabled(False)
         status_display.align_button.setEnabled(False)
+        status_display.live_monitor_button.setEnabled(False)
     
     def set_experiment_model(self, model: EQEExperimentModel) -> None:
         """
@@ -146,7 +148,9 @@ class MainApplicationView(QMainWindow):
             self._on_measurement_progress, Qt.QueuedConnection)
         model.experiment_complete.connect(
             self._on_experiment_complete, Qt.QueuedConnection)
-        
+        model.live_signal_update.connect(
+            self._on_live_signal_update, Qt.QueuedConnection)
+
         # Note: StabilityTestModel will be created after device initialization completes
         # See initialize_stability_model() method
     
@@ -536,17 +540,46 @@ class MainApplicationView(QMainWindow):
             self._show_error(f"Failed to align monochromator: {e}")
         except Exception as e:
             self._show_error(f"Unexpected error during alignment: {e}")
-    
+
+    def _on_live_monitor_requested(self, start: bool) -> None:
+        """Handle live signal monitor toggle."""
+        if not self.experiment_model:
+            self._show_error("Experiment model not initialized")
+            self.measurement_tab.stop_live_monitor()
+            return
+
+        try:
+            if start:
+                self.experiment_model.start_live_signal_monitor()
+                status_display = self.measurement_tab.get_status_display()
+                status_display.set_status_message("Live signal monitor active (523 nm)")
+            else:
+                self.experiment_model.stop_live_signal_monitor()
+                status_display = self.measurement_tab.get_status_display()
+                status_display.set_status_message("Ready")
+
+        except EQEExperimentError as e:
+            self._show_error(f"Live monitor error: {e}")
+            self.measurement_tab.stop_live_monitor()
+
+    def _on_live_signal_update(self, current_nA: float) -> None:
+        """Handle live signal update from experiment model."""
+        self.measurement_tab.update_live_signal(current_nA)
+
     def _stop_measurement(self) -> None:
         """Stop current measurement."""
         if self.experiment_model:
             self.experiment_model.stop_all_measurements()
-            
+            self.experiment_model.stop_live_signal_monitor()
+
             # Reset button states
             plot_widget = self.measurement_tab.get_plot_widget()
             plot_widget.set_power_measuring(False)
             plot_widget.set_current_measuring(False)
-            
+
+            # Stop live monitor UI
+            self.measurement_tab.stop_live_monitor()
+
             status_display = self.measurement_tab.get_status_display()
             status_display.set_status_message("Measurement stopped")
     

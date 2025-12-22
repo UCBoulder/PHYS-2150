@@ -361,20 +361,26 @@ class ControlButtonWidget(QWidget):
 
 class StatusDisplayWidget(QWidget):
     """Widget for displaying system status and progress."""
-    
-    # Signal for alignment button
+
+    # Signals
     alignment_requested = Signal()
-    
+    live_monitor_requested = Signal(bool)  # True to start, False to stop
+
     def __init__(self, parent=None):
         """Initialize the status display widget."""
         super().__init__(parent)
-        
+
         # Create status components
         self.device_status = QTextEdit()
         self.progress_bar = QProgressBar()
         self.status_label = QLabel("Ready")
-        self.align_button = QPushButton("Enable Green Alignment Dot")
-        
+        self.align_button = QPushButton("Green Dot")
+        self.live_monitor_button = QPushButton("Live Signal")
+        self.live_signal_label = QLabel("")
+
+        # Live monitor state
+        self._live_monitoring = False
+
         self._setup_components()
         self._setup_layout()
         self._connect_signals()
@@ -385,55 +391,136 @@ class StatusDisplayWidget(QWidget):
         self.device_status.setMaximumHeight(100)
         self.device_status.setReadOnly(True)
         self.device_status.setStyleSheet("font-family: monospace; font-size: 10px;")
-        
+
         # Progress bar
         self.progress_bar.setVisible(False)
         self.progress_bar.setRange(0, 100)
-        
+
         # Status label
         font_size = GUI_CONFIG["font_sizes"]["label"]
         self.status_label.setStyleSheet(f"font-size: {font_size}px; font-weight: bold;")
         self.status_label.setAlignment(Qt.AlignCenter)
-        
-        # Alignment button
+
+        # Alignment button (smaller)
         button_font_size = GUI_CONFIG["font_sizes"]["button"]
         start_color = GUI_CONFIG["colors"]["start_button"]
         self.align_button.setStyleSheet(
             f"font-size: {button_font_size}px; background-color: {start_color}; "
-            f"color: black; min-height: 40px;"
+            f"color: black; min-height: 30px;"
         )
+
+        # Live monitor button
+        self.live_monitor_button.setStyleSheet(
+            f"font-size: {button_font_size}px; background-color: {start_color}; "
+            f"color: black; min-height: 30px;"
+        )
+
+        # Live signal display label
+        self.live_signal_label.setStyleSheet(
+            f"font-size: {font_size + 2}px; font-weight: bold; color: #00ff00; "
+            "background-color: #1a1a1a; padding: 8px; border-radius: 4px;"
+        )
+        self.live_signal_label.setAlignment(Qt.AlignCenter)
+        self.live_signal_label.setVisible(False)
     
     def _setup_layout(self) -> None:
         """Set up the widget layout."""
         layout = QVBoxLayout()
-        
+
         # Device status group
         device_group = QGroupBox("Device Status")
         device_layout = QVBoxLayout()
         device_layout.addWidget(self.device_status)
         device_group.setLayout(device_layout)
-        
-        # Progress group with alignment button
+
+        # Progress group with buttons
         progress_group = QGroupBox("Progress")
         progress_layout = QVBoxLayout()
         progress_layout.addWidget(self.status_label)
         progress_layout.addWidget(self.progress_bar)
-        progress_layout.addWidget(self.align_button)
+
+        # Buttons side by side
+        button_row = QHBoxLayout()
+        button_row.addWidget(self.align_button)
+        button_row.addWidget(self.live_monitor_button)
+        progress_layout.addLayout(button_row)
+
+        # Live signal display (below buttons)
+        progress_layout.addWidget(self.live_signal_label)
+
         progress_group.setLayout(progress_layout)
-        
+
         layout.addWidget(device_group)
         layout.addWidget(progress_group)
         layout.addStretch()
-        
+
         self.setLayout(layout)
     
     def _connect_signals(self) -> None:
         """Connect button signals."""
         self.align_button.clicked.connect(self._on_align_button_clicked)
-    
+        self.live_monitor_button.clicked.connect(self._on_live_monitor_button_clicked)
+
     def _on_align_button_clicked(self) -> None:
         """Handle alignment button click."""
         self.alignment_requested.emit()
+
+    def _on_live_monitor_button_clicked(self) -> None:
+        """Handle live monitor button click."""
+        # Check if in offline mode
+        from ..config import settings
+        if settings.OFFLINE_MODE:
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.warning(
+                self,
+                "Offline Mode",
+                "Cannot perform measurements in OFFLINE mode.\n\n"
+                "Restart the application without the --offline flag to use hardware."
+            )
+            return
+
+        self._live_monitoring = not self._live_monitoring
+        self._update_live_monitor_button()
+        self.live_monitor_requested.emit(self._live_monitoring)
+
+    def _update_live_monitor_button(self) -> None:
+        """Update live monitor button appearance based on state."""
+        button_font_size = GUI_CONFIG["font_sizes"]["button"]
+        if self._live_monitoring:
+            stop_color = GUI_CONFIG["colors"]["stop_button"]
+            self.live_monitor_button.setText("Stop Monitor")
+            self.live_monitor_button.setStyleSheet(
+                f"font-size: {button_font_size}px; background-color: {stop_color}; "
+                f"color: black; min-height: 30px;"
+            )
+            self.live_signal_label.setVisible(True)
+            self.live_signal_label.setText("Starting...")
+        else:
+            start_color = GUI_CONFIG["colors"]["start_button"]
+            self.live_monitor_button.setText("Live Signal")
+            self.live_monitor_button.setStyleSheet(
+                f"font-size: {button_font_size}px; background-color: {start_color}; "
+                f"color: black; min-height: 30px;"
+            )
+            self.live_signal_label.setVisible(False)
+
+    def update_live_signal(self, current_nA: float) -> None:
+        """
+        Update the live signal display with current reading.
+
+        Args:
+            current_nA: Current in nanoamps
+        """
+        if abs(current_nA) >= 1000:
+            # Show in µA if >= 1000 nA
+            self.live_signal_label.setText(f"{current_nA/1000:.2f} µA")
+        else:
+            self.live_signal_label.setText(f"{current_nA:.2f} nA")
+
+    def stop_live_monitor(self) -> None:
+        """Stop live monitoring (called externally when needed)."""
+        self._live_monitoring = False
+        self._update_live_monitor_button()
     
     def update_device_status(self, device_name: str, is_connected: bool, message: str = "") -> None:
         """
