@@ -118,13 +118,13 @@ class ParameterInputWidget(QGroupBox):
     def load_parameters(self, params: Dict[str, Any]) -> None:
         """
         Load parameter values into the input fields.
-        
+
         Args:
             params: Parameter dictionary to load
         """
         # Temporarily disconnect signals to avoid recursive updates
         self._disconnect_signals()
-        
+
         try:
             if 'start_wavelength' in params:
                 self.start_wavelength.setValue(params['start_wavelength'])
@@ -137,6 +137,9 @@ class ParameterInputWidget(QGroupBox):
         finally:
             # Reconnect signals
             self._connect_signals()
+
+        # Emit parameters_changed to sync model with loaded values
+        self.parameters_changed.emit(self.get_parameters())
     
     def _disconnect_signals(self) -> None:
         """Temporarily disconnect signals."""
