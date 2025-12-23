@@ -5,7 +5,11 @@ This controller provides a clean interface to the Oriel Cornerstone monochromato
 It handles wavelength control, grating selection, filter management, and shutter control.
 """
 
+import warnings
 import pyvisa as visa
+
+# Suppress pyvisa warning about unknown status codes from the monochromator
+warnings.filterwarnings("ignore", message="VI_WARN_UNKNOWN_STATUS", category=visa.VisaIOWarning)
 from typing import Optional, Dict, Any
 from ..drivers.cornerstone_mono import Cornerstone_Mono
 

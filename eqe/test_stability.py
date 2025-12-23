@@ -105,11 +105,11 @@ class StabilityTest:
             if not self.lockin.connect():
                 raise Exception("Failed to connect to PicoScope")
             
-            chopper_freq = config.get("default_chopper_freq", 81)
-            num_cycles = config.get("default_num_cycles", 100)
+            chopper_freq = config["default_chopper_freq"]
+            num_cycles = config["default_num_cycles"]
             self.lockin.set_reference_frequency(chopper_freq)
             self.lockin.set_num_cycles(num_cycles)
-            print(f"✓ PicoScope connected (Freq: {chopper_freq} Hz, Cycles: {num_cycles})")
+            print("✓ PicoScope connected")
             
             # Create measurement models
             self.power_model = PowerMeasurementModel(

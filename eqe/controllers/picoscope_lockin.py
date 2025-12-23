@@ -42,11 +42,11 @@ class PicoScopeController:
 
         # Load configuration from settings
         config = DEVICE_CONFIGS[DeviceType.PICOSCOPE_LOCKIN]
-        self._reference_freq = config.get("default_chopper_freq", 81.0)
-        self._num_cycles = config.get("default_num_cycles", 100)
+        self._reference_freq = config["default_chopper_freq"]
+        self._num_cycles = config["default_num_cycles"]
         # Correction factor compensates for RMS normalization in Hilbert algorithm
         # Value of 0.5 validated via AWG testing - see docs/lockin_validation_handoff.md
-        self._correction_factor = config.get("correction_factor", 0.5)
+        self._correction_factor = config["correction_factor"]
         
     def connect(self) -> bool:
         """

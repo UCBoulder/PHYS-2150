@@ -64,7 +64,7 @@ DEVICE_CONFIGS = {
         "grating_wavelength_threshold": 685,  # nm - switch to grating 2 above this
     },
     DeviceType.PICOSCOPE_LOCKIN: {
-        "default_chopper_freq": 81,    # Hz - default chopper frequency
+        "default_chopper_freq": 81,    # Hz - initial default (actual freq set during measurement)
         "default_num_cycles": 100,     # Number of cycles for lock-in integration
         "num_measurements": 5,         # Number of measurements to average for stability
         # Correction factor for Hilbert lock-in algorithm (validated via AWG testing)
@@ -85,11 +85,16 @@ MONOCHROMATOR_CORRECTION_FACTORS = {
     "130B5202": 1.0,  # EQE1 - no correction needed with software lock-in
 }
 
+# Filter wavelength thresholds (nm)
+# These define when to switch between filter positions
+FILTER_THRESHOLD_LOWER = 420   # Below this: no filter (position 3)
+FILTER_THRESHOLD_UPPER = 800   # Above this: 780nm filter (position 2), between: 400nm filter (position 1)
+
 # Filter configuration for monochromator
 FILTER_CONFIG = {
-    1: {"name": "400 nm filter", "wavelength_range": (420, 800)},
-    2: {"name": "780 nm filter", "wavelength_range": (800, float('inf'))},
-    3: {"name": "no filter", "wavelength_range": (0, 420)},
+    1: {"name": "400 nm filter", "wavelength_range": (FILTER_THRESHOLD_LOWER, FILTER_THRESHOLD_UPPER)},
+    2: {"name": "780 nm filter", "wavelength_range": (FILTER_THRESHOLD_UPPER, float('inf'))},
+    3: {"name": "no filter", "wavelength_range": (0, FILTER_THRESHOLD_LOWER)},
 }
 
 # File naming conventions

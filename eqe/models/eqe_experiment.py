@@ -223,16 +223,16 @@ class EQEExperimentModel(QObject):
             if not self.lockin.connect():
                 raise PicoScopeError("Failed to connect to PicoScope")
             
-            # Configure with default parameters
-            chopper_freq = config.get("default_chopper_freq", 81)
-            num_cycles = config.get("default_num_cycles", 100)
+            # Configure with default parameters from settings
+            chopper_freq = config["default_chopper_freq"]
+            num_cycles = config["default_num_cycles"]
             
             self.lockin.set_reference_frequency(chopper_freq)
             self.lockin.set_num_cycles(num_cycles)
             # No correction factor needed - software lock-in uses actual square wave reference!
             
-            self._notify_device_status("PicoScope Lock-in", True, f"Connected (Nominal freq: {chopper_freq} Hz)")
-            self.logger.log(f"PicoScope lock-in initialized (Freq: {chopper_freq} Hz, Cycles: {num_cycles})")
+            self._notify_device_status("PicoScope Lock-in", True, "Connected")
+            self.logger.log("PicoScope lock-in initialized")
         except PicoScopeError as e:
             self._notify_device_status("PicoScope Lock-in", False, str(e))
             raise EQEExperimentError(f"Failed to initialize lock-in: {e}")

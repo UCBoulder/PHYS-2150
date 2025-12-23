@@ -293,7 +293,7 @@ class TLPMX:
 		else:
 			dll_name = "TLPMX_64.dll"
 			dllabspath = os.path.dirname(os.path.abspath(__file__)) + os.path.sep + dll_name
-			self.dll = cdll.LoadLibrary("C:\Program Files\IVI Foundation\VISA\Win64\Bin\TLPMX_64.dll")
+			self.dll = cdll.LoadLibrary(r"C:\Program Files\IVI Foundation\VISA\Win64\Bin\TLPMX_64.dll")
 
 		self.devSession = c_long()
 		self.devSession.value = 0
