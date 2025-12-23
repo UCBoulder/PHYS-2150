@@ -125,6 +125,7 @@
                 <div class="input-group mb-0">
                     <label for="cell-input">Cell Number (e.g., 195)</label>
                     <input type="text" id="cell-input" pattern="[0-9]{3}" maxlength="3" placeholder="000">
+                    <span class="input-error" id="cell-input-error">Please enter a 3-digit cell number</span>
                 </div>
             </div>
             <div class="modal-footer">
@@ -196,7 +197,9 @@
 
         // Handle theme changes
         window.addEventListener('themechange', (e) => {
-            if (typeof Plotly !== 'undefined') {
+            const plotDiv = document.getElementById('jv-plot');
+            // Only update if plot has been initialized (has data attribute)
+            if (typeof Plotly !== 'undefined' && plotDiv && plotDiv.data) {
                 updatePlotTheme(e.detail.dark);
             }
         });
@@ -327,18 +330,31 @@
             }
         });
 
+        // Clear error state when typing
+        document.getElementById('cell-input').addEventListener('input', () => {
+            document.getElementById('cell-input').classList.remove('error');
+            document.getElementById('cell-input-error').classList.remove('visible');
+        });
+
         function closeCellModal() {
             document.getElementById('cell-modal').classList.remove('active');
         }
 
         function confirmCellNumber() {
             const input = document.getElementById('cell-input');
+            const error = document.getElementById('cell-input-error');
             const value = input.value.trim();
 
             if (!/^\d{3}$/.test(value)) {
-                alert('Please enter a 3-digit cell number');
+                input.classList.add('error');
+                error.classList.add('visible');
+                input.focus();
                 return;
             }
+
+            // Clear error state
+            input.classList.remove('error');
+            error.classList.remove('visible');
 
             document.getElementById('cell-number').value = value;
             closeCellModal();
