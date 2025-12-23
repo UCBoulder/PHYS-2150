@@ -1,0 +1,33 @@
+# PHYS-2150 Measurement Suite - Python Dependencies
+# Install with: pip install -r requirements.txt
+#
+# Note: This file is a manual fallback. For reproducible environments,
+# use UV: pip install uv && uv sync
+#
+# External drivers (must be installed separately on Windows):
+# - NI-VISA Runtime: https://www.ni.com/en-us/support/downloads/drivers/download.ni-visa.html
+# - PicoScope SDK: https://www.picotech.com/downloads
+# - Thorlabs OPM: https://www.thorlabs.com/software_pages/ViewSoftwarePage.cfm?Code=OPM
+# - Newport MonoUtility: Contact Newport/MKS for software
+
+# Core scientific computing
+numpy>=1.24
+scipy>=1.10
+pandas>=2.0
+matplotlib>=3.7
+
+# GUI framework
+PySide6>=6.5
+
+# Instrument communication
+pyvisa>=1.13
+
+# PicoScope oscilloscope SDK (Python bindings)
+# Requires PicoScope native SDK to be installed first
+picosdk>=1.0
+
+# Development dependencies (optional)
+# pyinstaller>=6.0
+# pytest>=7.0
+# pytest-qt>=4.2
+# ruff>=0.1.0

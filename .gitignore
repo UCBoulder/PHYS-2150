@@ -1,0 +1,57 @@
+# Virtual environments
+.venv/
+venv/
+eqe_venv/
+env/
+
+# Python compiled files
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+
+# Package build artifacts
+*.egg-info/
+*.egg
+.eggs/
+dist/
+*.whl
+
+# PyInstaller (but keep build/phys2150.spec and build/installer.iss)
+# PyInstaller creates a 'build' folder for temp files - those get mixed with our build/ config
+# So we ignore specific PyInstaller outputs
+*.manifest
+*.spec.bak
+
+# IDE and editor files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Testing and linting cache
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Environment files
+.env
+.env.local
+
+# Logs
+*.log
+
+# Miscellaneous
+*.bak
+*.swp
+*.tmp
+
+# Measurement data (keep out of repo)
+# Uncomment if you want to ignore CSV data files:
+# *.csv
