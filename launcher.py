@@ -1,5 +1,5 @@
 """
-PHYS-2150 Measurement Suite Launcher
+PHYS 2150 Measurement Suite Launcher
 
 Unified launcher for the EQE and J-V measurement applications.
 Provides a simple interface to select which measurement to perform.
@@ -24,7 +24,7 @@ class LauncherWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("PHYS-2150 Measurement Suite")
+        self.setWindowTitle("PHYS 2150 Measurement Suite")
         self.setFixedSize(500, 350)
 
         # Center window on screen
@@ -52,7 +52,7 @@ class LauncherWindow(QMainWindow):
         layout.setContentsMargins(30, 30, 30, 30)
 
         # Title
-        title_label = QLabel("PHYS-2150 Measurement Suite")
+        title_label = QLabel("PHYS 2150 Measurement Suite")
         title_font = QFont()
         title_font.setPointSize(18)
         title_font.setBold(True)
@@ -97,7 +97,7 @@ class LauncherWindow(QMainWindow):
         layout.addStretch()
 
         # Footer
-        footer_label = QLabel("CU Boulder Physics Lab")
+        footer_label = QLabel("CU Boulder Physics Undergraduate Labs")
         footer_label.setAlignment(Qt.AlignCenter)
         footer_label.setStyleSheet("color: gray;")
         layout.addWidget(footer_label)
@@ -122,9 +122,10 @@ class LauncherWindow(QMainWindow):
             QFrame containing the button and description
         """
         frame = QFrame()
-        frame.setFrameStyle(QFrame.StyledPanel | QFrame.Raised)
+        frame.setFrameStyle(QFrame.NoFrame)
         frame_layout = QVBoxLayout(frame)
         frame_layout.setSpacing(10)
+        frame_layout.setContentsMargins(10, 10, 10, 10)
 
         # Main button
         button = QPushButton(title)
@@ -150,15 +151,6 @@ class LauncherWindow(QMainWindow):
         """)
         button.clicked.connect(callback)
         frame_layout.addWidget(button)
-
-        # Description
-        desc_label = QLabel(description)
-        desc_label.setAlignment(Qt.AlignCenter)
-        desc_font = QFont()
-        desc_font.setPointSize(9)
-        desc_label.setFont(desc_font)
-        desc_label.setStyleSheet("color: #666;")
-        frame_layout.addWidget(desc_label)
 
         return frame
 
