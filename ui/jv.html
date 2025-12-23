@@ -40,27 +40,18 @@
                 <div class="controls-section-title">Voltage Sweep</div>
 
                 <div class="input-group">
-                    <label for="start-voltage">Start Voltage</label>
-                    <div class="input-with-unit">
-                        <input type="number" id="start-voltage" value="-0.1" step="0.1">
-                        <span class="unit">V</span>
-                    </div>
+                    <label for="start-voltage">Start Voltage (V)</label>
+                    <input type="text" id="start-voltage" value="-0.1" autocomplete="off">
                 </div>
 
                 <div class="input-group">
-                    <label for="stop-voltage">Stop Voltage</label>
-                    <div class="input-with-unit">
-                        <input type="number" id="stop-voltage" value="0.7" step="0.1">
-                        <span class="unit">V</span>
-                    </div>
+                    <label for="stop-voltage">Stop Voltage (V)</label>
+                    <input type="text" id="stop-voltage" value="0.7" autocomplete="off">
                 </div>
 
                 <div class="input-group">
-                    <label for="step-voltage">Step Voltage</label>
-                    <div class="input-with-unit">
-                        <input type="number" id="step-voltage" value="0.02" step="0.01">
-                        <span class="unit">V</span>
-                    </div>
+                    <label for="step-voltage">Step Voltage (V)</label>
+                    <input type="text" id="step-voltage" value="0.02" autocomplete="off">
                 </div>
             </div>
 
@@ -86,6 +77,9 @@
             <div class="controls-section">
                 <button class="btn btn-primary btn-block" id="measure-btn" onclick="toggleMeasurement()">
                     Start Measurement
+                </button>
+                <button class="btn btn-secondary btn-block" id="save-btn" onclick="saveData()" disabled>
+                    Save Data
                 </button>
             </div>
         </aside>
@@ -157,6 +151,20 @@
         </div>
     </div>
 
+    <!-- Save Data Modal -->
+    <div class="modal-overlay" id="save-modal">
+        <div class="modal">
+            <div class="modal-title">Measurement Complete</div>
+            <div class="modal-body">
+                <p>Would you like to save the measurement data?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeSaveModal()">Discard</button>
+                <button class="btn btn-primary" onclick="confirmSave()">Save</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         /**
          * J-V Measurement Application
@@ -177,6 +185,9 @@
             setTimeout(() => {
                 initPlot();
                 checkDeviceStatus();
+
+                // Prompt for cell number on startup
+                setCellNumber();
             }, 50);
         });
 
@@ -194,24 +205,68 @@
             }
         });
 
-        function getPlotColors(isDark) {
-            return {
+        // Handle theme changes
+        window.addEventListener('themechange', (e) => {
+            if (typeof Plotly !== 'undefined') {
+                updatePlotTheme(e.detail.dark);
+            }
+        });
+
+        function getPlotLayout(isDark) {
+            const colors = {
                 text: isDark ? '#eeeeee' : '#1a1a1a',
                 grid: isDark ? '#444444' : '#dddddd',
-                forward: '#4A90D9',
-                reverse: '#e57373'
+                zeroline: isDark ? '#666666' : '#999999',
+                legendBg: isDark ? 'rgba(50,50,50,0.9)' : 'rgba(255,255,255,0.9)'
+            };
+            return {
+                xaxis: {
+                    title: 'Voltage (V)',
+                    color: colors.text,
+                    gridcolor: colors.grid,
+                    zerolinecolor: colors.zeroline,
+                    zerolinewidth: 1
+                },
+                yaxis: {
+                    title: 'Current (mA)',
+                    color: colors.text,
+                    gridcolor: colors.grid,
+                    zerolinecolor: colors.zeroline,
+                    zerolinewidth: 1
+                },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: colors.text },
+                legend: { font: { color: colors.text }, bgcolor: colors.legendBg },
+                margin: { t: 20, r: 30, b: 60, l: 60 }
             };
         }
 
+        // Plotly config - always show modebar
+        const plotConfig = {
+            displayModeBar: true,
+            modeBarButtonsToRemove: ['lasso2d', 'select2d'],
+            displaylogo: false
+        };
+
         function updatePlotTheme(isDark) {
-            const colors = getPlotColors(isDark);
+            const colors = {
+                text: isDark ? '#eeeeee' : '#1a1a1a',
+                grid: isDark ? '#444444' : '#dddddd',
+                zeroline: isDark ? '#666666' : '#999999',
+                legendBg: isDark ? 'rgba(50,50,50,0.9)' : 'rgba(255,255,255,0.9)'
+            };
+            // Use dot notation for reliable relayout updates
             Plotly.relayout('jv-plot', {
-                'title.font.color': colors.text,
                 'xaxis.color': colors.text,
                 'xaxis.gridcolor': colors.grid,
+                'xaxis.zerolinecolor': colors.zeroline,
                 'yaxis.color': colors.text,
                 'yaxis.gridcolor': colors.grid,
-                'font.color': colors.text
+                'yaxis.zerolinecolor': colors.zeroline,
+                'font.color': colors.text,
+                'legend.font.color': colors.text,
+                'legend.bgcolor': colors.legendBg
             });
         }
 
@@ -256,8 +311,21 @@
          */
         function setCellNumber() {
             document.getElementById('cell-modal').classList.add('active');
-            document.getElementById('cell-input').focus();
+            // Delay focus to ensure modal transition is complete
+            setTimeout(() => {
+                const input = document.getElementById('cell-input');
+                input.focus();
+                input.select();
+            }, 100);
         }
+
+        // Allow Enter key to confirm cell number
+        document.getElementById('cell-input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                confirmCellNumber();
+            }
+        });
 
         function closeCellModal() {
             document.getElementById('cell-modal').classList.remove('active');
@@ -281,8 +349,31 @@
          */
         function showPixelModal() {
             document.getElementById('pixel-modal').classList.add('active');
-            document.getElementById('pixel-input').focus();
+            setTimeout(() => {
+                const input = document.getElementById('pixel-input');
+                input.focus();
+                input.select();
+            }, 100);
         }
+
+        // Allow Enter key to confirm pixel
+        document.getElementById('pixel-input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                confirmPixel();
+            }
+        });
+
+        // Allow Enter key to save, Escape to discard in save modal
+        document.getElementById('save-modal').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                confirmSave();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                closeSaveModal();
+            }
+        });
 
         function closePixelModal() {
             document.getElementById('pixel-modal').classList.remove('active');
@@ -323,9 +414,10 @@
             isMeasuring = true;
             updateMeasuringState(true);
 
-            // Clear previous data
+            // Clear previous data and disable save
             forwardData = { x: [], y: [] };
             reverseData = { x: [], y: [] };
+            document.getElementById('save-btn').disabled = true;
             clearPlot();
             updatePixelLabel(pixel);
 
@@ -396,53 +488,83 @@
             updateMeasuringState(false);
 
             if (success) {
-                // Could prompt to save here
+                // Enable save button and show save modal
+                document.getElementById('save-btn').disabled = false;
+                showSaveModal();
                 console.log('Measurement complete');
             }
         }
 
-        function getPlotLayout() {
-            const colors = getPlotColors(LabTheme.isDark());
-            return {
-                title: { text: 'J-V Characterization', font: { size: 18, color: colors.text } },
-                xaxis: { title: 'Voltage (V)', color: colors.text, gridcolor: colors.grid },
-                yaxis: { title: 'Current (mA)', color: colors.text, gridcolor: colors.grid },
-                paper_bgcolor: 'transparent',
-                plot_bgcolor: 'transparent',
-                font: { color: colors.text },
-                showlegend: true,
-                legend: { x: 0.02, y: 0.98 },
-                margin: { t: 50, r: 40, b: 60, l: 70 },
-                autosize: true
-            };
+        /**
+         * Save modal functions
+         */
+        function showSaveModal() {
+            document.getElementById('save-modal').classList.add('active');
+        }
+
+        function closeSaveModal() {
+            document.getElementById('save-modal').classList.remove('active');
+        }
+
+        function confirmSave() {
+            closeSaveModal();
+            saveData();
+        }
+
+        /**
+         * Save measurement data to CSV via Python API
+         */
+        function saveData() {
+            const cellNumber = document.getElementById('cell-number').value || '000';
+            const pixel = currentPixel || 1;
+
+            // Generate CSV content
+            let csv = 'Direction,Voltage (V),Current (mA)\n';
+
+            // Add forward sweep data
+            for (let i = 0; i < forwardData.x.length; i++) {
+                csv += `Forward,${forwardData.x[i].toFixed(4)},${forwardData.y[i].toFixed(6)}\n`;
+            }
+
+            // Add reverse sweep data
+            for (let i = 0; i < reverseData.x.length; i++) {
+                csv += `Reverse,${reverseData.x[i].toFixed(4)},${reverseData.y[i].toFixed(6)}\n`;
+            }
+
+            // Call Python API to save (shows native file dialog)
+            const api = LabAPI.get();
+            if (api && api.save_csv_data) {
+                api.save_csv_data(csv, cellNumber, pixel, (result) => {
+                    const response = JSON.parse(result);
+                    if (response.success) {
+                        console.log('Data saved to:', response.path);
+                    } else if (response.message !== 'Cancelled') {
+                        alert('Save failed: ' + response.message);
+                    }
+                });
+            } else {
+                console.error('Save API not available');
+            }
         }
 
         function clearPlot() {
             const plotDiv = document.getElementById('jv-plot');
+            const layout = getPlotLayout(LabTheme.isDark());
             const traces = [
                 { x: [], y: [], mode: 'markers', type: 'scatter', name: 'Forward', marker: { color: '#4A90D9', size: 8 } },
                 { x: [], y: [], mode: 'markers', type: 'scatter', name: 'Reverse', marker: { color: '#e57373', size: 8 } }
             ];
-            const layout = {
-                title: 'J-V Characterization',
-                xaxis: { title: 'Voltage (V)' },
-                yaxis: { title: 'Current (mA)' }
-            };
-            Plotly.newPlot(plotDiv, traces, layout);
+            Plotly.newPlot(plotDiv, traces, layout, plotConfig);
         }
 
         function updatePlot() {
             const plotDiv = document.getElementById('jv-plot');
+            const layout = getPlotLayout(LabTheme.isDark());
             const traces = [
                 { x: forwardData.x, y: forwardData.y, mode: 'markers', type: 'scatter', name: 'Forward', marker: { color: '#4A90D9', size: 8 } },
                 { x: reverseData.x, y: reverseData.y, mode: 'markers', type: 'scatter', name: 'Reverse', marker: { color: '#e57373', size: 8 } }
             ];
-            const layout = {
-                title: 'J-V Characterization',
-                xaxis: { title: 'Voltage (V)' },
-                yaxis: { title: 'Current (mA)' }
-            };
-            Plotly.newPlot(plotDiv, traces, layout);
+            Plotly.newPlot(plotDiv, traces, layout, plotConfig);
         }
 
         /**

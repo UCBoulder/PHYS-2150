@@ -142,8 +142,13 @@ html, body {
 
 .header-actions {
     display: flex;
-    gap: 12px;
+    gap: 16px;
     align-items: center;
+}
+
+/* Override absolute positioning when theme toggle is in header */
+.header-actions .theme-toggle {
+    position: static;
 }
 
 

@@ -53,6 +53,18 @@
     cursor: not-allowed;
 }
 
+/* Hide number input spinners */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
 .input-group input[readonly] {
     background: var(--bg-tertiary);
     cursor: default;
@@ -68,6 +80,9 @@
     border-radius: 4px 0 0 4px;
     border-right: none;
     flex: 1;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
 }
 
 .input-with-unit .unit {

@@ -136,6 +136,43 @@ class JVApi(QObject):
 
         return json.dumps({"success": False, "message": "Cancelled"})
 
+    @Slot(str, str, int, result=str)
+    def save_csv_data(self, csv_content: str, cell_number: str, pixel: int) -> str:
+        """
+        Save CSV data directly (for mock/offline mode).
+
+        Args:
+            csv_content: CSV string to save
+            cell_number: Cell number for filename
+            pixel: Pixel number for filename
+
+        Returns:
+            JSON string with success status and file path
+        """
+        from datetime import datetime
+
+        # Generate default filename
+        timestamp = datetime.now().strftime("%Y%m%d")
+        default_filename = f"JV_Cell{cell_number}_Pixel{pixel}_{timestamp}.csv"
+
+        # Show save dialog
+        file_path, _ = QFileDialog.getSaveFileName(
+            self._window,
+            "Save J-V Data",
+            default_filename,
+            "CSV files (*.csv)"
+        )
+
+        if file_path:
+            try:
+                with open(file_path, 'w', newline='') as f:
+                    f.write(csv_content)
+                return json.dumps({"success": True, "path": file_path})
+            except Exception as e:
+                return json.dumps({"success": False, "message": str(e)})
+
+        return json.dumps({"success": False, "message": "Cancelled"})
+
     def _on_measurement_point(self, direction: str, voltage: float, current: float) -> None:
         """Forward measurement point to JS."""
         js = f"onMeasurementPoint('{direction}', {voltage}, {current})"
