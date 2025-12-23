@@ -11,8 +11,8 @@ The PHYS 2150 Measurement Suite communicates with several pieces of laboratory e
 | Keithley 2450 SMU | NI-VISA Runtime | J-V measurements |
 | PicoScope 5242D/2204A | PicoScope SDK | EQE lock-in amplifier |
 | Thorlabs PM100USB | Thorlabs OPM | Reference power measurement |
-| Newport CS130B Monochromator | Newport MonoUtility | Wavelength selection |
-| Newport USFW-100 Filter Wheel | Newport MonoUtility | Order-sorting filters |
+| Newport CS130B Monochromator | NI-VISA Runtime | Wavelength selection (SCPI over serial) |
+| Newport USFW-100 Filter Wheel | NI-VISA Runtime | Order-sorting filters (SCPI over serial) |
 
 ## Driver Installation
 
@@ -105,27 +105,6 @@ The Thorlabs Optical Power Meter software provides drivers for the PM100USB powe
 4. The power meter should appear and display readings
 
 **Note:** The TLPMX.py driver in this application communicates directly with the Thorlabs DLLs installed by the OPM software.
-
-### 4. Newport MonoUtility
-
-Newport MonoUtility provides control software for the CS130B monochromator and USFW-100 filter wheel.
-
-**Download:**
-- Contact Newport/MKS Instruments for software access
-- Or check: https://www.newport.com/f/cornerstone-130-1-8-m-monochromator
-
-**Installation:**
-
-1. Run the installer provided by Newport
-2. Follow the installation wizard
-3. Install USB drivers when prompted
-
-**Verification:**
-
-1. Connect the CS130B monochromator via USB
-2. Connect the USFW-100 filter wheel via USB
-3. Open Newport MonoUtility
-4. Both devices should connect and respond to commands
 
 ## Physical Connections
 

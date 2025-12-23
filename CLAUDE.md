@@ -100,7 +100,7 @@ common/                  # Shared code
 
 J-V requires: NI-VISA Runtime, Keithley 2450
 
-EQE requires: PicoScope SDK (ps5000a or ps2000), Thorlabs OPM, Newport MonoUtility, NI-VISA
+EQE requires: PicoScope SDK (ps5000a or ps2000), Thorlabs OPM, NI-VISA
 
 ## Exception Classes
 

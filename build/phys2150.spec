@@ -10,7 +10,7 @@ Or without UV:
 
 Output: dist/PHYS2150/ folder with PHYS2150.exe and all dependencies
 
-Note: External hardware drivers (NI-VISA, PicoSDK, Thorlabs OPM, Newport MonoUtility)
+Note: External hardware drivers (NI-VISA, PicoSDK, Thorlabs OPM)
 must be installed separately on the target Windows machine.
 """
 

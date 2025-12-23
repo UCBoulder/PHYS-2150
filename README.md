@@ -1,6 +1,6 @@
-# PHYS-2150 Measurement Suite
+# PHYS 2150 Measurement Suite
 
-A comprehensive solar cell characterization system for the CU Boulder Physics 2150 lab course. This suite provides two complementary measurements for complete solar cell analysis:
+A comprehensive solar cell characterization system for the CU Boulder PHYS 2150 lab course. This suite provides two complementary measurements for complete solar cell analysis:
 
 | Measurement | Purpose | Key Equipment |
 |-------------|---------|---------------|
@@ -64,8 +64,7 @@ uv run python -m jv --offline
 
 - [PicoScope SDK](https://www.picotech.com/downloads)
 - [Thorlabs OPM](https://www.thorlabs.com/software_pages/ViewSoftwarePage.cfm?Code=OPM)
-- [Newport MonoUtility](https://www.newport.com/) (contact Newport for software)
-- NI-VISA Runtime (for serial communication)
+- [NI-VISA Runtime](https://www.ni.com/en-us/support/downloads/drivers/download.ni-visa.html) (for serial communication)
 
 See [docs/hardware-setup.md](docs/hardware-setup.md) for detailed installation instructions.
 
@@ -222,7 +221,7 @@ This software is released under the **MIT License**. See [LICENSE](LICENSE) for 
 
 ## Citation
 
-If you use this software in your research, please cite:
+If you use this software, please cite:
 
 ```
 PHYS 2150 Measurement Suite

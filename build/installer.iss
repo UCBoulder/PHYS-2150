@@ -14,7 +14,6 @@
 ; - NI-VISA Runtime (for instrument communication)
 ; - PicoScope SDK (for EQE measurements)
 ; - Thorlabs OPM driver (for power meter)
-; - Newport MonoUtility (for monochromator)
 
 #define MyAppName "PHYS 2150 Measurement Suite"
 #define MyAppVersion "2.0.0"
@@ -128,4 +127,4 @@ Type: filesandordirs; Name: "{app}\cache"
 
 [Messages]
 ; Custom messages
-WelcomeLabel2=This will install [name/ver] on your computer.%n%nIMPORTANT: This application requires the following hardware drivers to be pre-installed:%n%n- NI-VISA Runtime%n- PicoScope SDK%n- Thorlabs OPM driver%n- Newport MonoUtility%n%nPlease ensure these are installed before using the application.
+WelcomeLabel2=This will install [name/ver] on your computer.%n%nIMPORTANT: This application requires the following hardware drivers to be pre-installed:%n%n- NI-VISA Runtime%n- PicoScope SDK%n- Thorlabs OPM driver%n%nPlease ensure these are installed before using the application.
