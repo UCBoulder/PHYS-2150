@@ -13,7 +13,7 @@ Before starting, ensure you have:
 
 ## Quick Start
 
-### Using UV (Recommended)
+### Using UV
 
 [UV](https://github.com/astral-sh/uv) is a fast, modern Python package manager that provides reproducible environments.
 
@@ -36,30 +36,7 @@ uv run python -m eqe
 uv run python -m jv
 ```
 
-### Using pip (Alternative)
-
-If you prefer traditional pip:
-
-```bash
-# Clone the repository
-git clone https://github.com/UCBoulder/PHYS-2150.git
-cd PHYS-2150
-
-# Create virtual environment
-python -m venv .venv
-
-# Activate virtual environment
-# On Windows:
-.venv\Scripts\activate
-# On Unix/macOS:
-source .venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Run the application
-python launcher.py
-```
+> **Windows Note:** If `uv` is not recognized, use `python -m uv` instead.
 
 ## Project Structure
 
@@ -67,7 +44,6 @@ python launcher.py
 PHYS-2150/
 ├── launcher.py              # Main entry point - measurement selector
 ├── pyproject.toml           # Project configuration and dependencies
-├── requirements.txt         # Pip fallback dependencies
 │
 ├── common/                  # Shared infrastructure
 │   ├── drivers/            # Hardware drivers (TLPMX.py)
@@ -136,7 +112,6 @@ uv run python -m jv --offline
 
 ### Adding Dependencies
 
-With UV:
 ```bash
 # Add a runtime dependency
 uv add numpy
@@ -146,12 +121,6 @@ uv add --dev pytest
 
 # Update lock file
 uv lock
-```
-
-With pip:
-```bash
-# Add to requirements.txt manually, then:
-pip install -r requirements.txt
 ```
 
 ### Code Style
@@ -211,7 +180,7 @@ uv sync
 uv run pytest
 
 # 3. Update version in pyproject.toml
-# Edit: version = "2.1.0"
+# Edit: version = "2.2.0"
 
 # 4. Build executable
 uv run pyinstaller build/phys2150.spec
@@ -221,8 +190,8 @@ iscc build/installer.iss
 
 # 6. Test on clean machine
 # 7. Create git tag
-git tag -a v2.1.0 -m "Release 2.1.0"
-git push origin v2.1.0
+git tag -a v2.2.0 -m "Release 2.2.0"
+git push origin v2.2.0
 ```
 
 ## MVC Architecture

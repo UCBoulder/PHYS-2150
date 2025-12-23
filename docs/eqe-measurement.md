@@ -117,6 +117,40 @@ Our system uses a **software lock-in** implemented on PicoScope - no external lo
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+## GUI Controls
+
+### Manual Monochromator Controls
+
+The EQE application includes manual monochromator controls for alignment and troubleshooting:
+
+| Control | Function |
+|---------|----------|
+| **Wavelength** | Set monochromator to specific wavelength (auto-selects grating and filter) |
+| **Go Button** | Apply wavelength setting |
+| **Shutter Open/Close** | Control monochromator shutter for beam blocking |
+| **Filter Status** | Display current filter position (1, 2, or 3) |
+
+These controls are useful for:
+- Initial optical alignment
+- Checking beam position at specific wavelengths
+- Troubleshooting without running full scans
+
+### Live Signal Monitor
+
+The **Live Signal Monitor** displays real-time photocurrent readings from the lock-in amplifier. This is essential for:
+
+- **Beam alignment** - Maximize signal by adjusting sample position
+- **Signal verification** - Confirm the system is working before scanning
+- **Troubleshooting** - Identify noise or instability issues
+
+The monitor shows:
+- Current reading in nanoamps (nA)
+- Update rate synchronized with lock-in measurements
+
+### Green Dot Alignment
+
+The **Green Dot** button (in the Monochromator Controls panel) sets the monochromator to 532 nm - a visible wavelength useful for optical alignment. Combined with the Live Signal Monitor, this allows precise positioning of samples.
+
 ## Measurement Workflow
 
 ### Complete EQE Measurement Process
