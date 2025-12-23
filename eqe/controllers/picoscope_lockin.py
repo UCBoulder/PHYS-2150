@@ -256,7 +256,8 @@ class PicoScopeController:
             # Restore original cycles
             self._num_cycles = original_cycles
 
-    def read_current(self, num_measurements: int = 5, wavelength_nm: float = None) -> Optional[float]:
+    def read_current(self, num_measurements: int = 5, wavelength_nm: float = None,
+                     return_stats: bool = False) -> Optional[float]:
         """
         Read photocurrent using software lock-in with averaging.
 
@@ -267,9 +268,11 @@ class PicoScopeController:
         Args:
             num_measurements: Number of measurements to average (default: 5)
             wavelength_nm: Optional wavelength for logging context
+            return_stats: If True, return dict with current and stats; if False, return just current
 
         Returns:
-            Optional[float]: Measured current in Amps, or None if error
+            If return_stats=False: Optional[float] - Measured current in Amps, or None if error
+            If return_stats=True: Optional[dict] - {'current': float, 'std_dev': float, 'n': int, 'cv_percent': float}
 
         Raises:
             PicoScopeError: If measurement fails
@@ -330,6 +333,13 @@ class PicoScopeController:
             # Log to console and emit to GUI stats widget
             _logger.student_stats(stats)
 
+            if return_stats:
+                return {
+                    'current': current,
+                    'std_dev': current_std,
+                    'n': len(R_values),
+                    'cv_percent': cv
+                }
             return current
             
         except Exception as e:

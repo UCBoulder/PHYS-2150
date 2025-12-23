@@ -15,6 +15,7 @@ from ..controllers.monochromator import MonochromatorController, MonochromatorEr
 from ..config.settings import (
     CURRENT_MEASUREMENT_CONFIG,
     PHASE_ADJUSTMENT_CONFIG,
+    DATA_EXPORT_CONFIG,
 )
 from ..utils.data_handling import MeasurementDataLogger
 
@@ -52,10 +53,11 @@ class CurrentMeasurementModel:
         self._is_measuring = False
         self._stop_requested = False
         self._measurement_thread: Optional[threading.Thread] = None
-        
+
         # Measurement data
         self.wavelengths: List[float] = []
         self.currents: List[float] = []
+        self.measurement_stats: List[dict] = []  # Stats per wavelength: {std_dev, n, cv_percent}
         self.pixel_number: Optional[int] = None
         
         # Callbacks for progress updates
@@ -99,15 +101,17 @@ class CurrentMeasurementModel:
         
         return confirmed_wavelength
     
-    def _read_lockin_current(self, wavelength_nm: float = None) -> float:
+    def _read_lockin_current(self, wavelength_nm: float = None, return_stats: bool = False):
         """
         Read current using PicoScope software lock-in amplifier.
 
         Args:
             wavelength_nm: Optional wavelength for logging context
+            return_stats: If True, return (current, stats_dict); if False, return just current
 
         Returns:
-            float: Measured current in Amps
+            If return_stats=False: float - Measured current in Amps
+            If return_stats=True: Tuple[float, dict] - (current, {std_dev, n, cv_percent})
 
         Raises:
             CurrentMeasurementError: If measurement fails
@@ -116,48 +120,63 @@ class CurrentMeasurementModel:
             # Read current using PicoScope software lock-in with robust averaging
             # Use configured number of measurements for stability
             num_measurements = CURRENT_MEASUREMENT_CONFIG.get("num_measurements", 5)
-            current = self.lockin.read_current(
+            result = self.lockin.read_current(
                 num_measurements=num_measurements,
-                wavelength_nm=wavelength_nm
+                wavelength_nm=wavelength_nm,
+                return_stats=return_stats
             )
-            
-            if current is None:
+
+            if result is None:
                 raise CurrentMeasurementError("Failed to read current from PicoScope")
-            
-            return current
-                    
+
+            if return_stats:
+                # Result is dict: {current, std_dev, n, cv_percent}
+                return result['current'], {
+                    'std_dev': result['std_dev'],
+                    'n': result['n'],
+                    'cv_percent': result['cv_percent']
+                }
+            return result
+
         except PicoScopeError as e:
             raise CurrentMeasurementError(f"Failed to read current: {e}")
     
-    def measure_current_at_wavelength(self, wavelength: float) -> Tuple[float, float]:
+    def measure_current_at_wavelength(self, wavelength: float, return_stats: bool = False):
         """
         Measure current at a specific wavelength.
-        
+
         Args:
             wavelength: Wavelength in nm
-            
+            return_stats: If True, also return measurement statistics
+
         Returns:
-            Tuple[float, float]: (confirmed_wavelength, current)
-            
+            If return_stats=False: Tuple[float, float] - (confirmed_wavelength, current)
+            If return_stats=True: Tuple[float, float, dict] - (confirmed_wavelength, current, stats)
+
         Raises:
             CurrentMeasurementError: If measurement fails
         """
         try:
             # Configure devices
             confirmed_wavelength = self._configure_for_wavelength(wavelength)
-            
+
             # Wait for photocell to stabilize after wavelength change
             stabilization_time = CURRENT_MEASUREMENT_CONFIG.get("stabilization_time", 0.2)
             time.sleep(stabilization_time)
-            
+
             # Read current using software lock-in (wavelength passed for logging context)
-            current = self._read_lockin_current(wavelength_nm=confirmed_wavelength)
+            if return_stats:
+                current, stats = self._read_lockin_current(
+                    wavelength_nm=confirmed_wavelength,
+                    return_stats=True
+                )
+                self.logger.debug(f"Current at {confirmed_wavelength:.1f} nm: {current:.6e} A")
+                return confirmed_wavelength, current, stats
+            else:
+                current = self._read_lockin_current(wavelength_nm=confirmed_wavelength)
+                self.logger.debug(f"Current at {confirmed_wavelength:.1f} nm: {current:.6e} A")
+                return confirmed_wavelength, current
 
-            # Verbose log to debug level (stats already logged by controller)
-            self.logger.debug(f"Current at {confirmed_wavelength:.1f} nm: {current:.6e} A")
-
-            return confirmed_wavelength, current
-            
         except (CurrentMeasurementError, MonochromatorError) as e:
             raise CurrentMeasurementError(f"Failed to measure current at {wavelength} nm: {e}")
     
@@ -176,8 +195,12 @@ class CurrentMeasurementModel:
             self.logger.log(f"Starting current measurement for pixel {pixel_number}")
             self.wavelengths.clear()
             self.currents.clear()
+            self.measurement_stats.clear()
             self.pixel_number = pixel_number
-            
+
+            # Check if we should collect stats for export
+            collect_stats = DATA_EXPORT_CONFIG.get("include_measurement_stats", False)
+
             # Prepare monochromator
             self.monochromator.open_shutter()
 
@@ -206,9 +229,15 @@ class CurrentMeasurementModel:
                         new_filter = self.monochromator.get_filter_for_wavelength(current_wavelength)
                         self.logger.debug(f"Set filter to {new_filter}")
 
-                    # Measure current
-                    confirmed_wavelength, current = self.measure_current_at_wavelength(current_wavelength)
-                    
+                    # Measure current (with stats if enabled for export)
+                    if collect_stats:
+                        confirmed_wavelength, current, stats = self.measure_current_at_wavelength(
+                            current_wavelength, return_stats=True
+                        )
+                        self.measurement_stats.append(stats)
+                    else:
+                        confirmed_wavelength, current = self.measure_current_at_wavelength(current_wavelength)
+
                     # Store data
                     self.wavelengths.append(confirmed_wavelength)
                     self.currents.append(current)
@@ -318,19 +347,29 @@ class CurrentMeasurementModel:
             return not self._measurement_thread.is_alive()
         return True
     
-    def get_measurement_data(self) -> Tuple[List[float], List[float], Optional[int]]:
+    def get_measurement_data(self) -> Tuple[List[float], List[float], Optional[int], List[dict]]:
         """
         Get the current measurement data.
-        
+
         Returns:
-            Tuple[List[float], List[float], Optional[int]]: (wavelengths, currents, pixel_number)
+            Tuple containing:
+                - wavelengths: List of wavelengths in nm
+                - currents: List of currents in A
+                - pixel_number: Pixel number (1-8)
+                - measurement_stats: List of stat dicts {std_dev, n, cv_percent} per wavelength
         """
-        return self.wavelengths.copy(), self.currents.copy(), self.pixel_number
-    
+        return (
+            self.wavelengths.copy(),
+            self.currents.copy(),
+            self.pixel_number,
+            self.measurement_stats.copy()
+        )
+
     def clear_data(self) -> None:
         """Clear measurement data."""
         self.wavelengths.clear()
         self.currents.clear()
+        self.measurement_stats.clear()
         self.pixel_number = None
     
     def align_monochromator(self, alignment_wavelength: float = None) -> None:

@@ -724,13 +724,17 @@ class EQEExperimentModel(QObject):
         """Save current measurement data."""
         if not self.current_model:
             raise EQEExperimentError("Current model not initialized")
-        
-        wavelengths, currents, pixel_number = self.current_model.get_measurement_data()
+
+        wavelengths, currents, pixel_number, measurement_stats = self.current_model.get_measurement_data()
         if not wavelengths:
             raise EQEExperimentError("No current data to save")
-        
+
         try:
-            self.data_handler.save_measurement_data(file_path, wavelengths, currents, "current")
+            # Pass measurement stats to save function (will export if enabled in settings)
+            self.data_handler.save_measurement_data(
+                file_path, wavelengths, currents, "current",
+                measurement_stats=measurement_stats if measurement_stats else None
+            )
             self.logger.log(f"Current data saved to {file_path} (pixel {pixel_number})")
         except DataValidationError as e:
             raise EQEExperimentError(f"Failed to save current data: {e}")

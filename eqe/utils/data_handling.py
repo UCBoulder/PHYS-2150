@@ -91,36 +91,65 @@ class DataHandler:
             raise DataValidationError(f"Unknown measurement type: {measurement_type}")
     
     @staticmethod
-    def save_measurement_data(file_path: str, wavelengths: List[float], 
-                            measurements: List[float], measurement_type: str) -> None:
+    def save_measurement_data(file_path: str, wavelengths: List[float],
+                            measurements: List[float], measurement_type: str,
+                            measurement_stats: Optional[List[Dict[str, Any]]] = None) -> None:
         """
         Save measurement data to CSV file.
-        
+
         Args:
             file_path: Path to save the file
             wavelengths: List of wavelength values
             measurements: List of measurement values
             measurement_type: Type of measurement for header selection
-            
+            measurement_stats: Optional list of stat dicts per wavelength
+                              Each dict: {std_dev: float, n: int, cv_percent: float}
+
         Raises:
             DataValidationError: If save operation fails
         """
         try:
-            headers = DATA_EXPORT_CONFIG["headers"].get(measurement_type, 
-                                                       ["Wavelength (nm)", "Measurement"])
-            
+            # Check if stats export is enabled and we have stats data
+            include_stats = (
+                DATA_EXPORT_CONFIG.get("include_measurement_stats", False)
+                and measurement_type == "current"
+                and measurement_stats is not None
+                and len(measurement_stats) == len(measurements)
+            )
+
+            if include_stats:
+                headers = DATA_EXPORT_CONFIG["headers"].get("current_with_stats",
+                    ["Wavelength (nm)", "Current_mean (A)", "Current_std (A)", "n", "CV_percent"])
+            else:
+                headers = DATA_EXPORT_CONFIG["headers"].get(measurement_type,
+                    ["Wavelength (nm)", "Measurement"])
+
             with open(file_path, mode='w', newline='') as file:
                 writer = csv.writer(file, delimiter=DATA_EXPORT_CONFIG["csv_delimiter"])
                 writer.writerow(headers)
-                
-                for wavelength, measurement in zip(wavelengths, measurements):
+
+                precision = DATA_EXPORT_CONFIG["precision"]
+
+                for i, (wavelength, measurement) in enumerate(zip(wavelengths, measurements)):
                     # Use scientific notation for measurement values to preserve
                     # precision for very small values (e.g., nanoamp currents).
-                    # round(1e-9, 6) = 0.0, but f"{1e-9:.6e}" = "1.000000e-09"
-                    precision = DATA_EXPORT_CONFIG["precision"]
                     formatted_measurement = f"{measurement:.{precision}e}"
-                    writer.writerow([wavelength, formatted_measurement])
-                    
+
+                    if include_stats:
+                        stats = measurement_stats[i]
+                        formatted_std = f"{stats['std_dev']:.{precision}e}"
+                        row = [
+                            wavelength,
+                            formatted_measurement,
+                            formatted_std,
+                            stats['n'],
+                            f"{stats['cv_percent']:.1f}"
+                        ]
+                    else:
+                        row = [wavelength, formatted_measurement]
+
+                    writer.writerow(row)
+
         except Exception as e:
             raise DataValidationError(f"{ERROR_MESSAGES['file_save_failed']}: {e}")
     
