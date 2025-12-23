@@ -114,10 +114,12 @@ class DataHandler:
                 writer.writerow(headers)
                 
                 for wavelength, measurement in zip(wavelengths, measurements):
-                    # Round to specified precision
+                    # Use scientific notation for measurement values to preserve
+                    # precision for very small values (e.g., nanoamp currents).
+                    # round(1e-9, 6) = 0.0, but f"{1e-9:.6e}" = "1.000000e-09"
                     precision = DATA_EXPORT_CONFIG["precision"]
-                    rounded_measurement = round(measurement, precision)
-                    writer.writerow([wavelength, rounded_measurement])
+                    formatted_measurement = f"{measurement:.{precision}e}"
+                    writer.writerow([wavelength, formatted_measurement])
                     
         except Exception as e:
             raise DataValidationError(f"{ERROR_MESSAGES['file_save_failed']}: {e}")
