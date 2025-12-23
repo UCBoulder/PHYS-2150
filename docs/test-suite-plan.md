@@ -1,8 +1,8 @@
-# Test Suite Implementation Plan for PHYS-2150
+# Test Suite Implementation Plan for PHYS 2150
 
 ## Overview
 
-Build a comprehensive test suite for the PHYS-2150 Measurement Suite with:
+Build a comprehensive test suite for the PHYS 2150 Measurement Suite with:
 - Regression testing for CI/CD pipeline
 - Realistic physics-based mock data for J-V curves and EQE spectra
 - Phased implementation from quick wins to full coverage

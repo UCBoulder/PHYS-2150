@@ -1,6 +1,6 @@
 # Architecture Guide
 
-This document explains the Model-View-Controller (MVC) architecture used in the PHYS-2150 Measurement Suite and how it applies to laboratory instrumentation software.
+This document explains the Model-View-Controller (MVC) architecture used in the PHYS 2150 Measurement Suite and how it applies to laboratory instrumentation software.
 
 ## Why MVC for Lab Software?
 

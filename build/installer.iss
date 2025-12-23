@@ -1,4 +1,4 @@
-; PHYS-2150 Measurement Suite - Inno Setup Installer Script
+; PHYS 2150 Measurement Suite - Inno Setup Installer Script
 ;
 ; Build instructions:
 ; 1. First build the application with PyInstaller:
@@ -16,7 +16,7 @@
 ; - Thorlabs OPM driver (for power meter)
 ; - Newport MonoUtility (for monochromator)
 
-#define MyAppName "PHYS-2150 Measurement Suite"
+#define MyAppName "PHYS 2150 Measurement Suite"
 #define MyAppVersion "2.0.0"
 #define MyAppPublisher "CU Boulder Physics Lab"
 #define MyAppURL "https://github.com/UCBoulder/PHYS-2150"
@@ -79,11 +79,11 @@ Source: "..\dist\PHYS2150\*"; DestDir: "{app}"; Flags: ignoreversion recursesubd
 
 [Icons]
 ; Start Menu shortcuts
-Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Comment: "Launch PHYS-2150 Measurement Suite"
+Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Comment: "Launch PHYS 2150 Measurement Suite"
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
 
 ; Desktop shortcut (optional)
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon; Comment: "Launch PHYS-2150 Measurement Suite"
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon; Comment: "Launch PHYS 2150 Measurement Suite"
 
 [Run]
 ; Launch application after install (optional)

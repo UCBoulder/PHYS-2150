@@ -9,7 +9,7 @@ A comprehensive solar cell characterization system for the CU Boulder Physics 21
 
 ## Quick Start
 
-### Installation with UV (Recommended)
+### Installation
 
 ```bash
 pip install uv
@@ -19,37 +19,21 @@ uv sync
 uv run python launcher.py
 ```
 
-> **Windows Note:** If `uv` is not recognized, use `python -m uv` instead:
->
-> ```bash
-> python -m uv sync
-> python -m uv run python launcher.py
-> ```
-
-### Installation with pip
-
-```bash
-git clone https://github.com/UCBoulder/PHYS-2150.git
-cd PHYS-2150
-pip install -r requirements.txt
-python launcher.py
-```
+> **Windows Note:** If `uv` is not recognized, use `python -m uv` instead.
 
 ### Running the Applications
 
 ```bash
 # Unified launcher (select EQE or J-V)
-python launcher.py
+uv run python launcher.py
 
-# Run J-V measurement directly
-python -m jv
-
-# Run EQE measurement directly
-python -m eqe
+# Run directly
+uv run python -m eqe
+uv run python -m jv
 
 # Offline mode (GUI testing without hardware)
-python -m jv --offline
-python -m eqe --offline
+uv run python -m eqe --offline
+uv run python -m jv --offline
 ```
 
 ## Hardware Requirements
@@ -88,10 +72,9 @@ See [docs/hardware-setup.md](docs/hardware-setup.md) for detailed installation i
 ## Project Structure
 
 ```
-PHYS-2150/
+PHYS 2150/
 ├── launcher.py              # Unified launcher - select EQE or J-V
-├── pyproject.toml           # Project dependencies
-├── requirements.txt         # Pip fallback
+├── pyproject.toml           # Project dependencies (uv sync)
 │
 ├── jv/                      # J-V Measurement Application
 │   ├── main.py             # Entry point
@@ -242,7 +225,7 @@ This software is released under the **MIT License**. See [LICENSE](LICENSE) for 
 If you use this software in your research, please cite:
 
 ```
-PHYS-2150 Measurement Suite
+PHYS 2150 Measurement Suite
 University of Colorado Boulder
 https://github.com/UCBoulder/PHYS-2150
 ```

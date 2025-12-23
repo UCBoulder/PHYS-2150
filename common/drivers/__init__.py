@@ -1,5 +1,5 @@
 """
-Shared device drivers for PHYS-2150 measurement applications.
+Shared device drivers for PHYS 2150 measurement applications.
 """
 
 try:

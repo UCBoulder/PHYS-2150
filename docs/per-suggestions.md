@@ -1,4 +1,4 @@
-# Physics Education Research (PER) Suggestions for PHYS-2150 Measurement Applications
+# Physics Education Research (PER) Suggestions for PHYS 2150 Measurement Applications
 
 This document outlines recommendations for enhancing the EQE and J-V measurement applications from a physics education research perspective, aligned with the course goals of the CURE (Course-based Undergraduate Research Experience).
 
@@ -369,7 +369,7 @@ Add header section to saved CSV files:
 
 **J-V Example:**
 ```csv
-# PHYS-2150 J-V Measurement
+# PHYS 2150 J-V Measurement
 # Date: 2025-11-27 14:32:15
 # Cell: 195, Pixel: 3
 # Operator: [initials]
@@ -397,7 +397,7 @@ Voltage (V), Forward Scan (mA), Reverse Scan (mA)
 
 **EQE Example:**
 ```csv
-# PHYS-2150 EQE Current Measurement
+# PHYS 2150 EQE Current Measurement
 # Date: 2025-11-27 15:45:00
 # Cell: 195, Pixel: 3
 # Operator: [initials]
@@ -597,7 +597,7 @@ These are modular additions that don't require architectural changes:
 - "Structured Quantitative Inquiry Labs" - Holmes et al.
 
 ### Course-Specific
-- PHYS-2150 Syllabus and Course Goals
+- PHYS 2150 Syllabus and Course Goals
 - CURE Framework for undergraduate research experiences
 
 ---

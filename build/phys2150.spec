@@ -1,6 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
 """
-PyInstaller spec file for PHYS-2150 Measurement Suite
+PyInstaller spec file for PHYS 2150 Measurement Suite
 
 Build command:
     uv run pyinstaller build/phys2150.spec

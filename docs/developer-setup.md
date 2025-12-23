@@ -1,6 +1,6 @@
 # Developer Setup Guide
 
-This guide covers setting up a development environment for the PHYS-2150 Measurement Suite.
+This guide covers setting up a development environment for the PHYS 2150 Measurement Suite.
 
 ## Prerequisites
 

@@ -16,7 +16,7 @@ The software lock-in achieves excellent technical performance (0.66% CV), but se
 
 ## Course Learning Goals (Reference)
 
-From the PHYS-2150 syllabus:
+From the PHYS 2150 syllabus:
 - Articulate that repeated measurements will give a distribution of results
 - Calculate and report the mean of a distribution for the best estimate
 - Appropriately use and differentiate between standard deviation and standard error

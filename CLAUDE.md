@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-PHYS-2150 Measurement Suite is a solar cell characterization system for CU Boulder Physics 2150 lab. It provides two measurement applications:
+PHYS 2150 Measurement Suite is a solar cell characterization system for CU Boulder Physics 2150 lab. It provides two measurement applications:
 - **J-V Characterization**: Current-voltage curves using Keithley 2450 SMU
 - **EQE (External Quantum Efficiency)**: Spectral response using PicoScope with software lock-in amplifier
 

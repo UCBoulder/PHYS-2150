@@ -1,10 +1,10 @@
 # Hardware Setup Guide
 
-This guide covers the installation of hardware drivers required for the PHYS-2150 Measurement Suite. All drivers must be installed **before** running the application.
+This guide covers the installation of hardware drivers required for the PHYS 2150 Measurement Suite. All drivers must be installed **before** running the application.
 
 ## Overview
 
-The PHYS-2150 Measurement Suite communicates with several pieces of laboratory equipment:
+The PHYS 2150 Measurement Suite communicates with several pieces of laboratory equipment:
 
 | Equipment | Driver Required | Used For |
 |-----------|-----------------|----------|

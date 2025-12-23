@@ -1,4 +1,4 @@
-# PHYS-2150 Troubleshooting Guide
+# PHYS 2150 Troubleshooting Guide
 
 Comprehensive troubleshooting for both J-V and EQE measurement systems.
 

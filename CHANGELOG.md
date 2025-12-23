@@ -1,10 +1,26 @@
 # Changelog
 
-All notable changes to the PHYS-2150 Measurement Suite are documented in this file.
+All notable changes to the PHYS 2150 Measurement Suite are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
+
+## [2.2.0] - 2025-12-22
+
+### Added
+- Manual monochromator controls: wavelength setting, shutter open/close, filter status display
+- Live Signal Monitor for real-time photocurrent viewing during alignment
+- Green Dot alignment button moved to Monochromator Controls panel
+
+### Fixed
+- CSV export now preserves nanoamp-scale current values (was rounding to zero)
+- Application closes cleanly when launched from unified launcher
+
+### Changed
+- Lock-in correction factor validated at 0.5 via AWG testing
+- Launcher UI simplified (removed problematic description text)
+- Documentation updated with validated lock-in parameters and phase sensitivity notes
 
 ## [2.1.0] - 2025-12-02
 
@@ -60,6 +76,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 | Version | Date | Key Changes |
 |---------|------|-------------|
+| 2.2.0 | 2025-12-22 | Manual monochromator controls, Live Signal Monitor, CSV bug fix |
 | 2.1.0 | 2025-12-02 | Bug fixes for stability test and PicoScope 2204A support |
 | 2.0.0 | 2025-11-27 | MVC refactor, PicoScope software lock-in, PySide6 GUI |
 | 1.0.0 | 2025-04-22 | Initial release with SR510 lock-in |
