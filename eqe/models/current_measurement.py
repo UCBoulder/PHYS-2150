@@ -310,7 +310,8 @@ class CurrentMeasurementModel:
         self._stop_requested = False
         self._measurement_thread = threading.Thread(
             target=self._measurement_worker,
-            args=(start_wavelength, end_wavelength, step_size, pixel_number)
+            args=(start_wavelength, end_wavelength, step_size, pixel_number),
+            daemon=True
         )
         self._measurement_thread.start()
         

@@ -278,7 +278,8 @@ class PowerMeasurementModel:
         self._stop_requested = False
         self._measurement_thread = threading.Thread(
             target=self._measurement_worker,
-            args=(start_wavelength, end_wavelength, step_size)
+            args=(start_wavelength, end_wavelength, step_size),
+            daemon=True
         )
         self._measurement_thread.start()
         

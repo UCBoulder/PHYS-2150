@@ -344,7 +344,8 @@ class PhaseAdjustmentModel:
         self._stop_requested = False
         self._adjustment_thread = threading.Thread(
             target=self._adjustment_worker,
-            args=(pixel_number,)
+            args=(pixel_number,),
+            daemon=True
         )
         self._adjustment_thread.start()
         

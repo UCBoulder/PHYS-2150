@@ -621,16 +621,30 @@ class MainApplicationView(QMainWindow):
     
     def closeEvent(self, event) -> None:
         """Handle application close event."""
+        # Stop the status timer first to prevent callbacks during cleanup
+        if hasattr(self, 'status_timer') and self.status_timer:
+            self.status_timer.stop()
+
+        # Stop stability test if running
+        if hasattr(self, 'stability_model') and self.stability_model:
+            try:
+                self.stability_model.stop_test()
+            except Exception as e:
+                print(f"Error stopping stability test: {e}")
+
         if self.experiment_model:
             try:
+                # Stop live monitor if active
+                self.experiment_model.stop_live_signal_monitor()
+
                 # Stop all measurements
                 self.experiment_model.stop_all_measurements()
-                
+
                 # Clean up resources
                 self.experiment_model.cleanup()
             except Exception as e:
                 print(f"Error during cleanup: {e}")
-        
+
         event.accept()
 
 

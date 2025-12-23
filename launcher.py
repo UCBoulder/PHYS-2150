@@ -194,10 +194,20 @@ class LauncherWindow(QMainWindow):
         # Launch as a subprocess so the launcher can close cleanly
         # Use sys.executable to ensure we use the same Python interpreter
         try:
-            subprocess.Popen(
-                [sys.executable, "-m", app_name],
-                cwd=launcher_dir,
-            )
+            if sys.platform == 'win32':
+                # On Windows, create a new console for the subprocess
+                # This prevents the parent terminal from waiting for subprocess I/O
+                subprocess.Popen(
+                    [sys.executable, "-m", app_name],
+                    cwd=launcher_dir,
+                    creationflags=subprocess.CREATE_NEW_CONSOLE,
+                )
+            else:
+                subprocess.Popen(
+                    [sys.executable, "-m", app_name],
+                    cwd=launcher_dir,
+                    start_new_session=True,
+                )
         except Exception as e:
             print(f"Failed to launch {app_name}: {e}")
             self.show()

@@ -331,9 +331,11 @@ class EQEApplication:
     
     def _cleanup(self) -> None:
         """Clean up application resources."""
+        import os
+        import sys
         try:
             self.logger.log("Starting application cleanup")
-            
+
             # Stop any running initialization
             # Wrap in try-except since Qt may have already deleted the thread
             try:
@@ -343,39 +345,46 @@ class EQEApplication:
             except RuntimeError:
                 # Thread already deleted by Qt, ignore
                 pass
-            
+
             # Cleanup experiment model
             if self.experiment_model:
                 self.experiment_model.cleanup()
-            
+
             self.logger.log("Application cleanup completed")
-            
+
         except Exception as e:
             self.logger.log(f"Error during cleanup: {e}", "ERROR")
+        finally:
+            # Flush all output streams before exit
+            sys.stdout.flush()
+            sys.stderr.flush()
+            # Force terminate the process immediately
+            os._exit(0)
 
 
 def main():
     """Main entry point for the EQE application."""
     import argparse
-    
+
     # Parse command line arguments
     parser = argparse.ArgumentParser(description='EQE Measurement Application')
     parser.add_argument('--offline', action='store_true',
                        help='Run in offline mode without hardware (for GUI testing)')
     args = parser.parse_args()
-    
+
     # Set offline mode in config
     if args.offline:
         print("Running in OFFLINE mode - hardware initialization disabled")
         from eqe.config import settings
         settings.OFFLINE_MODE = True
-    
+
     try:
         # Create and run application
+        # Note: app.run() calls _cleanup() which calls os._exit()
+        # so this function will not return normally
         app = EQEApplication()
-        exit_code = app.run()
-        sys.exit(exit_code)
-        
+        app.run()
+
     except KeyboardInterrupt:
         print("\nApplication interrupted by user")
         sys.exit(1)
