@@ -175,6 +175,8 @@
         let currentPixel = null;
         let forwardData = { x: [], y: [] };
         let reverseData = { x: [], y: [] };
+        let isOfflineMode = false;
+        let isDeviceConnected = false;
 
         // Initialize on load
         document.addEventListener('DOMContentLoaded', async () => {
@@ -279,31 +281,42 @@
                 if (api && api.get_device_status) {
                     api.get_device_status((result) => {
                         const status = JSON.parse(result);
-                        updateDeviceStatus(status.connected, status.message);
+                        isOfflineMode = status.offline_mode;
+                        isDeviceConnected = status.connected;
+                        updateDeviceStatus(status.connected, status.message, status.offline_mode);
                     });
                 } else {
-                    // Mock for development
-                    updateDeviceStatus(true, 'Keithley 2450 (Mock)');
+                    // Fallback - assume offline mode for development
+                    isOfflineMode = true;
+                    isDeviceConnected = false;
+                    updateDeviceStatus(false, 'Development mode', true);
                 }
             } catch (error) {
-                updateDeviceStatus(false, 'Connection failed');
+                updateDeviceStatus(false, 'Connection failed', false);
             }
         }
 
-        function updateDeviceStatus(connected, message) {
+        function updateDeviceStatus(connected, message, offlineMode) {
             const dot = document.getElementById('status-dot');
             const text = document.getElementById('status-text');
             const btn = document.getElementById('measure-btn');
 
+            isDeviceConnected = connected;
+            isOfflineMode = offlineMode;
+
             if (connected) {
                 dot.className = 'status-dot connected';
                 text.textContent = message || 'Connected';
+                btn.disabled = false;
+            } else if (offlineMode) {
+                dot.className = 'status-dot warning';
+                text.textContent = message || 'Offline mode';
+                btn.disabled = false;
             } else {
                 dot.className = 'status-dot disconnected';
-                text.textContent = message || 'Not connected (Mock mode)';
+                text.textContent = message || 'Not connected';
+                btn.disabled = true;
             }
-            // Always enable button - mock mode works without hardware
-            btn.disabled = false;
         }
 
         /**
@@ -430,9 +443,29 @@
                 pixel: pixel
             };
 
-            // Always run mock measurement for now (hardware integration later)
-            console.log('Starting mock measurement with params:', params);
-            mockMeasurement(params);
+            if (isDeviceConnected) {
+                // Use real hardware via Python API
+                console.log('Starting hardware measurement with params:', params);
+                const api = LabAPI.get();
+                if (api && api.start_measurement) {
+                    api.start_measurement(JSON.stringify(params), (result) => {
+                        const response = JSON.parse(result);
+                        if (!response.success) {
+                            alert('Measurement failed: ' + response.message);
+                            isMeasuring = false;
+                            updateMeasuringState(false);
+                        }
+                    });
+                }
+            } else if (isOfflineMode) {
+                // Run mock measurement in offline mode
+                console.log('Starting mock measurement with params:', params);
+                mockMeasurement(params);
+            } else {
+                alert('No device connected. Use --offline flag for testing.');
+                isMeasuring = false;
+                updateMeasuringState(false);
+            }
         }
 
         function stopMeasurement() {

@@ -51,11 +51,27 @@ class JVApi(QObject):
     @Slot(result=str)
     def get_device_status(self) -> str:
         """Get current device connection status."""
+        from .config import settings
+        offline_mode = getattr(settings, 'OFFLINE_MODE', False)
+
         if self._experiment:
             connected = self._experiment.is_initialized()
-            message = "Keithley 2450" if connected else "Not connected"
-            return json.dumps({"connected": connected, "message": message})
-        return json.dumps({"connected": False, "message": "No experiment model"})
+            if connected:
+                message = "Keithley 2450"
+            elif offline_mode:
+                message = "Offline mode"
+            else:
+                message = "Not connected"
+            return json.dumps({
+                "connected": connected,
+                "message": message,
+                "offline_mode": offline_mode
+            })
+        return json.dumps({
+            "connected": False,
+            "message": "No experiment model",
+            "offline_mode": offline_mode
+        })
 
     @Slot(str, result=str)
     def start_measurement(self, params_json: str) -> str:
@@ -302,8 +318,36 @@ class JVWebApplication:
 
 def main():
     """Entry point for J-V web application."""
-    app = JVWebApplication()
-    sys.exit(app.run())
+    import argparse
+
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='J-V Measurement Application')
+    parser.add_argument(
+        '--offline',
+        action='store_true',
+        help='Run in offline mode without hardware (for GUI testing)'
+    )
+    args = parser.parse_args()
+
+    # Set offline mode in settings
+    from .config import settings
+    if args.offline:
+        print("Running in OFFLINE mode - mock measurements enabled")
+        settings.OFFLINE_MODE = True
+    else:
+        settings.OFFLINE_MODE = False
+
+    try:
+        app = JVWebApplication()
+        exit_code = app.run()
+        sys.exit(exit_code)
+
+    except KeyboardInterrupt:
+        print("\nApplication interrupted by user")
+        sys.exit(1)
+    except Exception as e:
+        print(f"Fatal error: {e}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
