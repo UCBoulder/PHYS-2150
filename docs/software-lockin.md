@@ -218,39 +218,36 @@ direction = "RISING"
 
 Without phase-locked triggering, random starting phases cause ~5× worse stability.
 
-## Why No Correction Factor Needed?
+## Correction Factor
 
-### The SR510 Problem
+### Why 0.5 Correction Factor?
 
-The previous system used an SR510 analog lock-in. It required a 0.45 correction factor because:
+The software lock-in requires a **0.5 correction factor** to report accurate amplitudes. This was validated through AWG testing (see Validation Results below).
 
-1. **Sine wave reference**: SR510 uses pure sine reference
-2. **Square wave signal**: Chopper produces square wave
-3. **Harmonic loss**: Sine reference only detects fundamental
-4. **Missing energy**: Harmonics (3rd, 5th, 7th...) are lost
-
-```
-Square wave Fourier series:
-    4/π × [sin(ωt) + sin(3ωt)/3 + sin(5ωt)/5 + ...]
-
-Fundamental only = π/4 ≈ 0.785 of RMS
-SR510 correction = 0.45 (empirically measured)
-```
-
-### Our Solution
-
-The software lock-in uses the **actual square wave reference**:
-
-1. **Square wave reference**: Direct from chopper TTL
-2. **Square wave signal**: From modulated light
-3. **All harmonics preserved**: Hilbert transform works on actual waveform
-4. **No correction needed**: Digital precision
+The correction compensates for the RMS normalization in the Hilbert algorithm:
 
 ```python
-# We use the actual chopper waveform as reference
-# NOT a synthesized sine wave
-reference = acquire_channel_B()  # Real square wave
+# In the algorithm, reference is normalized to unit RMS
+ref_rms = np.sqrt(np.mean(ref_normalized**2))
+ref_normalized = ref_normalized / ref_rms
 ```
+
+For a square wave, this normalization introduces a 2× scaling that the 0.5 factor corrects.
+
+### Configuration
+
+The correction factor is set in `eqe/config/settings.py`:
+
+```python
+DeviceType.PICOSCOPE_LOCKIN: {
+    "correction_factor": 0.5,  # Validated via AWG testing
+    # ...
+}
+```
+
+### Comparison to SR510
+
+The previous SR510 analog lock-in required a 0.45 correction factor for a different reason - it used a sine wave reference with a square wave signal, losing harmonic content. Our software lock-in uses the actual square wave reference, but still requires correction due to the RMS normalization math.
 
 ## Measurement Averaging
 
@@ -336,8 +333,45 @@ CV:            0.66%
 | CV | ~2-5% | 0.66% |
 | Drift | Noticeable | Negligible |
 | Input range | ±1V | ±20V |
-| Correction factor | 0.45 | 1.0 |
+| Correction factor | 0.45 | 0.5 |
 | Cost | $3,000+ | $1,500 |
+
+### AWG Validation Results
+
+The lock-in algorithm was validated using known test signals from function generators:
+
+**PicoScope AWG Test (81 Hz square wave):**
+
+| Metric | Result |
+|--------|--------|
+| Amplitude accuracy | ±0.7% (with 0.5 correction) |
+| Linearity R² | 0.999998 |
+| Noise floor | 0.36 mV |
+
+**Keysight EDU33212A AWG Test:**
+
+| Metric | Result |
+|--------|--------|
+| Amplitude accuracy | +0.73% |
+| Frequency response (50-200 Hz) | -0.77% stable |
+
+**Transimpedance Amplifier Verification:**
+
+| Metric | Result |
+|--------|--------|
+| Measured TIA gain | 1.004 MΩ |
+| Expected | 1.000 MΩ |
+| Error | 0.4% |
+
+### Phase Sensitivity Note
+
+The Hilbert algorithm's R value depends on phase alignment between signal and reference:
+
+- **0° offset**: Correct amplitude
+- **90° offset**: ~29% low
+- **180° offset**: Correct amplitude (but negative X)
+
+This is not an issue when signal and reference both come from the same physical chopper, as they maintain constant phase relationship.
 
 ## Troubleshooting
 

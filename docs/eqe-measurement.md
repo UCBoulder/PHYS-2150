@@ -222,9 +222,12 @@ DEVICE_CONFIGS = {
         "default_chopper_freq": 81,    # Hz
         "default_num_cycles": 100,     # Integration cycles
         "num_measurements": 5,         # Averages per point
+        "correction_factor": 0.5,      # Validated via AWG testing
     }
 }
 ```
+
+See [software-lockin.md](software-lockin.md) for details on the correction factor and validation.
 
 ### Measurement Averaging
 
