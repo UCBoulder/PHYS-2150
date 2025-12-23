@@ -143,10 +143,14 @@ class Cornerstone_Mono:
     def UnitIdle(self, verbose=False):
         qry_str = "idle?"
         idle_str = self.GetQueryResponse(qry_str, verbose)
-        idle_val = int(idle_str)
-        if idle_val == 1:
-            return True
-        else:
+        # Handle empty string from timeout - assume not idle yet
+        if not idle_str or not idle_str.strip():
+            return False
+        try:
+            idle_val = int(idle_str)
+            return idle_val == 1
+        except ValueError:
+            # If response can't be parsed, assume not idle
             return False
 
     def WaitForIdle(self, verbose=False):

@@ -257,17 +257,19 @@ class EQEApplication:
             status_display = self.main_view.measurement_tab.get_status_display()
             plot_widget = self.main_view.measurement_tab.get_plot_widget()
             
+            monochromator_control = self.main_view.measurement_tab.get_monochromator_control()
+
             if success:
                 status_display.set_status_message("Ready for measurements")
                 print("Device initialization completed successfully")
-                
+
                 # Initialize stability test model now that devices are connected
                 self.main_view.initialize_stability_model()
-                
+
                 # Enable controls
                 plot_widget.set_buttons_enabled(True)
-                status_display.align_button.setEnabled(True)
                 status_display.live_monitor_button.setEnabled(True)
+                monochromator_control.set_enabled(True)
 
             else:
                 status_display.set_status_message("Initialization failed")
@@ -283,8 +285,8 @@ class EQEApplication:
 
                 # Disable controls
                 plot_widget.set_buttons_enabled(False)
-                status_display.align_button.setEnabled(False)
                 status_display.live_monitor_button.setEnabled(False)
+                monochromator_control.set_enabled(False)
         except Exception as e:
             print(f"Error in initialization completion handler: {e}")
     

@@ -363,7 +363,6 @@ class StatusDisplayWidget(QWidget):
     """Widget for displaying system status and progress."""
 
     # Signals
-    alignment_requested = Signal()
     live_monitor_requested = Signal(bool)  # True to start, False to stop
 
     def __init__(self, parent=None):
@@ -374,7 +373,6 @@ class StatusDisplayWidget(QWidget):
         self.device_status = QTextEdit()
         self.progress_bar = QProgressBar()
         self.status_label = QLabel("Ready")
-        self.align_button = QPushButton("Green Dot")
         self.live_monitor_button = QPushButton("Live Signal")
         self.live_signal_label = QLabel("")
 
@@ -401,15 +399,9 @@ class StatusDisplayWidget(QWidget):
         self.status_label.setStyleSheet(f"font-size: {font_size}px; font-weight: bold;")
         self.status_label.setAlignment(Qt.AlignCenter)
 
-        # Alignment button (smaller)
+        # Live monitor button
         button_font_size = GUI_CONFIG["font_sizes"]["button"]
         start_color = GUI_CONFIG["colors"]["start_button"]
-        self.align_button.setStyleSheet(
-            f"font-size: {button_font_size}px; background-color: {start_color}; "
-            f"color: black; min-height: 30px;"
-        )
-
-        # Live monitor button
         self.live_monitor_button.setStyleSheet(
             f"font-size: {button_font_size}px; background-color: {start_color}; "
             f"color: black; min-height: 30px;"
@@ -427,43 +419,35 @@ class StatusDisplayWidget(QWidget):
         """Set up the widget layout."""
         layout = QVBoxLayout()
 
-        # Device status group
-        device_group = QGroupBox("Device Status")
+        # Device status group - exposed as public attribute for layout flexibility
+        self.device_group = QGroupBox("Device Status")
         device_layout = QVBoxLayout()
         device_layout.addWidget(self.device_status)
-        device_group.setLayout(device_layout)
+        self.device_group.setLayout(device_layout)
 
-        # Progress group with buttons
-        progress_group = QGroupBox("Progress")
+        # Progress group with buttons - exposed as public attribute
+        self.progress_group = QGroupBox("Progress")
         progress_layout = QVBoxLayout()
         progress_layout.addWidget(self.status_label)
         progress_layout.addWidget(self.progress_bar)
 
-        # Buttons side by side
-        button_row = QHBoxLayout()
-        button_row.addWidget(self.align_button)
-        button_row.addWidget(self.live_monitor_button)
-        progress_layout.addLayout(button_row)
+        # Live monitor button
+        progress_layout.addWidget(self.live_monitor_button)
 
-        # Live signal display (below buttons)
+        # Live signal display (below button)
         progress_layout.addWidget(self.live_signal_label)
 
-        progress_group.setLayout(progress_layout)
+        self.progress_group.setLayout(progress_layout)
 
-        layout.addWidget(device_group)
-        layout.addWidget(progress_group)
+        layout.addWidget(self.device_group)
+        layout.addWidget(self.progress_group)
         layout.addStretch()
 
         self.setLayout(layout)
     
     def _connect_signals(self) -> None:
         """Connect button signals."""
-        self.align_button.clicked.connect(self._on_align_button_clicked)
         self.live_monitor_button.clicked.connect(self._on_live_monitor_button_clicked)
-
-    def _on_align_button_clicked(self) -> None:
-        """Handle alignment button click."""
-        self.alignment_requested.emit()
 
     def _on_live_monitor_button_clicked(self) -> None:
         """Handle live monitor button click."""
@@ -628,3 +612,268 @@ class MainControlPanel(QWidget):
     def get_status_display(self) -> StatusDisplayWidget:
         """Get the status display widget."""
         return self.status_display
+
+
+class MonochromatorControlWidget(QGroupBox):
+    """Widget for manual monochromator control."""
+
+    # Signals
+    wavelength_change_requested = Signal(float)  # wavelength in nm
+    shutter_open_requested = Signal()
+    shutter_close_requested = Signal()
+    alignment_requested = Signal()  # Green Dot alignment
+
+    def __init__(self, parent=None):
+        """Initialize the monochromator control widget."""
+        super().__init__("Monochromator Controls", parent)
+
+        # Green Dot alignment button
+        self.align_button = QPushButton("Green Dot")
+
+        # Wavelength controls
+        self.wavelength_spinbox = QDoubleSpinBox()
+        self.go_button = QPushButton("Go")
+        self.wavelength_display = QLabel("-- nm")
+
+        # Shutter controls
+        self.open_shutter_button = QPushButton("Open")
+        self.close_shutter_button = QPushButton("Close")
+        self.shutter_indicator = QLabel("CLOSED")
+
+        # Filter status (read-only)
+        self.filter_label = QLabel("--")
+
+        self._setup_components()
+        self._setup_layout()
+        self._connect_signals()
+
+    def _setup_components(self) -> None:
+        """Configure component properties."""
+        font_size = GUI_CONFIG["font_sizes"]["label"]
+        button_font_size = GUI_CONFIG["font_sizes"]["button"]
+        start_color = GUI_CONFIG["colors"]["start_button"]
+
+        # Green Dot alignment button
+        self.align_button.setStyleSheet(
+            f"font-size: {button_font_size}px; background-color: {start_color}; "
+            f"color: black; min-height: 30px;"
+        )
+
+        # Wavelength spinbox
+        self.wavelength_spinbox.setRange(200, 1200)
+        self.wavelength_spinbox.setSuffix(" nm")
+        self.wavelength_spinbox.setDecimals(1)
+        self.wavelength_spinbox.setValue(500.0)
+        self.wavelength_spinbox.setStyleSheet(f"font-size: {font_size}px;")
+
+        # Go button
+        self.go_button.setStyleSheet(
+            f"font-size: {button_font_size}px; background-color: {start_color}; "
+            f"color: black; min-height: 28px; min-width: 50px;"
+        )
+
+        # Wavelength display
+        self.wavelength_display.setStyleSheet(
+            f"font-size: {font_size}px; font-weight: bold; color: #00aaff;"
+        )
+        self.wavelength_display.setAlignment(Qt.AlignCenter)
+
+        # Shutter buttons
+        self.open_shutter_button.setStyleSheet(
+            f"font-size: {button_font_size}px; background-color: {start_color}; "
+            f"color: black; min-height: 28px;"
+        )
+        self.close_shutter_button.setStyleSheet(
+            f"font-size: {button_font_size}px; background-color: {start_color}; "
+            f"color: black; min-height: 28px;"
+        )
+
+        # Shutter indicator (starts closed)
+        self.shutter_indicator.setStyleSheet(
+            f"font-size: {font_size}px; font-weight: bold; color: #ff6666;"
+        )
+        self.shutter_indicator.setAlignment(Qt.AlignCenter)
+
+        # Filter label
+        self.filter_label.setStyleSheet(f"font-size: {font_size}px; font-weight: bold;")
+        self.filter_label.setAlignment(Qt.AlignCenter)
+
+    def _setup_layout(self) -> None:
+        """Set up the widget layout."""
+        layout = QVBoxLayout()
+        font_size = GUI_CONFIG["font_sizes"]["label"]
+
+        # Green Dot alignment button at top
+        layout.addWidget(self.align_button)
+
+        # Wavelength row
+        wavelength_row = QHBoxLayout()
+        wl_label = QLabel("Wavelength:")
+        wl_label.setStyleSheet(f"font-size: {font_size}px;")
+        wavelength_row.addWidget(wl_label)
+        wavelength_row.addWidget(self.wavelength_spinbox)
+        wavelength_row.addWidget(self.go_button)
+        layout.addLayout(wavelength_row)
+
+        # Current wavelength display
+        current_row = QHBoxLayout()
+        current_label = QLabel("Current:")
+        current_label.setStyleSheet(f"font-size: {font_size}px;")
+        current_row.addWidget(current_label)
+        current_row.addWidget(self.wavelength_display)
+        current_row.addStretch()
+        layout.addLayout(current_row)
+
+        # Shutter row
+        shutter_row = QHBoxLayout()
+        shutter_label = QLabel("Shutter:")
+        shutter_label.setStyleSheet(f"font-size: {font_size}px;")
+        shutter_row.addWidget(shutter_label)
+        shutter_row.addWidget(self.open_shutter_button)
+        shutter_row.addWidget(self.close_shutter_button)
+        shutter_row.addWidget(self.shutter_indicator)
+        layout.addLayout(shutter_row)
+
+        # Filter row
+        filter_row = QHBoxLayout()
+        filter_label_text = QLabel("Filter:")
+        filter_label_text.setStyleSheet(f"font-size: {font_size}px;")
+        filter_row.addWidget(filter_label_text)
+        filter_row.addWidget(self.filter_label)
+        filter_row.addStretch()
+        layout.addLayout(filter_row)
+
+        self.setLayout(layout)
+
+    def _connect_signals(self) -> None:
+        """Connect button signals."""
+        self.align_button.clicked.connect(self._on_align_button_clicked)
+        self.go_button.clicked.connect(self._on_go_clicked)
+        self.open_shutter_button.clicked.connect(self._on_open_shutter_clicked)
+        self.close_shutter_button.clicked.connect(self._on_close_shutter_clicked)
+
+    def _on_align_button_clicked(self) -> None:
+        """Handle Green Dot alignment button click."""
+        from ..config import settings
+        if settings.OFFLINE_MODE:
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.warning(
+                self,
+                "Offline Mode",
+                "Cannot control hardware in OFFLINE mode.\n\n"
+                "Restart the application without the --offline flag to use hardware."
+            )
+            return
+
+        self.alignment_requested.emit()
+
+    def _on_go_clicked(self) -> None:
+        """Handle Go button click."""
+        # Check if in offline mode
+        from ..config import settings
+        if settings.OFFLINE_MODE:
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.warning(
+                self,
+                "Offline Mode",
+                "Cannot control hardware in OFFLINE mode.\n\n"
+                "Restart the application without the --offline flag to use hardware."
+            )
+            return
+
+        wavelength = self.wavelength_spinbox.value()
+        self.wavelength_change_requested.emit(wavelength)
+
+    def _on_open_shutter_clicked(self) -> None:
+        """Handle Open shutter button click."""
+        from ..config import settings
+        if settings.OFFLINE_MODE:
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.warning(
+                self,
+                "Offline Mode",
+                "Cannot control hardware in OFFLINE mode.\n\n"
+                "Restart the application without the --offline flag to use hardware."
+            )
+            return
+
+        self.shutter_open_requested.emit()
+
+    def _on_close_shutter_clicked(self) -> None:
+        """Handle Close shutter button click."""
+        from ..config import settings
+        if settings.OFFLINE_MODE:
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.warning(
+                self,
+                "Offline Mode",
+                "Cannot control hardware in OFFLINE mode.\n\n"
+                "Restart the application without the --offline flag to use hardware."
+            )
+            return
+
+        self.shutter_close_requested.emit()
+
+    def update_wavelength_display(self, wavelength: float) -> None:
+        """
+        Update the current wavelength display.
+
+        Args:
+            wavelength: Current wavelength in nm
+        """
+        self.wavelength_display.setText(f"{wavelength:.1f} nm")
+
+    def update_shutter_status(self, is_open: bool) -> None:
+        """
+        Update shutter indicator display.
+
+        Args:
+            is_open: True if shutter is open
+        """
+        if is_open:
+            self.shutter_indicator.setText("OPEN")
+            self.shutter_indicator.setStyleSheet(
+                f"font-size: {GUI_CONFIG['font_sizes']['label']}px; "
+                f"font-weight: bold; color: #00ff00;"
+            )
+        else:
+            self.shutter_indicator.setText("CLOSED")
+            self.shutter_indicator.setStyleSheet(
+                f"font-size: {GUI_CONFIG['font_sizes']['label']}px; "
+                f"font-weight: bold; color: #ff6666;"
+            )
+
+    def update_filter_status(self, filter_number: int) -> None:
+        """
+        Update filter status display.
+
+        Args:
+            filter_number: Current filter position (1, 2, or 3)
+        """
+        filter_names = {
+            1: "1 (400nm LP)",
+            2: "2 (780nm LP)",
+            3: "3 (None)"
+        }
+        self.filter_label.setText(filter_names.get(filter_number, f"{filter_number}"))
+
+    def update_state(self, wavelength: float, shutter_open: bool, filter_number: int) -> None:
+        """
+        Update all state displays at once.
+
+        Args:
+            wavelength: Current wavelength in nm
+            shutter_open: True if shutter is open
+            filter_number: Current filter position
+        """
+        self.update_wavelength_display(wavelength)
+        self.update_shutter_status(shutter_open)
+        self.update_filter_status(filter_number)
+
+    def set_enabled(self, enabled: bool) -> None:
+        """Enable or disable all controls."""
+        self.align_button.setEnabled(enabled)
+        self.wavelength_spinbox.setEnabled(enabled)
+        self.go_button.setEnabled(enabled)
+        self.open_shutter_button.setEnabled(enabled)
+        self.close_shutter_button.setEnabled(enabled)

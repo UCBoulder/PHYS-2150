@@ -103,6 +103,11 @@ class MainApplicationView(QMainWindow):
         self.measurement_tab.alignment_requested.connect(self._on_align_button_clicked)
         self.measurement_tab.live_monitor_requested.connect(self._on_live_monitor_requested)
 
+        # Monochromator control signals
+        self.measurement_tab.wavelength_change_requested.connect(self._on_wavelength_change_requested)
+        self.measurement_tab.shutter_open_requested.connect(self._on_shutter_open_requested)
+        self.measurement_tab.shutter_close_requested.connect(self._on_shutter_close_requested)
+
         # Stability tab signals (placeholder for future expansion)
         # Signals are handled internally by the stability tab and model
     
@@ -127,9 +132,10 @@ class MainApplicationView(QMainWindow):
         """
         plot_widget = self.measurement_tab.get_plot_widget()
         status_display = self.measurement_tab.get_status_display()
+        monochromator_control = self.measurement_tab.get_monochromator_control()
         plot_widget.set_buttons_enabled(False)
-        status_display.align_button.setEnabled(False)
         status_display.live_monitor_button.setEnabled(False)
+        monochromator_control.set_enabled(False)
     
     def set_experiment_model(self, model: EQEExperimentModel) -> None:
         """
@@ -150,6 +156,8 @@ class MainApplicationView(QMainWindow):
             self._on_experiment_complete, Qt.QueuedConnection)
         model.live_signal_update.connect(
             self._on_live_signal_update, Qt.QueuedConnection)
+        model.monochromator_state_changed.connect(
+            self._on_monochromator_state_changed, Qt.QueuedConnection)
 
         # Note: StabilityTestModel will be created after device initialization completes
         # See initialize_stability_model() method
@@ -221,9 +229,9 @@ class MainApplicationView(QMainWindow):
             device_status = self.experiment_model.get_device_status()
             all_connected = all(device_status.values())
             plot_widget = self.measurement_tab.get_plot_widget()
-            status_display = self.measurement_tab.get_status_display()
+            monochromator_control = self.measurement_tab.get_monochromator_control()
             plot_widget.set_buttons_enabled(all_connected)
-            status_display.align_button.setEnabled(all_connected)
+            monochromator_control.set_enabled(all_connected)
 
             # Track that devices are initialized (fixes button responsiveness)
             if all_connected:
@@ -565,6 +573,53 @@ class MainApplicationView(QMainWindow):
     def _on_live_signal_update(self, current_nA: float) -> None:
         """Handle live signal update from experiment model."""
         self.measurement_tab.update_live_signal(current_nA)
+
+    def _on_wavelength_change_requested(self, wavelength: float) -> None:
+        """Handle wavelength change request from UI."""
+        if not self.experiment_model:
+            self._show_error("Experiment model not initialized")
+            return
+
+        try:
+            self.experiment_model.set_wavelength_manual(wavelength)
+            status_display = self.measurement_tab.get_status_display()
+            status_display.set_status_message(f"Wavelength set to {wavelength:.1f} nm")
+
+        except EQEExperimentError as e:
+            self._show_error(f"Failed to set wavelength: {e}")
+
+    def _on_shutter_open_requested(self) -> None:
+        """Handle shutter open request from UI."""
+        if not self.experiment_model:
+            self._show_error("Experiment model not initialized")
+            return
+
+        try:
+            self.experiment_model.open_shutter_manual()
+            status_display = self.measurement_tab.get_status_display()
+            status_display.set_status_message("Shutter opened")
+
+        except EQEExperimentError as e:
+            self._show_error(f"Failed to open shutter: {e}")
+
+    def _on_shutter_close_requested(self) -> None:
+        """Handle shutter close request from UI."""
+        if not self.experiment_model:
+            self._show_error("Experiment model not initialized")
+            return
+
+        try:
+            self.experiment_model.close_shutter_manual()
+            status_display = self.measurement_tab.get_status_display()
+            status_display.set_status_message("Shutter closed")
+
+        except EQEExperimentError as e:
+            self._show_error(f"Failed to close shutter: {e}")
+
+    def _on_monochromator_state_changed(self, wavelength: float, shutter_open: bool,
+                                        filter_number: int) -> None:
+        """Handle monochromator state change from model."""
+        self.measurement_tab.update_monochromator_state(wavelength, shutter_open, filter_number)
 
     def _stop_measurement(self) -> None:
         """Stop current measurement."""

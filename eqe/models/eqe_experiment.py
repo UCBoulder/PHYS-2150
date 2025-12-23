@@ -40,6 +40,7 @@ class EQEExperimentModel(QObject):
     measurement_progress = Signal(str, dict)  # measurement_type, progress_data
     experiment_complete = Signal(bool, str)  # success, message
     live_signal_update = Signal(float)  # current in nanoamps
+    monochromator_state_changed = Signal(float, bool, int)  # wavelength, shutter_open, filter
     
     def __init__(self, logger: Optional[MeasurementDataLogger] = None):
         """
@@ -75,6 +76,9 @@ class EQEExperimentModel(QObject):
         # Live signal monitor
         self._live_monitor_timer: Optional[QTimer] = None
         self._live_monitor_active = False
+
+        # Monochromator state tracking (shutter state not queryable from hardware)
+        self._shutter_open = False
 
         # Experiment parameters
         self.measurement_params = DEFAULT_MEASUREMENT_PARAMS.copy()
@@ -400,6 +404,11 @@ class EQEExperimentModel(QObject):
 
         try:
             self.power_model.align_monochromator()
+            self._shutter_open = True  # Alignment opens shutter
+            # Update UI with current monochromator state
+            wavelength = self.monochromator.get_wavelength()
+            filter_number = self.monochromator._current_filter or 0
+            self.monochromator_state_changed.emit(wavelength, self._shutter_open, filter_number)
             self.logger.log("Monochromator aligned for visual check")
         except PowerMeasurementError as e:
             raise EQEExperimentError(f"Failed to align monochromator: {e}")
@@ -424,7 +433,13 @@ class EQEExperimentModel(QObject):
             # Set monochromator to 523 nm (green) and open shutter
             self.monochromator.set_wavelength(523.0)
             self.monochromator.open_shutter()
+            self._shutter_open = True
             self.logger.log("Live signal monitor: Set to 523 nm, shutter open")
+
+            # Update UI with current monochromator state
+            wavelength = self.monochromator.get_wavelength()
+            filter_number = self.monochromator._current_filter or 0
+            self.monochromator_state_changed.emit(wavelength, self._shutter_open, filter_number)
 
             # Start periodic measurements
             self._live_monitor_active = True
@@ -445,6 +460,100 @@ class EQEExperimentModel(QObject):
             self._live_monitor_timer = None
 
         self.logger.log("Live signal monitor stopped")
+
+    def set_wavelength_manual(self, wavelength: float) -> None:
+        """
+        Manually set monochromator wavelength with auto grating/filter selection.
+
+        Args:
+            wavelength: Target wavelength in nm (200-1200)
+
+        Raises:
+            EQEExperimentError: If operation fails
+        """
+        if settings.OFFLINE_MODE:
+            raise EQEExperimentError("Cannot control hardware in OFFLINE mode")
+
+        if not self._devices_initialized:
+            raise EQEExperimentError("Devices not initialized")
+
+        try:
+            # Use configure_for_wavelength which handles grating + filter + wavelength
+            confirmed_wavelength = self.monochromator.configure_for_wavelength(wavelength)
+            filter_number = self.monochromator._current_filter or 0
+            self.monochromator_state_changed.emit(
+                confirmed_wavelength, self._shutter_open, filter_number
+            )
+            self.logger.log(f"Wavelength set to {confirmed_wavelength:.1f} nm (filter {filter_number})")
+        except MonochromatorError as e:
+            raise EQEExperimentError(f"Failed to set wavelength: {e}")
+
+    def open_shutter_manual(self) -> None:
+        """
+        Manually open the monochromator shutter.
+
+        Raises:
+            EQEExperimentError: If operation fails
+        """
+        if settings.OFFLINE_MODE:
+            raise EQEExperimentError("Cannot control hardware in OFFLINE mode")
+
+        if not self._devices_initialized:
+            raise EQEExperimentError("Devices not initialized")
+
+        try:
+            self.monochromator.open_shutter()
+            self._shutter_open = True
+            wavelength = self.monochromator.get_wavelength()
+            filter_number = self.monochromator._current_filter or 0
+            self.monochromator_state_changed.emit(wavelength, self._shutter_open, filter_number)
+            self.logger.log("Shutter opened")
+        except MonochromatorError as e:
+            raise EQEExperimentError(f"Failed to open shutter: {e}")
+
+    def close_shutter_manual(self) -> None:
+        """
+        Manually close the monochromator shutter.
+
+        Raises:
+            EQEExperimentError: If operation fails
+        """
+        if settings.OFFLINE_MODE:
+            raise EQEExperimentError("Cannot control hardware in OFFLINE mode")
+
+        if not self._devices_initialized:
+            raise EQEExperimentError("Devices not initialized")
+
+        try:
+            self.monochromator.close_shutter()
+            self._shutter_open = False
+            wavelength = self.monochromator.get_wavelength()
+            filter_number = self.monochromator._current_filter or 0
+            self.monochromator_state_changed.emit(wavelength, self._shutter_open, filter_number)
+            self.logger.log("Shutter closed")
+        except MonochromatorError as e:
+            raise EQEExperimentError(f"Failed to close shutter: {e}")
+
+    def get_monochromator_state(self) -> Dict[str, Any]:
+        """
+        Get current monochromator state.
+
+        Returns:
+            Dict with 'wavelength', 'shutter_open', and 'filter' keys
+        """
+        if not self._devices_initialized or not self.monochromator:
+            return {'wavelength': 0.0, 'shutter_open': False, 'filter': 0}
+
+        try:
+            wavelength = self.monochromator.get_wavelength()
+        except MonochromatorError:
+            wavelength = 0.0
+
+        return {
+            'wavelength': wavelength,
+            'shutter_open': self._shutter_open,
+            'filter': self.monochromator._current_filter or 0
+        }
 
     def _do_live_measurement(self) -> None:
         """Perform a single fast measurement for live monitoring."""

@@ -12,7 +12,7 @@ from PySide6.QtCore import Signal
 from typing import Dict, Any
 
 from .plot_widgets import MultiPlotWidget
-from .control_widgets import ParameterInputWidget, StatusDisplayWidget
+from .control_widgets import ParameterInputWidget, StatusDisplayWidget, MonochromatorControlWidget
 
 
 class MeasurementTab(QWidget):
@@ -29,19 +29,25 @@ class MeasurementTab(QWidget):
     stop_requested = Signal()
     alignment_requested = Signal()
     live_monitor_requested = Signal(bool)  # True to start, False to stop
+
+    # Signals for monochromator control
+    wavelength_change_requested = Signal(float)  # wavelength in nm
+    shutter_open_requested = Signal()
+    shutter_close_requested = Signal()
     
     def __init__(self):
         """Initialize the measurement tab."""
         super().__init__()
-        
+
         # Create UI components
         self.parameter_input = ParameterInputWidget()
         self.status_display = StatusDisplayWidget()
+        self.monochromator_control = MonochromatorControlWidget()
         self.plot_widget = MultiPlotWidget()
-        
+
         # Set up layout
         self._setup_layout()
-        
+
         # Connect internal signals
         self._connect_signals()
     
@@ -49,16 +55,29 @@ class MeasurementTab(QWidget):
         """Set up the tab layout."""
         main_layout = QVBoxLayout()
         main_layout.setSpacing(10)
-        
-        # Top row: Parameter input and Device Status side by side
+
+        # Top row: Two columns
         top_row = QHBoxLayout()
-        top_row.addWidget(self.parameter_input)
-        top_row.addWidget(self.status_display)
+
+        # Left column: Parameters + Device Status (stacked)
+        left_column = QVBoxLayout()
+        left_column.addWidget(self.parameter_input)
+        left_column.addWidget(self.status_display.device_group)
+        left_column.addStretch()
+
+        # Right column: Progress + Monochromator Controls (stacked)
+        right_column = QVBoxLayout()
+        right_column.addWidget(self.status_display.progress_group)
+        right_column.addWidget(self.monochromator_control)
+        right_column.addStretch()
+
+        top_row.addLayout(left_column)
+        top_row.addLayout(right_column)
         main_layout.addLayout(top_row)
-        
+
         # Middle section: Plots (takes most of the space, full width)
         main_layout.addWidget(self.plot_widget, stretch=3)
-        
+
         self.setLayout(main_layout)
     
     def _connect_signals(self) -> None:
@@ -66,7 +85,7 @@ class MeasurementTab(QWidget):
         # Forward parameter input signals
         self.parameter_input.parameters_changed.connect(
             self.parameters_changed.emit)
-        
+
         # Forward plot widget button signals
         self.plot_widget.power_measurement_requested.connect(
             self.power_measurement_requested.emit)
@@ -74,12 +93,20 @@ class MeasurementTab(QWidget):
             self.current_measurement_requested.emit)
         self.plot_widget.stop_requested.connect(
             self.stop_requested.emit)
-        
+
         # Forward status display signals
-        self.status_display.alignment_requested.connect(
-            self.alignment_requested.emit)
         self.status_display.live_monitor_requested.connect(
             self.live_monitor_requested.emit)
+
+        # Forward monochromator control signals
+        self.monochromator_control.alignment_requested.connect(
+            self.alignment_requested.emit)
+        self.monochromator_control.wavelength_change_requested.connect(
+            self.wavelength_change_requested.emit)
+        self.monochromator_control.shutter_open_requested.connect(
+            self.shutter_open_requested.emit)
+        self.monochromator_control.shutter_close_requested.connect(
+            self.shutter_close_requested.emit)
     
     # Public methods for external control
     
@@ -148,3 +175,12 @@ class MeasurementTab(QWidget):
     def stop_live_monitor(self) -> None:
         """Stop live monitoring UI state."""
         self.status_display.stop_live_monitor()
+
+    def update_monochromator_state(self, wavelength: float, shutter_open: bool,
+                                   filter_number: int) -> None:
+        """Update monochromator state display."""
+        self.monochromator_control.update_state(wavelength, shutter_open, filter_number)
+
+    def get_monochromator_control(self) -> MonochromatorControlWidget:
+        """Get the monochromator control widget."""
+        return self.monochromator_control
