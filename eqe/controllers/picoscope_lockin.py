@@ -258,10 +258,11 @@ class PicoScopeController:
 
     def read_current(self, num_measurements: int = 5, wavelength_nm: float = None) -> Optional[float]:
         """
-        Read photocurrent using software lock-in with robust averaging.
+        Read photocurrent using software lock-in with averaging.
 
-        This performs multiple lock-in measurements and uses trimmed mean
-        averaging to reject outliers from lamp flicker and chopper variations.
+        This performs multiple lock-in measurements and reports honest
+        statistics (mean and std dev of all measurements). High CV% at
+        low-signal wavelengths is expected and teaches students about SNR.
 
         Args:
             num_measurements: Number of measurements to average (default: 5)
@@ -291,30 +292,14 @@ class PicoScopeController:
             
             if not R_values:
                 raise PicoScopeError("All lock-in measurements failed")
-            
-            # Use MEDIAN and TRIMMED MEAN for robust averaging
+
+            # Calculate honest statistics from all measurements (no outlier rejection)
+            # Students should see real measurement variability - high CV at low signal
+            # wavelengths teaches them about SNR, not something to hide
             R_array = np.array(R_values)
-            
-            # Calculate median for reference
-            median_signal = np.median(R_array)
-            
-            # Trimmed mean: remove outliers beyond 2 standard deviations from median
-            deviations = np.abs(R_array - median_signal)
-            threshold = 2 * np.std(deviations)
-            mask = deviations <= threshold
-            R_trimmed = R_array[mask]
-            
-            # Use trimmed mean if we have enough measurements remaining
-            if len(R_trimmed) >= 3:
-                average_signal = np.mean(R_trimmed)
-                std_signal = np.std(R_trimmed)
-                n_outliers = len(R_values) - len(R_trimmed)
-            else:
-                # If too many outliers, use median (most robust)
-                average_signal = median_signal
-                std_signal = np.std(R_array)
-                n_outliers = 0
-            
+            average_signal = np.mean(R_array)
+            std_signal = np.std(R_array)
+
             # Calculate coefficient of variation for quality metric
             cv = 100 * std_signal / average_signal if average_signal > 0 else 0
 
@@ -335,9 +320,9 @@ class PicoScopeController:
             stats = MeasurementStats(
                 mean=current,
                 std_dev=current_std,
-                n_measurements=len(R_trimmed),
+                n_measurements=len(R_values),
                 n_total=num_measurements,
-                n_outliers=n_outliers,
+                n_outliers=0,
                 cv_percent=cv,
                 unit="A",
                 wavelength_nm=wavelength_nm
