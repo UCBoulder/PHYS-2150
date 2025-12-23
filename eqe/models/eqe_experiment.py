@@ -271,12 +271,27 @@ class EQEExperimentModel(QObject):
             'progress_percent': progress
         }
         self._notify_measurement_progress('power', progress_data)
+
+        # Update monochromator state display (shutter is open during measurement)
+        self._shutter_open = True
+        filter_number = self.monochromator._current_filter if self.monochromator else 0
+        self.monochromator_state_changed.emit(wavelength, True, filter_number)
     
     def _on_power_complete(self, success: bool) -> None:
         """Handle power measurement completion."""
         message = "Power measurement completed" if success else "Power measurement failed"
         self.logger.log(message)
         self._notify_experiment_complete(success, message)
+
+        # Update monochromator state (shutter is closed after measurement)
+        self._shutter_open = False
+        if self.monochromator:
+            try:
+                wavelength = self.monochromator.get_wavelength()
+                filter_number = self.monochromator._current_filter or 0
+                self.monochromator_state_changed.emit(wavelength, False, filter_number)
+            except Exception:
+                pass  # Ignore errors getting state after measurement
     
     def _on_current_progress(self, wavelength: float, current: float, progress: float) -> None:
         """Handle current measurement progress."""
@@ -286,12 +301,27 @@ class EQEExperimentModel(QObject):
             'progress_percent': progress
         }
         self._notify_measurement_progress('current', progress_data)
+
+        # Update monochromator state display (shutter is open during measurement)
+        self._shutter_open = True
+        filter_number = self.monochromator._current_filter if self.monochromator else 0
+        self.monochromator_state_changed.emit(wavelength, True, filter_number)
     
     def _on_current_complete(self, success: bool) -> None:
         """Handle current measurement completion."""
         message = "Current measurement completed" if success else "Current measurement failed"
         self.logger.log(message)
         self._notify_experiment_complete(success, message)
+
+        # Update monochromator state (shutter is closed after measurement)
+        self._shutter_open = False
+        if self.monochromator:
+            try:
+                wavelength = self.monochromator.get_wavelength()
+                filter_number = self.monochromator._current_filter or 0
+                self.monochromator_state_changed.emit(wavelength, False, filter_number)
+            except Exception:
+                pass  # Ignore errors getting state after measurement
     
     def _on_phase_progress(self, phase: float, signal: float) -> None:
         """Handle phase adjustment progress."""
