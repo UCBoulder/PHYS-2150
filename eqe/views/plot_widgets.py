@@ -487,45 +487,75 @@ class MultiPlotWidget(QWidget):
             measuring: True if measurement is in progress
         """
         self._power_measuring = measuring
-        
+        button_font_size = GUI_CONFIG['font_sizes']['button']
+
         if measuring:
             self.power_button.setText("Stop Power Measurement")
             self.power_button.setStyleSheet(
-                f"font-size: {GUI_CONFIG['font_sizes']['button']}px; "
+                f"font-size: {button_font_size}px; "
                 f"background-color: {GUI_CONFIG['colors']['stop_button']}; "
                 f"color: black; min-height: 40px;"
+            )
+            # Disable current button
+            self.current_button.setEnabled(False)
+            self.current_button.setStyleSheet(
+                f"font-size: {button_font_size}px; "
+                f"background-color: #666666; color: #999999; min-height: 40px;"
             )
         else:
             self.power_button.setText("Start Power Measurement")
             self.power_button.setStyleSheet(
-                f"font-size: {GUI_CONFIG['font_sizes']['button']}px; "
+                f"font-size: {button_font_size}px; "
                 f"background-color: {GUI_CONFIG['colors']['start_button']}; "
                 f"color: black; min-height: 40px;"
             )
-    
+            # Re-enable current button if not measuring
+            if not self._current_measuring:
+                self.current_button.setEnabled(True)
+                self.current_button.setStyleSheet(
+                    f"font-size: {button_font_size}px; "
+                    f"background-color: {GUI_CONFIG['colors']['start_button']}; "
+                    f"color: black; min-height: 40px;"
+                )
+
     def set_current_measuring(self, measuring: bool) -> None:
         """
         Update current measurement button state.
-        
+
         Args:
             measuring: True if measurement is in progress
         """
         self._current_measuring = measuring
-        
+        button_font_size = GUI_CONFIG['font_sizes']['button']
+
         if measuring:
             self.current_button.setText("Stop Current Measurement")
             self.current_button.setStyleSheet(
-                f"font-size: {GUI_CONFIG['font_sizes']['button']}px; "
+                f"font-size: {button_font_size}px; "
                 f"background-color: {GUI_CONFIG['colors']['stop_button']}; "
                 f"color: black; min-height: 40px;"
+            )
+            # Disable power button
+            self.power_button.setEnabled(False)
+            self.power_button.setStyleSheet(
+                f"font-size: {button_font_size}px; "
+                f"background-color: #666666; color: #999999; min-height: 40px;"
             )
         else:
             self.current_button.setText("Start Current Measurement")
             self.current_button.setStyleSheet(
-                f"font-size: {GUI_CONFIG['font_sizes']['button']}px; "
+                f"font-size: {button_font_size}px; "
                 f"background-color: {GUI_CONFIG['colors']['start_button']}; "
                 f"color: black; min-height: 40px;"
             )
+            # Re-enable power button if not measuring
+            if not self._power_measuring:
+                self.power_button.setEnabled(True)
+                self.power_button.setStyleSheet(
+                    f"font-size: {button_font_size}px; "
+                    f"background-color: {GUI_CONFIG['colors']['start_button']}; "
+                    f"color: black; min-height: 40px;"
+                )
     
     def set_buttons_enabled(self, enabled: bool) -> None:
         """Enable or disable measurement buttons."""

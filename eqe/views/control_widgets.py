@@ -316,41 +316,74 @@ class ControlButtonWidget(QWidget):
             measuring: True if measurement is in progress
         """
         self._power_measuring = measuring
-        
+        button_font_size = GUI_CONFIG['font_sizes']['button']
+        button_height = GUI_CONFIG["sizes"]["button_height"]
+
         if measuring:
             self.power_button.setText("Stop Power Measurement")
             self.power_button.setStyleSheet(
-                f"font-size: {GUI_CONFIG['font_sizes']['button']}px; "
+                f"font-size: {button_font_size}px; "
                 f"background-color: {GUI_CONFIG['colors']['stop_button']}; color: black;"
             )
+            # Disable current button and other controls
+            self.current_button.setEnabled(False)
+            self.current_button.setStyleSheet(
+                f"font-size: {button_font_size}px; "
+                f"background-color: #666666; color: #999999;"
+            )
+            self.align_button.setEnabled(False)
         else:
             self.power_button.setText("Start Power Measurement")
             self.power_button.setStyleSheet(
-                f"font-size: {GUI_CONFIG['font_sizes']['button']}px; "
+                f"font-size: {button_font_size}px; "
                 f"background-color: {GUI_CONFIG['colors']['start_button']}; color: black;"
             )
-    
+            # Re-enable current button if not measuring
+            if not self._current_measuring:
+                self.current_button.setEnabled(True)
+                self.current_button.setStyleSheet(
+                    f"font-size: {button_font_size}px; "
+                    f"background-color: {GUI_CONFIG['colors']['start_button']}; color: black;"
+                )
+                self.align_button.setEnabled(True)
+
     def set_current_measuring(self, measuring: bool) -> None:
         """
         Update current measurement button state.
-        
+
         Args:
             measuring: True if measurement is in progress
         """
         self._current_measuring = measuring
-        
+        button_font_size = GUI_CONFIG['font_sizes']['button']
+
         if measuring:
             self.current_button.setText("Stop Current Measurement")
             self.current_button.setStyleSheet(
-                f"font-size: {GUI_CONFIG['font_sizes']['button']}px; "
+                f"font-size: {button_font_size}px; "
                 f"background-color: {GUI_CONFIG['colors']['stop_button']}; color: black;"
             )
+            # Disable power button and other controls
+            self.power_button.setEnabled(False)
+            self.power_button.setStyleSheet(
+                f"font-size: {button_font_size}px; "
+                f"background-color: #666666; color: #999999;"
+            )
+            self.align_button.setEnabled(False)
         else:
             self.current_button.setText("Start Current Measurement")
             self.current_button.setStyleSheet(
-                f"font-size: {GUI_CONFIG['font_sizes']['button']}px; "
+                f"font-size: {button_font_size}px; "
                 f"background-color: {GUI_CONFIG['colors']['start_button']}; color: black;"
             )
+            # Re-enable power button if not measuring
+            if not self._power_measuring:
+                self.power_button.setEnabled(True)
+                self.power_button.setStyleSheet(
+                    f"font-size: {button_font_size}px; "
+                    f"background-color: {GUI_CONFIG['colors']['start_button']}; color: black;"
+                )
+                self.align_button.setEnabled(True)
     
     def set_enabled(self, enabled: bool) -> None:
         """Enable or disable all buttons."""
@@ -505,7 +538,37 @@ class StatusDisplayWidget(QWidget):
         """Stop live monitoring (called externally when needed)."""
         self._live_monitoring = False
         self._update_live_monitor_button()
-    
+
+    def set_live_monitor_enabled(self, enabled: bool) -> None:
+        """
+        Enable or disable the live monitor button.
+
+        Args:
+            enabled: True to enable, False to disable
+        """
+        self.live_monitor_button.setEnabled(enabled)
+        # Update visual appearance for disabled state
+        button_font_size = GUI_CONFIG["font_sizes"]["button"]
+        if enabled:
+            if self._live_monitoring:
+                stop_color = GUI_CONFIG["colors"]["stop_button"]
+                self.live_monitor_button.setStyleSheet(
+                    f"font-size: {button_font_size}px; background-color: {stop_color}; "
+                    f"color: black; min-height: 30px;"
+                )
+            else:
+                start_color = GUI_CONFIG["colors"]["start_button"]
+                self.live_monitor_button.setStyleSheet(
+                    f"font-size: {button_font_size}px; background-color: {start_color}; "
+                    f"color: black; min-height: 30px;"
+                )
+        else:
+            # Gray out when disabled
+            self.live_monitor_button.setStyleSheet(
+                f"font-size: {button_font_size}px; background-color: #666666; "
+                f"color: #999999; min-height: 30px;"
+            )
+
     def update_device_status(self, device_name: str, is_connected: bool, message: str = "") -> None:
         """
         Update device connection status.
@@ -676,7 +739,7 @@ class MonochromatorControlWidget(QGroupBox):
         self.wavelength_display.setStyleSheet(
             f"font-size: {font_size}px; font-weight: bold; color: #00aaff;"
         )
-        self.wavelength_display.setAlignment(Qt.AlignCenter)
+        self.wavelength_display.setAlignment(Qt.AlignLeft)
 
         # Shutter buttons
         self.open_shutter_button.setStyleSheet(
@@ -692,11 +755,11 @@ class MonochromatorControlWidget(QGroupBox):
         self.shutter_indicator.setStyleSheet(
             f"font-size: {font_size}px; font-weight: bold; color: #ff6666;"
         )
-        self.shutter_indicator.setAlignment(Qt.AlignCenter)
+        self.shutter_indicator.setAlignment(Qt.AlignLeft)
 
         # Filter label
         self.filter_label.setStyleSheet(f"font-size: {font_size}px; font-weight: bold;")
-        self.filter_label.setAlignment(Qt.AlignCenter)
+        self.filter_label.setAlignment(Qt.AlignLeft)
 
     def _setup_layout(self) -> None:
         """Set up the widget layout."""
@@ -706,42 +769,58 @@ class MonochromatorControlWidget(QGroupBox):
         # Green Dot alignment button at top
         layout.addWidget(self.align_button)
 
-        # Wavelength row
+        # Current wavelength display (actual monochromator state)
         wavelength_row = QHBoxLayout()
         wl_label = QLabel("Wavelength:")
         wl_label.setStyleSheet(f"font-size: {font_size}px;")
+        wl_label.setFixedWidth(80)
         wavelength_row.addWidget(wl_label)
-        wavelength_row.addWidget(self.wavelength_spinbox)
-        wavelength_row.addWidget(self.go_button)
+        wavelength_row.addWidget(self.wavelength_display)
+        wavelength_row.addStretch()
         layout.addLayout(wavelength_row)
 
-        # Current wavelength display
-        current_row = QHBoxLayout()
-        current_label = QLabel("Current:")
-        current_label.setStyleSheet(f"font-size: {font_size}px;")
-        current_row.addWidget(current_label)
-        current_row.addWidget(self.wavelength_display)
-        current_row.addStretch()
-        layout.addLayout(current_row)
-
-        # Shutter row
-        shutter_row = QHBoxLayout()
+        # Shutter row (indicator next to label, then buttons)
+        shutter_container = QWidget()
+        shutter_container.setFixedHeight(35)
+        shutter_row = QHBoxLayout(shutter_container)
+        shutter_row.setContentsMargins(0, 0, 0, 0)
+        shutter_row.setAlignment(Qt.AlignVCenter)
         shutter_label = QLabel("Shutter:")
         shutter_label.setStyleSheet(f"font-size: {font_size}px;")
-        shutter_row.addWidget(shutter_label)
-        shutter_row.addWidget(self.open_shutter_button)
-        shutter_row.addWidget(self.close_shutter_button)
-        shutter_row.addWidget(self.shutter_indicator)
-        layout.addLayout(shutter_row)
+        shutter_label.setFixedWidth(80)
+        shutter_row.addWidget(shutter_label, 0, Qt.AlignVCenter)
+        self.shutter_indicator.setMinimumWidth(70)
+        shutter_row.addWidget(self.shutter_indicator, 0, Qt.AlignVCenter)
+        shutter_row.addWidget(self.open_shutter_button, 0, Qt.AlignVCenter)
+        shutter_row.addWidget(self.close_shutter_button, 0, Qt.AlignVCenter)
+        shutter_row.addStretch()
+        layout.addWidget(shutter_container)
 
         # Filter row
         filter_row = QHBoxLayout()
         filter_label_text = QLabel("Filter:")
         filter_label_text.setStyleSheet(f"font-size: {font_size}px;")
+        filter_label_text.setFixedWidth(80)
         filter_row.addWidget(filter_label_text)
         filter_row.addWidget(self.filter_label)
         filter_row.addStretch()
         layout.addLayout(filter_row)
+
+        # Separator for manual control section
+        separator = QLabel("─── Manual Control ───")
+        separator.setAlignment(Qt.AlignCenter)
+        separator.setStyleSheet(f"font-size: {font_size - 2}px; color: gray;")
+        layout.addWidget(separator)
+
+        # Manual wavelength control row
+        manual_row = QHBoxLayout()
+        set_label = QLabel("Set to:")
+        set_label.setStyleSheet(f"font-size: {font_size}px;")
+        set_label.setFixedWidth(80)
+        manual_row.addWidget(set_label)
+        manual_row.addWidget(self.wavelength_spinbox, 1)
+        manual_row.addWidget(self.go_button)
+        layout.addLayout(manual_row)
 
         self.setLayout(layout)
 
@@ -877,3 +956,36 @@ class MonochromatorControlWidget(QGroupBox):
         self.go_button.setEnabled(enabled)
         self.open_shutter_button.setEnabled(enabled)
         self.close_shutter_button.setEnabled(enabled)
+
+        # Update visual appearance for disabled state
+        button_font_size = GUI_CONFIG["font_sizes"]["button"]
+        start_color = GUI_CONFIG["colors"]["start_button"]
+
+        if enabled:
+            # Restore normal button styling
+            self.align_button.setStyleSheet(
+                f"font-size: {button_font_size}px; background-color: {start_color}; "
+                f"color: black; min-height: 30px;"
+            )
+            self.go_button.setStyleSheet(
+                f"font-size: {button_font_size}px; background-color: {start_color}; "
+                f"color: black; min-height: 28px; min-width: 50px;"
+            )
+            self.open_shutter_button.setStyleSheet(
+                f"font-size: {button_font_size}px; background-color: {start_color}; "
+                f"color: black; min-height: 28px;"
+            )
+            self.close_shutter_button.setStyleSheet(
+                f"font-size: {button_font_size}px; background-color: {start_color}; "
+                f"color: black; min-height: 28px;"
+            )
+        else:
+            # Gray out when disabled
+            disabled_style = (
+                f"font-size: {button_font_size}px; background-color: #666666; "
+                f"color: #999999;"
+            )
+            self.align_button.setStyleSheet(disabled_style + " min-height: 30px;")
+            self.go_button.setStyleSheet(disabled_style + " min-height: 28px; min-width: 50px;")
+            self.open_shutter_button.setStyleSheet(disabled_style + " min-height: 28px;")
+            self.close_shutter_button.setStyleSheet(disabled_style + " min-height: 28px;")

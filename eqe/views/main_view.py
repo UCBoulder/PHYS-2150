@@ -353,6 +353,11 @@ class MainApplicationView(QMainWindow):
         plot_widget = self.measurement_tab.get_plot_widget()
         plot_widget.set_power_measuring(False)
         plot_widget.set_current_measuring(False)
+
+        # Re-enable controls
+        monochromator_control = self.measurement_tab.get_monochromator_control()
+        monochromator_control.set_enabled(True)
+        status_display.set_live_monitor_enabled(True)
         
         # Show completion message
         if success:
@@ -462,12 +467,21 @@ class MainApplicationView(QMainWindow):
             plot_widget = self.measurement_tab.get_plot_widget()
             plot_widget.get_power_plot().clear_plot()
             
+            # Stop live signal monitor if running
+            self.experiment_model.stop_live_signal_monitor()
+            status_display = self.measurement_tab.get_status_display()
+            status_display.stop_live_monitor()
+
             # Start measurement
             if self.experiment_model.start_power_measurement():
                 self._current_measurement_type = "power"
                 plot_widget.set_power_measuring(True)
-                
-                status_display = self.measurement_tab.get_status_display()
+
+                # Disable controls during measurement
+                monochromator_control = self.measurement_tab.get_monochromator_control()
+                monochromator_control.set_enabled(False)
+                status_display.set_live_monitor_enabled(False)
+
                 status_display.set_status_message("Starting power measurement...")
         
         except EQEExperimentError as e:
@@ -504,13 +518,22 @@ class MainApplicationView(QMainWindow):
             plot_widget.get_current_plot().clear_plot()
             plot_widget.get_phase_plot().clear_plot()
             
+            # Stop live signal monitor if running
+            self.experiment_model.stop_live_signal_monitor()
+            status_display = self.measurement_tab.get_status_display()
+            status_display.stop_live_monitor()
+
             # Start phase adjustment first
             self._current_pixel_number = pixel_number
             self._current_measurement_type = None  # Reset to ensure continuation logic works
             if self.experiment_model.start_phase_adjustment(pixel_number):
-                status_display = self.measurement_tab.get_status_display()
+                # Disable controls during measurement
+                monochromator_control = self.measurement_tab.get_monochromator_control()
+                monochromator_control.set_enabled(False)
+                status_display.set_live_monitor_enabled(False)
+
                 status_display.set_status_message(f"Starting phase adjustment for pixel {pixel_number}...")
-                
+
                 # Phase adjustment will complete, then we'll start current measurement
                 # This is handled in _update_status() which checks for phase completion
         
