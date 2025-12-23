@@ -156,7 +156,7 @@ DATA_EXPORT_CONFIG = {
     "headers": {
         "power": ["Wavelength (nm)", "Power (W)"],
         "current": ["Wavelength (nm)", "Current (A)"],
-        "current_with_stats": ["Wavelength (nm)", "Current_mean (A)", "Current_std (A)", "n", "CV_percent"],
+        "current_with_stats": ["Wavelength (nm)", "Current_mean (nA)", "Current_std (nA)", "n", "CV_percent"],
         "phase": ["Pixel #", "Set Angle", "Signal", "R^2 Value"],
     }
 }

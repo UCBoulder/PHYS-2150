@@ -131,21 +131,22 @@ class DataHandler:
                 precision = DATA_EXPORT_CONFIG["precision"]
 
                 for i, (wavelength, measurement) in enumerate(zip(wavelengths, measurements)):
-                    # Use scientific notation for measurement values to preserve
-                    # precision for very small values (e.g., nanoamp currents).
-                    formatted_measurement = f"{measurement:.{precision}e}"
-
                     if include_stats:
+                        # Convert from Amps to nanoamps for readability
+                        # Students can immediately interpret "4.24 nA" vs "4.24E-09 A"
+                        current_nA = measurement * 1e9
                         stats = measurement_stats[i]
-                        formatted_std = f"{stats['std_dev']:.{precision}e}"
+                        std_nA = stats['std_dev'] * 1e9
                         row = [
                             wavelength,
-                            formatted_measurement,
-                            formatted_std,
+                            f"{current_nA:.2f}",
+                            f"{std_nA:.2f}",
                             stats['n'],
                             f"{stats['cv_percent']:.1f}"
                         ]
                     else:
+                        # Use scientific notation for raw Amps (legacy format)
+                        formatted_measurement = f"{measurement:.{precision}e}"
                         row = [wavelength, formatted_measurement]
 
                     writer.writerow(row)
