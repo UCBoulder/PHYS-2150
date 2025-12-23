@@ -268,7 +268,7 @@ This removes the highest and lowest values, providing robust averaging against o
 
 ## Hardware Configuration
 
-### PicoScope 5242D (Recommended)
+### PicoScope 5242D (~$1,500)
 
 | Specification | Value |
 |--------------|-------|
@@ -279,7 +279,7 @@ This removes the highest and lowest values, providing robust averaging against o
 | Memory | 128 MS |
 | SDK | `ps5000a` |
 
-### PicoScope 2204A (Alternative)
+### PicoScope 2204A (~$150, Recommended)
 
 | Specification | Value |
 |--------------|-------|
@@ -334,7 +334,7 @@ CV:            0.66%
 | Drift | Noticeable | Negligible |
 | Input range | ±1V | ±20V |
 | Correction factor | 0.45 | 0.5 |
-| Cost | $3,000+ | $1,500 |
+| Cost | $3,000+ | ~$150 (2204A) |
 
 ### AWG Validation Results
 

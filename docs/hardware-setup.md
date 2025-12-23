@@ -297,7 +297,7 @@ FILTER_CONFIG = {
 }
 ```
 
-#### PicoScope 5242D (Recommended)
+#### PicoScope 5242D (~$1,500)
 
 - Bandwidth: 60 MHz
 - Resolution: 15-bit (2 channels)
@@ -306,7 +306,7 @@ FILTER_CONFIG = {
 - Buffer memory: 128 MS
 - SDK: `ps5000a`
 
-#### PicoScope 2204A (Alternative)
+#### PicoScope 2204A (~$150, Recommended)
 
 - Bandwidth: 10 MHz
 - Resolution: 8-bit
@@ -315,6 +315,7 @@ FILTER_CONFIG = {
 - Buffer memory: 8 KB (shared between channels)
 - SDK: `ps2000` (NOT ps2000a!)
 - Interface: USB 2.0
+- Cost: ~$150
 
 **2204A Limitations for EQE:**
 
