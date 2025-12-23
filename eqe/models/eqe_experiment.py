@@ -17,7 +17,13 @@ from ..controllers.picoscope_lockin import PicoScopeController, PicoScopeError
 from ..models.power_measurement import PowerMeasurementModel, PowerMeasurementError
 from ..models.current_measurement import CurrentMeasurementModel, CurrentMeasurementError
 from ..models.phase_adjustment import PhaseAdjustmentModel, PhaseAdjustmentError
-from ..config.settings import DEFAULT_MEASUREMENT_PARAMS, DEVICE_CONFIGS, DeviceType
+from ..config.settings import (
+    DEFAULT_MEASUREMENT_PARAMS,
+    DEVICE_CONFIGS,
+    DeviceType,
+    GUI_CONFIG,
+    PHASE_ADJUSTMENT_CONFIG,
+)
 from ..utils.data_handling import DataHandler, MeasurementDataLogger, DataValidationError
 from ..config import settings
 
@@ -374,14 +380,14 @@ class EQEExperimentModel(QObject):
                 raise EQEExperimentError("Invalid cell number format")
             
             # Validate pixel number
-            pixel_number = self.measurement_params.get('pixel_number', 1)
+            pixel_number = self.measurement_params.get('pixel_number', DEFAULT_MEASUREMENT_PARAMS['pixel_number'])
             if not self.data_handler.validate_pixel_number(pixel_number):
                 raise EQEExperimentError("Invalid pixel number")
             
             # Validate wavelength range
-            start_wl = self.measurement_params.get('start_wavelength', 350)
-            end_wl = self.measurement_params.get('end_wavelength', 850)
-            step_size = self.measurement_params.get('step_size', 10)
+            start_wl = self.measurement_params.get('start_wavelength', DEFAULT_MEASUREMENT_PARAMS['start_wavelength'])
+            end_wl = self.measurement_params.get('end_wavelength', DEFAULT_MEASUREMENT_PARAMS['end_wavelength'])
+            step_size = self.measurement_params.get('step_size', DEFAULT_MEASUREMENT_PARAMS['step_size'])
             
             if start_wl >= end_wl:
                 raise EQEExperimentError("Start wavelength must be less than end wavelength")
@@ -430,11 +436,12 @@ class EQEExperimentModel(QObject):
             return  # Already running
 
         try:
-            # Set monochromator to 523 nm (green) and open shutter
-            self.monochromator.set_wavelength(523.0)
+            # Set monochromator to alignment wavelength (green) and open shutter
+            alignment_wl = PHASE_ADJUSTMENT_CONFIG["alignment_wavelength"]
+            self.monochromator.set_wavelength(alignment_wl)
             self.monochromator.open_shutter()
             self._shutter_open = True
-            self.logger.log("Live signal monitor: Set to 523 nm, shutter open")
+            self.logger.log(f"Live signal monitor: Set to {alignment_wl} nm, shutter open")
 
             # Update UI with current monochromator state
             wavelength = self.monochromator.get_wavelength()
@@ -445,7 +452,8 @@ class EQEExperimentModel(QObject):
             self._live_monitor_active = True
             self._live_monitor_timer = QTimer()
             self._live_monitor_timer.timeout.connect(self._do_live_measurement)
-            self._live_monitor_timer.start(500)  # Measure every 500ms
+            interval_ms = GUI_CONFIG["live_monitor_interval_ms"]
+            self._live_monitor_timer.start(interval_ms)
 
         except (MonochromatorError, PicoScopeError) as e:
             self._live_monitor_active = False

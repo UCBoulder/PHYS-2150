@@ -12,7 +12,13 @@ import threading
 
 from ..controllers.picoscope_lockin import PicoScopeController, PicoScopeError
 from ..controllers.monochromator import MonochromatorController, MonochromatorError
-from ..config.settings import CURRENT_MEASUREMENT_CONFIG, MONOCHROMATOR_CORRECTION_FACTORS
+from ..config.settings import (
+    CURRENT_MEASUREMENT_CONFIG,
+    MONOCHROMATOR_CORRECTION_FACTORS,
+    FILTER_THRESHOLD_LOWER,
+    FILTER_THRESHOLD_UPPER,
+    PHASE_ADJUSTMENT_CONFIG,
+)
 from ..utils.data_handling import MeasurementDataLogger
 
 
@@ -187,11 +193,11 @@ class CurrentMeasurementModel:
             
             # Set initial filter based on starting wavelength and track current filter
             # Filter positions: 1 = 400 nm filter, 2 = 780 nm filter, 3 = no filter
-            if start_wavelength <= 420:
+            if start_wavelength <= FILTER_THRESHOLD_LOWER:
                 current_filter = 3  # No filter
                 self.monochromator.set_filter(current_filter)
                 self.logger.log("Set filter to 3 (no filter)")
-            elif start_wavelength <= 800:
+            elif start_wavelength <= FILTER_THRESHOLD_UPPER:
                 current_filter = 1  # 400 nm filter
                 self.monochromator.set_filter(current_filter)
                 self.logger.log("Set filter to 1 (400 nm)")
@@ -210,16 +216,17 @@ class CurrentMeasurementModel:
             
             # Set initial wavelength and wait for stabilization
             self.monochromator.set_wavelength(current_wavelength)
-            time.sleep(1)
+            initial_stabilization = CURRENT_MEASUREMENT_CONFIG["initial_stabilization_time"]
+            time.sleep(initial_stabilization)
             
             while current_wavelength <= end_wavelength and not self._stop_requested:
                 try:
                     # Update filter only when crossing thresholds
-                    if current_wavelength > 420 and current_filter == 3:
+                    if current_wavelength > FILTER_THRESHOLD_LOWER and current_filter == 3:
                         current_filter = 1  # Switch to 400 nm filter
                         self.monochromator.set_filter(current_filter)
                         self.logger.log("Set filter to 1 (400 nm)")
-                    elif current_wavelength > 800 and current_filter == 1:
+                    elif current_wavelength > FILTER_THRESHOLD_UPPER and current_filter == 1:
                         current_filter = 2  # Switch to 780 nm filter
                         self.monochromator.set_filter(current_filter)
                         self.logger.log("Set filter to 2 (780 nm)")
@@ -258,10 +265,11 @@ class CurrentMeasurementModel:
             
             # Set monochromator to green alignment dot position (happens during/after save dialog)
             try:
-                self.logger.log("Setting monochromator to green alignment position (532 nm)")
+                alignment_wl = PHASE_ADJUSTMENT_CONFIG["alignment_wavelength"]
+                self.logger.log(f"Setting monochromator to green alignment position ({alignment_wl} nm)")
                 self.monochromator.set_filter(1)
                 self.monochromator.set_grating(1)
-                self.monochromator.set_wavelength(532.0)
+                self.monochromator.set_wavelength(alignment_wl)
                 self.monochromator.open_shutter()
             except MonochromatorError as e:
                 self.logger.log(f"Warning: Failed to set alignment position: {e}", "WARNING")
@@ -353,13 +361,15 @@ class CurrentMeasurementModel:
         self.currents.clear()
         self.pixel_number = None
     
-    def align_monochromator(self, alignment_wavelength: float = 532.0) -> None:
+    def align_monochromator(self, alignment_wavelength: float = None) -> None:
         """
         Align monochromator for visual alignment.
-        
+
         Args:
-            alignment_wavelength: Wavelength for alignment in nm
+            alignment_wavelength: Wavelength for alignment in nm (defaults to config value)
         """
+        if alignment_wavelength is None:
+            alignment_wavelength = PHASE_ADJUSTMENT_CONFIG["alignment_wavelength"]
         try:
             self.logger.log(f"Aligning monochromator to {alignment_wavelength} nm")
             self.monochromator.set_filter(1)

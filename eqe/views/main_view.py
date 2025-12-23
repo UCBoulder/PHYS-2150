@@ -17,7 +17,7 @@ import logging
 from ..models.eqe_experiment import EQEExperimentModel, EQEExperimentError
 from ..models.stability_test import StabilityTestModel
 from ..utils.data_handling import DataHandler, DataValidationError
-from ..config.settings import GUI_CONFIG, ERROR_MESSAGES, FILE_NAMING
+from ..config.settings import GUI_CONFIG, ERROR_MESSAGES, FILE_NAMING, PHASE_ADJUSTMENT_CONFIG
 from .measurement_tab import MeasurementTab
 from .stability_test_tab import StabilityTestTab
 import datetime
@@ -398,7 +398,8 @@ class MainApplicationView(QMainWindow):
                     QMessageBox.information(self, "Data Saved", f"Phase data saved to {file_path}")
                     
                     # Check R-squared value and warn if low
-                    if phase_model.r_squared is not None and phase_model.r_squared < 0.90:
+                    min_r_squared = PHASE_ADJUSTMENT_CONFIG["min_r_squared"]
+                    if phase_model.r_squared is not None and phase_model.r_squared < min_r_squared:
                         QMessageBox.warning(
                             self, "Low R² Value",
                             ERROR_MESSAGES["low_r_squared"].format(pixel=self._current_pixel_number)
@@ -541,8 +542,9 @@ class MainApplicationView(QMainWindow):
         
         try:
             self.experiment_model.align_monochromator()
+            alignment_wl = PHASE_ADJUSTMENT_CONFIG["alignment_wavelength"]
             status_display = self.measurement_tab.get_status_display()
-            status_display.set_status_message("Monochromator aligned at 532 nm")
+            status_display.set_status_message(f"Monochromator aligned at {alignment_wl} nm")
 
         except EQEExperimentError as e:
             self._show_error(f"Failed to align monochromator: {e}")

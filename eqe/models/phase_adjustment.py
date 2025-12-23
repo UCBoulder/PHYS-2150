@@ -101,7 +101,8 @@ class PhaseAdjustmentModel:
         self.monochromator.send_command("shutter o")
         
         # Wait for light to stabilize
-        time.sleep(1.0)
+        stabilization_time = PHASE_ADJUSTMENT_CONFIG["stabilization_time"]
+        time.sleep(stabilization_time)
         
         self.logger.log(f"Prepared for phase adjustment on pixel {pixel_number}")
     
@@ -144,7 +145,8 @@ class PhaseAdjustmentModel:
             
             # Create visualization of projected signal vs phase
             # This shows how signal varies with assumed phase
-            test_phases = np.linspace(0, 360, 37)
+            num_points = PHASE_ADJUSTMENT_CONFIG["num_visualization_points"]
+            test_phases = np.linspace(0, 360, num_points)
             signals = []
             
             for test_phase in test_phases:

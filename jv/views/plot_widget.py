@@ -42,8 +42,8 @@ class JVPlotWidget(QWidget):
         self.font_sizes = GUI_CONFIG["font_sizes"]
 
         # Create matplotlib figure and axes
-        figsize = GUI_CONFIG.get("plot_figsize", (14, 14))
-        dpi = GUI_CONFIG.get("plot_dpi", 100)
+        figsize = GUI_CONFIG["plot_figsize"]
+        dpi = GUI_CONFIG["plot_dpi"]
         self.figure = Figure(figsize=figsize, dpi=dpi)
         self.axes = self.figure.add_subplot(111)
 
@@ -51,8 +51,8 @@ class JVPlotWidget(QWidget):
         self.canvas = FigureCanvas(self.figure)
 
         # Apply size constraints
-        min_size = GUI_CONFIG.get("plot_min_size", (525, 525))
-        max_size = GUI_CONFIG.get("plot_max_size", (700, 700))
+        min_size = GUI_CONFIG["plot_min_size"]
+        max_size = GUI_CONFIG["plot_max_size"]
         self.canvas.setMinimumSize(*min_size)
         self.canvas.setMaximumSize(*max_size)
 

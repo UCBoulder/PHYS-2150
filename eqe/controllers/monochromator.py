@@ -12,6 +12,12 @@ import pyvisa as visa
 warnings.filterwarnings("ignore", message="VI_WARN_UNKNOWN_STATUS", category=visa.VisaIOWarning)
 from typing import Optional, Dict, Any
 from ..drivers.cornerstone_mono import Cornerstone_Mono
+from ..config.settings import (
+    DeviceType,
+    DEVICE_CONFIGS,
+    FILTER_THRESHOLD_LOWER,
+    FILTER_THRESHOLD_UPPER,
+)
 
 
 class MonochromatorError(Exception):
@@ -44,7 +50,7 @@ class MonochromatorController:
         self._serial_number: Optional[str] = None
         self._current_filter: Optional[int] = None  # Track current filter position
     
-    def connect(self, interface: str = "usb", timeout_msec: int = 29000) -> bool:
+    def connect(self, interface: str = "usb", timeout_msec: int = None) -> bool:
         """
         Connect to the monochromator.
         
@@ -59,9 +65,12 @@ class MonochromatorController:
             MonochromatorError: If connection fails
         """
         try:
+            config = DEVICE_CONFIGS[DeviceType.MONOCHROMATOR]
+            if timeout_msec is None:
+                timeout_msec = config["timeout_msec"]
             self._device = Cornerstone_Mono(
-                self._rm, 
-                rem_ifc=interface, 
+                self._rm,
+                rem_ifc=interface,
                 timeout_msec=timeout_msec
             )
             self._serial_number = self._device.serial_number
@@ -191,7 +200,9 @@ class MonochromatorController:
             wavelength: Target wavelength in nanometers
         """
         # Auto-select grating based on wavelength
-        if wavelength < 685:
+        config = DEVICE_CONFIGS[DeviceType.MONOCHROMATOR]
+        grating_threshold = config["grating_wavelength_threshold"]
+        if wavelength < grating_threshold:
             self.set_grating(1)
         else:
             self.set_grating(2)
@@ -205,9 +216,9 @@ class MonochromatorController:
         Args:
             wavelength: Wavelength in nanometers
         """
-        if wavelength <= 420:
+        if wavelength <= FILTER_THRESHOLD_LOWER:
             self.set_filter(3)  # No filter
-        elif wavelength <= 800:
+        elif wavelength <= FILTER_THRESHOLD_UPPER:
             self.set_filter(1)  # 400 nm filter
         else:
             self.set_filter(2)  # 780 nm filter

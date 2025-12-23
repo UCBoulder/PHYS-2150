@@ -11,7 +11,7 @@ from typing import Optional, Dict, Tuple
 import numpy as np
 
 from ..drivers.picoscope_driver import PicoScopeDriver
-from ..config.settings import DEVICE_CONFIGS, DeviceType
+from ..config.settings import DEVICE_CONFIGS, DeviceType, CURRENT_MEASUREMENT_CONFIG
 
 
 class PicoScopeError(Exception):
@@ -44,6 +44,10 @@ class PicoScopeController:
         config = DEVICE_CONFIGS[DeviceType.PICOSCOPE_LOCKIN]
         self._reference_freq = config["default_chopper_freq"]
         self._num_cycles = config["default_num_cycles"]
+        self._fast_measurement_cycles = config["fast_measurement_cycles"]
+        self._saturation_threshold_v = config["saturation_threshold_v"]
+        self._signal_quality_reference_v = config["signal_quality_reference_v"]
+        self._transimpedance_gain = CURRENT_MEASUREMENT_CONFIG["transimpedance_gain"]
         # Correction factor compensates for RMS normalization in Hilbert algorithm
         # Value of 0.5 validated via AWG testing - see docs/lockin_validation_handoff.md
         self._correction_factor = config["correction_factor"]
@@ -203,7 +207,7 @@ class PicoScopeController:
         """
         return self.read_current(num_measurements=num_measurements)
 
-    def read_current_fast(self, num_cycles: int = 20) -> Optional[float]:
+    def read_current_fast(self, num_cycles: int = None) -> Optional[float]:
         """
         Read photocurrent with reduced cycles for fast live monitoring.
 
@@ -211,7 +215,7 @@ class PicoScopeController:
         Less accurate but suitable for alignment and quick checks.
 
         Args:
-            num_cycles: Number of cycles to integrate (default: 20 for speed)
+            num_cycles: Number of cycles to integrate (defaults to config value)
 
         Returns:
             Optional[float]: Measured current in Amps, or None if error
@@ -221,6 +225,9 @@ class PicoScopeController:
         """
         if not self._is_connected:
             raise PicoScopeError("Device not connected")
+
+        if num_cycles is None:
+            num_cycles = self._fast_measurement_cycles
 
         # Temporarily use fewer cycles
         original_cycles = self._num_cycles
@@ -311,14 +318,13 @@ class PicoScopeController:
                   f"(n={len(R_trimmed)}/{num_measurements}, outliers={n_outliers}, CV={cv:.2f}%)")
             
             # Check for saturation
-            if abs(average_signal) > 0.95:
+            if abs(average_signal) > self._saturation_threshold_v:
                 print(f"Warning: Signal near saturation ({average_signal:.3f} V)")
-            
+
             # Apply transimpedance amplifier gain
             # Note: The correction factor (0.5) is already applied in perform_lockin_measurement
             # via the driver. Here we just convert voltage to current using TIA gain.
-            # Assuming 1 MΩ transimpedance gain (see settings.py transimpedance_gain)
-            current = average_signal * 10 ** -6  # Convert to Amps (from V with 1MΩ gain)
+            current = average_signal * self._transimpedance_gain
             
             return current
             
@@ -363,7 +369,7 @@ class PicoScopeController:
             # Calculate signal quality (SNR estimate)
             # For now, we'll use a simplified quality metric
             # Higher R indicates better signal
-            quality_metric = min(1.0, R / 0.1)  # Normalized to 0.1V reference
+            quality_metric = min(1.0, R / self._signal_quality_reference_v)
             
             print(f"Phase response: Phase={optimal_phase:.1f}°, Magnitude={signal_magnitude:.6f} V, Quality={quality_metric:.4f}")
             

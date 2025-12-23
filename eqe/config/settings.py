@@ -44,6 +44,7 @@ CURRENT_MEASUREMENT_CONFIG = {
     "num_measurements": 5,         # Number of lock-in measurements to average
     "transimpedance_gain": 1e-6,  # Accounts for transimpedance amplifier (1 MΩ)
     "stabilization_time": 0.2,    # seconds - wait time after wavelength change for photocell stabilization
+    "initial_stabilization_time": 1.0,  # seconds - wait time after setting initial wavelength
 }
 
 # Phase adjustment configuration
@@ -51,6 +52,13 @@ PHASE_ADJUSTMENT_CONFIG = {
     "alignment_wavelength": 532,   # nm - wavelength for phase adjustment
     "min_r_squared": 0.90,        # Minimum acceptable R² for phase fit visualization
     "num_visualization_points": 37,  # Number of points for phase response visualization
+    "stabilization_time": 1.0,    # seconds - wait time for light stabilization before phase measurement
+}
+
+# Stability test configuration
+STABILITY_TEST_CONFIG = {
+    "initial_stabilization_time": 2.0,  # seconds - initial wait before starting measurements
+    "outlier_rejection_std": 2.0,       # Number of standard deviations for outlier rejection
 }
 
 # Device-specific configurations
@@ -66,10 +74,13 @@ DEVICE_CONFIGS = {
     DeviceType.PICOSCOPE_LOCKIN: {
         "default_chopper_freq": 81,    # Hz - initial default (actual freq set during measurement)
         "default_num_cycles": 100,     # Number of cycles for lock-in integration
+        "fast_measurement_cycles": 20, # Number of cycles for fast/live measurements
         "num_measurements": 5,         # Number of measurements to average for stability
+        "saturation_threshold_v": 0.95,  # Voltage threshold for saturation warning
+        "signal_quality_reference_v": 0.1,  # Reference voltage for quality metric calculation
         # Correction factor for Hilbert lock-in algorithm (validated via AWG testing)
         # The 0.5 factor compensates for RMS normalization of square wave reference
-        # See docs/lockin_validation_plan.md for validation details
+        # See docs/software-lockin.md for validation details
         "correction_factor": 0.5,
     }
 }
@@ -111,6 +122,7 @@ GUI_CONFIG = {
     "window_size": (1200, 800),
     "plot_size": (300, 300),
     "plot_max_size": (400, 400),
+    "live_monitor_interval_ms": 500,  # Update interval for live signal monitor
     "font_sizes": {
         "label": 14,
         "button": 14,

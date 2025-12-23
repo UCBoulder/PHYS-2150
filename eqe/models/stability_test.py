@@ -15,7 +15,7 @@ import logging
 from ..controllers.monochromator import MonochromatorController
 from ..controllers.thorlabs_power_meter import ThorlabsPowerMeterController
 from ..controllers.picoscope_lockin import PicoScopeController
-from ..config.settings import POWER_MEASUREMENT_CONFIG, CURRENT_MEASUREMENT_CONFIG
+from ..config.settings import POWER_MEASUREMENT_CONFIG, CURRENT_MEASUREMENT_CONFIG, STABILITY_TEST_CONFIG
 
 
 class StabilityTestModel:
@@ -181,7 +181,8 @@ class StabilityTestModel:
             # Wait for stabilization
             if self.status_callback:
                 self.status_callback("Stabilizing...")
-            time.sleep(2)
+            stabilization_time = STABILITY_TEST_CONFIG["initial_stabilization_time"]
+            time.sleep(stabilization_time)
             
             # Start test
             start_time = time.time()
@@ -308,10 +309,11 @@ class StabilityTestModel:
                     # Calculate mean and filter outliers (same as CurrentMeasurementModel)
                     mean_current = np.mean(current_readings)
                     std_current = np.std(current_readings)
-                    
-                    # Filter outliers (> 2 std dev)
-                    filtered = [c for c in current_readings 
-                               if abs(c - mean_current) <= 2 * std_current]
+
+                    # Filter outliers
+                    outlier_std = STABILITY_TEST_CONFIG["outlier_rejection_std"]
+                    filtered = [c for c in current_readings
+                               if abs(c - mean_current) <= outlier_std * std_current]
                     
                     if filtered:
                         final_current = np.mean(filtered)

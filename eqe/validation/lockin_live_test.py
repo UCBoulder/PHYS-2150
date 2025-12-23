@@ -48,9 +48,9 @@ def run_lockin_live_test():
     print()
 
     # Configuration - load from settings
-    CHOPPER_FREQ = LOCKIN_CONFIG.get("default_chopper_freq", 81.0)
-    NUM_CYCLES = LOCKIN_CONFIG.get("default_num_cycles", 100)
-    CORRECTION_FACTOR = LOCKIN_CONFIG.get("correction_factor", 0.5)
+    CHOPPER_FREQ = LOCKIN_CONFIG["default_chopper_freq"]
+    NUM_CYCLES = LOCKIN_CONFIG["default_num_cycles"]
+    CORRECTION_FACTOR = LOCKIN_CONFIG["correction_factor"]
     NUM_MEASUREMENTS = 20  # How many measurements to take
     DELAY_BETWEEN = 0.5  # Seconds between measurements
 
@@ -188,8 +188,8 @@ def run_continuous_monitor():
     print()
 
     # Load from settings
-    CHOPPER_FREQ = LOCKIN_CONFIG.get("default_chopper_freq", 81.0)
-    CORRECTION_FACTOR = LOCKIN_CONFIG.get("correction_factor", 0.5)
+    CHOPPER_FREQ = LOCKIN_CONFIG["default_chopper_freq"]
+    CORRECTION_FACTOR = LOCKIN_CONFIG["correction_factor"]
 
     user_input = input(f"Chopper frequency in Hz [{CHOPPER_FREQ}]: ").strip()
     if user_input:

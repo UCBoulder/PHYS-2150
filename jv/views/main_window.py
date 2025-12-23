@@ -41,7 +41,7 @@ class JVMainWindow(QMainWindow):
 
         # Window configuration
         self.setWindowTitle(GUI_CONFIG["window_title"])
-        geometry = GUI_CONFIG.get("window_geometry", (100, 100, 800, 600))
+        geometry = GUI_CONFIG["window_geometry"]
         self.setGeometry(*geometry)
 
         # Experiment model (to be set externally)
