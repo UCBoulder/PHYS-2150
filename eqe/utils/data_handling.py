@@ -145,9 +145,14 @@ class DataHandler:
                             f"{stats['cv_percent']:.1f}"
                         ]
                     else:
-                        # Use scientific notation for raw Amps (legacy format)
-                        formatted_measurement = f"{measurement:.{precision}e}"
-                        row = [wavelength, formatted_measurement]
+                        if measurement_type == "current":
+                            # Convert to nanoamps for readability
+                            current_nA = measurement * 1e9
+                            row = [wavelength, f"{current_nA:.2f}"]
+                        else:
+                            # Power stays in Watts with scientific notation
+                            formatted_measurement = f"{measurement:.{precision}e}"
+                            row = [wavelength, formatted_measurement]
 
                     writer.writerow(row)
 
