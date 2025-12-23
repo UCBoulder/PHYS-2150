@@ -7,10 +7,11 @@ all GUI components and provides the primary user interface.
 
 import sys
 from PySide6.QtWidgets import (
-    QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QMessageBox, 
+    QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QMessageBox,
     QFileDialog, QInputDialog, QApplication, QPushButton, QTabWidget
 )
 from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtGui import QKeyEvent
 from typing import Optional, Dict, Any
 import logging
 
@@ -20,6 +21,7 @@ from ..utils.data_handling import DataHandler, DataValidationError
 from ..config.settings import GUI_CONFIG, ERROR_MESSAGES, FILE_NAMING, PHASE_ADJUSTMENT_CONFIG
 from .measurement_tab import MeasurementTab
 from .stability_test_tab import StabilityTestTab
+from .eqe_analysis_tab import EQEAnalysisTab
 import datetime
 
 
@@ -72,6 +74,10 @@ class MainApplicationView(QMainWindow):
 
         # Track device initialization state
         self._devices_initialized = False
+
+        # Staff mode (hidden EQE analysis tab)
+        self._staff_mode_enabled = False
+        self.eqe_analysis_tab = EQEAnalysisTab()
 
         # Disable all interactive buttons until device initialization completes
         # This prevents focus issues when native PicoScope splash screen is shown
@@ -155,6 +161,10 @@ class MainApplicationView(QMainWindow):
             self._on_live_signal_update, Qt.QueuedConnection)
         model.monochromator_state_changed.connect(
             self._on_monochromator_state_changed, Qt.QueuedConnection)
+
+        # Update EQE analysis tab if staff mode is enabled
+        if self._staff_mode_enabled:
+            self.eqe_analysis_tab.set_experiment_model(model)
 
         # Note: StabilityTestModel will be created after device initialization completes
         # See initialize_stability_model() method
@@ -700,12 +710,44 @@ class MainApplicationView(QMainWindow):
     def _show_error(self, message: str) -> None:
         """
         Show error message to user.
-        
+
         Args:
             message: Error message to display
         """
         QMessageBox.critical(self, "Error", message)
-    
+
+    def keyPressEvent(self, event: QKeyEvent) -> None:
+        """
+        Handle key press events.
+
+        Ctrl+Shift+E toggles hidden staff mode (EQE Analysis tab).
+        """
+        if (event.modifiers() == (Qt.ControlModifier | Qt.ShiftModifier)
+                and event.key() == Qt.Key_E):
+            self._toggle_staff_mode()
+        else:
+            super().keyPressEvent(event)
+
+    def _toggle_staff_mode(self) -> None:
+        """Toggle hidden staff mode (EQE Analysis tab)."""
+        if self._staff_mode_enabled:
+            # Hide the EQE Analysis tab
+            index = self.tab_widget.indexOf(self.eqe_analysis_tab)
+            if index >= 0:
+                self.tab_widget.removeTab(index)
+            self._staff_mode_enabled = False
+            self.logger.info("Staff mode disabled")
+        else:
+            # Show the EQE Analysis tab
+            self.tab_widget.addTab(self.eqe_analysis_tab, "EQE Analysis")
+            # Give it access to the experiment model for session data
+            if self.experiment_model:
+                self.eqe_analysis_tab.set_experiment_model(self.experiment_model)
+            self._staff_mode_enabled = True
+            # Switch to the new tab
+            self.tab_widget.setCurrentWidget(self.eqe_analysis_tab)
+            self.logger.info("Staff mode enabled (Ctrl+Shift+E)")
+
     def closeEvent(self, event) -> None:
         """Handle application close event."""
         # Stop the status timer first to prevent callbacks during cleanup
