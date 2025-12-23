@@ -6,6 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [2.3.0] - 2025-12-23
+
+### Added
+- Tiered logging system with measurement statistics display (mean, std dev, n, CV%)
+- Optional measurement statistics export in CSV files (std_dev, n, CV% columns)
+- Staff debug mode (Ctrl+Shift+D) to view technical debug messages in console
+- Staff EQE visualization mode (Ctrl+Shift+E) for viewing calculated EQE during scans
+
+### Changed
+- Current measurements now exported in nanoamps (nA) for readability instead of scientific notation
+- Removed outlier rejection from measurements - students now see honest statistics including variability
+- Measurement statistics (CV%) displayed in real-time during wavelength scans
+- Improved window sizing for better fit on various screen resolutions
+- Cell number dialog now pre-selects text for faster entry
+- Monochromator controls disabled during active measurements to prevent conflicts
+
+### Fixed
+- Console output now shows human-readable units (nA, µA) instead of scientific notation
+
+### Removed
+- Newport MonoUtility no longer required as a dependency
+
 ## [2.2.0] - 2025-12-22
 
 ### Added
@@ -76,6 +98,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 | Version | Date | Key Changes |
 |---------|------|-------------|
+| 2.3.0 | 2025-12-23 | Tiered logging, measurement stats export, nanoamps format |
 | 2.2.0 | 2025-12-22 | Manual monochromator controls, Live Signal Monitor, CSV bug fix |
 | 2.1.0 | 2025-12-02 | Bug fixes for stability test and PicoScope 2204A support |
 | 2.0.0 | 2025-11-27 | MVC refactor, PicoScope software lock-in, PySide6 GUI |

@@ -366,12 +366,26 @@ Wavelength (nm),Power (W)
 
 ### Current Measurement File
 
+Current measurements are saved in **nanoamps (nA)** with measurement statistics for uncertainty analysis:
+
 ```csv
-Wavelength (nm),Current (A)
-350.0,2.345e-9
-360.0,3.456e-9
+Wavelength (nm),Current_mean (nA),Current_std (nA),n,CV_percent
+350.0,4.24,1.78,5,42.0
+400.0,24.60,2.52,5,10.2
+550.0,276.00,2.21,5,0.8
 ...
 ```
+
+| Column | Description |
+|--------|-------------|
+| `Current_mean (nA)` | Average of n lock-in measurements |
+| `Current_std (nA)` | Standard deviation of measurements |
+| `n` | Number of measurements averaged |
+| `CV_percent` | Coefficient of variation (std/mean × 100) |
+
+This format teaches students that **uncertainty is part of every measurement**, not separate from it. High CV% at band edge wavelengths (350nm, 750nm) is expected due to low signal-to-noise ratio.
+
+> **Note:** Statistics export can be disabled in `eqe/config/settings.py` by setting `DATA_EXPORT_CONFIG["include_measurement_stats"] = False`, which reverts to a simpler two-column format.
 
 ### File Naming Convention
 

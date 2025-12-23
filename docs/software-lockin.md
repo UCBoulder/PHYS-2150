@@ -251,20 +251,23 @@ The previous SR510 analog lock-in required a 0.45 correction factor for a differ
 
 ## Measurement Averaging
 
-### Trimmed Mean for Robustness
+### Honest Statistics
 
-Each wavelength point averages 5 measurements. To handle outliers:
+Each wavelength point averages 5 lock-in measurements. The system reports **honest statistics** without outlier rejection:
 
 ```python
-def trimmed_mean(values, trim_fraction=0.2):
-    """Average after removing extreme values"""
-    sorted_vals = sorted(values)
-    n = len(sorted_vals)
-    trim = int(n * trim_fraction)
-    return np.mean(sorted_vals[trim:n-trim])
+# Simple mean and standard deviation of all measurements
+mean_current = np.mean(measurements)
+std_current = np.std(measurements)
+cv_percent = 100 * std_current / mean_current
 ```
 
-This removes the highest and lowest values, providing robust averaging against occasional glitches.
+This approach:
+- Shows students real measurement variability
+- High CV% at band edges (low signal) teaches about signal-to-noise ratio
+- Avoids hiding measurement issues behind statistical manipulation
+
+The coefficient of variation (CV%) is displayed in real-time during measurements and exported with the data.
 
 ## Hardware Configuration
 
