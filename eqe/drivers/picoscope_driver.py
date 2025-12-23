@@ -29,6 +29,11 @@ import contextlib
 import platform
 import time
 
+from common.utils import get_logger, get_error, EQE_ERRORS
+
+# Module-level logger for PicoScope driver
+_logger = get_logger("eqe")
+
 class PicoScopeDriver:
     """
     Driver for PicoScope 5000a and 2000 series oscilloscopes
@@ -194,17 +199,17 @@ class PicoScopeDriver:
             if not connection_successful:
                 raise Exception("Failed to connect with any supported PicoScope SDK")
 
-            # Print success message
+            # Log resolution info (debug level - technical detail)
             if self.device_type == '5000a':
-                print("Using 15-bit resolution for 2-channel lock-in operation")
+                _logger.debug("Using 15-bit resolution for 2-channel lock-in operation")
             else:
-                print("Using 8-bit resolution for 2-channel lock-in operation")
+                _logger.debug("Using 8-bit resolution for 2-channel lock-in operation")
 
             self.connected = True
 
             # Get device info
             info_str = self._get_device_info()
-            print(f"Connected to {info_str}")
+            _logger.info(f"PicoScope connected: {info_str}")
 
             # Set up channels
             self._setup_channels()
@@ -212,7 +217,10 @@ class PicoScopeDriver:
             return True
 
         except Exception as e:
-            print(f"Failed to connect to PicoScope: {e}")
+            _logger.error(f"Failed to connect to PicoScope: {e}")
+            error = get_error("picoscope_not_found", "eqe")
+            if error:
+                _logger.student_error(error.title, error.message, error.causes, error.actions)
             self.connected = False
             return False
 
@@ -228,7 +236,7 @@ class PicoScopeDriver:
             bool: True if connection successful
         """
         try:
-            print("Attempting to connect to PicoScope 2000 series (2204A)...")
+            _logger.debug("Attempting to connect to PicoScope 2000 series (2204A)...")
 
             from picosdk.ps2000 import ps2000 as ps
             from picosdk.functions import assert_pico2000_ok
@@ -245,20 +253,20 @@ class PicoScopeDriver:
             if handle_value > 0:
                 # Success! Store the handle
                 self.chandle = ctypes.c_int16(handle_value)
-                print(f"Successfully connected to PicoScope 2000 series (handle: {handle_value})")
+                _logger.debug(f"ps2000 connected (handle: {handle_value})")
                 return True
             elif handle_value == 0:
-                print("  ps2000: No device found")
+                _logger.debug("ps2000: No device found")
                 return False
             else:
-                print(f"  ps2000: Error code {handle_value}")
+                _logger.debug(f"ps2000: Error code {handle_value}")
                 return False
 
         except ImportError as e:
-            print(f"  ps2000 SDK not available: {e}")
+            _logger.debug(f"ps2000 SDK not available: {e}")
             return False
         except Exception as e:
-            print(f"  ps2000 connection failed: {e}")
+            _logger.debug(f"ps2000 connection failed: {e}")
             return False
 
     def _try_connect_ps5000a(self):
@@ -269,7 +277,7 @@ class PicoScopeDriver:
             bool: True if connection successful
         """
         try:
-            print("Attempting to connect to PicoScope 5000a series (5242D)...")
+            _logger.debug("Attempting to connect to PicoScope 5000a series (5242D)...")
 
             from picosdk.ps5000a import ps5000a as ps
             from picosdk.functions import assert_pico_ok
@@ -302,10 +310,10 @@ class PicoScopeDriver:
                 status_code = 0  # Treat as success after power change
 
             if status_code == 0:
-                print(f"Successfully connected to PicoScope 5000a series")
+                _logger.debug("ps5000a connected successfully")
                 return True
             else:
-                print(f"  ps5000a: Error code {status_code}")
+                _logger.debug(f"ps5000a: Error code {status_code}")
                 try:
                     ps.ps5000aCloseUnit(self.chandle)
                 except:
@@ -313,10 +321,10 @@ class PicoScopeDriver:
                 return False
 
         except ImportError as e:
-            print(f"  ps5000a SDK not available: {e}")
+            _logger.debug(f"ps5000a SDK not available: {e}")
             return False
         except Exception as e:
-            print(f"  ps5000a connection failed: {e}")
+            _logger.debug(f"ps5000a connection failed: {e}")
             return False
     
     def _get_device_info(self):
@@ -398,7 +406,7 @@ class PicoScopeDriver:
             self.chA_range = chA_range
             self.chB_range = chB_range
 
-            print(f"Channels configured: 2V range, DC coupling")
+            _logger.debug("Channels configured: 2V range, DC coupling")
 
         elif self.device_type == '5000a':
             # PS5000a setup
@@ -439,7 +447,7 @@ class PicoScopeDriver:
             self.chA_range = chA_range
             self.chB_range = chB_range
 
-            print(f"Channels configured: ±20V range (no clipping!)")
+            _logger.debug("Channels configured: +/-20V range")
     
     def set_reference_frequency(self, frequency):
         """
@@ -476,7 +484,7 @@ class PicoScopeDriver:
             bool: True if AWG configured successfully
         """
         if not self.connected:
-            print("ERROR: Not connected to PicoScope")
+            _logger.error("AWG: Not connected to PicoScope")
             return False
 
         if self.device_type == '2000':
@@ -484,7 +492,7 @@ class PicoScopeDriver:
         elif self.device_type == '5000a':
             return self._set_awg_5000a(frequency, amplitude_vpp, waveform, offset_v)
         else:
-            print(f"ERROR: AWG not supported for device type {self.device_type}")
+            _logger.error(f"AWG not supported for device type {self.device_type}")
             return False
 
     def _set_awg_2000(self, frequency: float, amplitude_vpp: float,
@@ -520,11 +528,11 @@ class PicoScopeDriver:
 
         # Validate parameters
         if pk_to_pk_uv > 4000000:  # 4V max
-            print(f"WARNING: Amplitude {amplitude_vpp}V exceeds 4V max, clamping")
+            _logger.debug(f"AWG amplitude {amplitude_vpp}V exceeds 4V max, clamping")
             pk_to_pk_uv = 4000000
 
         if frequency > 100000:  # 100 kHz max
-            print(f"WARNING: Frequency {frequency}Hz exceeds 100kHz max, clamping")
+            _logger.debug(f"AWG frequency {frequency}Hz exceeds 100kHz max, clamping")
             frequency = 100000
 
         try:
@@ -545,11 +553,11 @@ class PicoScopeDriver:
             )
             self.assert_pico_ok(self.status["setSigGen"])
 
-            print(f"AWG: {frequency} Hz, {amplitude_vpp} Vpp {waveform}")
+            _logger.debug(f"AWG configured: {frequency} Hz, {amplitude_vpp} Vpp {waveform}")
             return True
 
         except Exception as e:
-            print(f"ERROR setting AWG: {e}")
+            _logger.error(f"Error setting AWG: {e}")
             return False
 
     def _set_awg_5000a(self, frequency: float, amplitude_vpp: float,
@@ -598,11 +606,11 @@ class PicoScopeDriver:
             )
             self.assert_pico_ok(self.status["setSigGen"])
 
-            print(f"AWG: {frequency} Hz, {amplitude_vpp} Vpp {waveform}")
+            _logger.debug(f"AWG configured: {frequency} Hz, {amplitude_vpp} Vpp {waveform}")
             return True
 
         except Exception as e:
-            print(f"ERROR setting AWG: {e}")
+            _logger.error(f"Error setting AWG: {e}")
             return False
 
     def stop_awg(self) -> bool:
@@ -641,11 +649,11 @@ class PicoScopeDriver:
                 )
                 self.assert_pico_ok(self.status["stopSigGen"])
 
-            print("AWG stopped")
+            _logger.debug("AWG stopped")
             return True
 
         except Exception as e:
-            print(f"ERROR stopping AWG: {e}")
+            _logger.error(f"Error stopping AWG: {e}")
             return False
 
     def software_lockin(self, reference_freq, num_cycles=100, correction_factor=1.0):
@@ -698,12 +706,15 @@ class PicoScopeDriver:
         signal_data, reference_data = self._acquire_block(num_samples, decimation)
 
         if signal_data is None or reference_data is None:
-            print("ERROR: Failed to acquire data")
+            _logger.error("Failed to acquire data from PicoScope")
+            error = get_error("acquisition_failed", "eqe")
+            if error:
+                _logger.student_error(error.title, error.message, error.causes, error.actions)
             return None
 
-        # Calculate actual sampling rate
+        # Log technical details (debug only - students don't need to see this)
         actual_samples_per_cycle = len(signal_data) / actual_cycles
-        print(f"Lock-in: {len(signal_data)} samples, {actual_samples_per_cycle:.1f} samples/cycle @ {reference_freq} Hz ({actual_cycles} cycles)")
+        _logger.debug(f"Lock-in acquisition: {len(signal_data)} samples, {actual_samples_per_cycle:.1f} samples/cycle @ {reference_freq} Hz ({actual_cycles} cycles)")
 
         # Process with Hilbert transform lock-in algorithm
         result = self._lockin_hilbert(signal_data, reference_data, fs, reference_freq,
@@ -746,7 +757,10 @@ class PicoScopeDriver:
         if ref_rms > 0:
             ref_normalized = ref_normalized / ref_rms
         else:
-            print("ERROR: Reference signal has zero amplitude!")
+            _logger.error("Reference signal has zero amplitude")
+            error = get_error("no_reference_signal", "eqe")
+            if error:
+                _logger.student_error(error.title, error.message, error.causes, error.actions)
             return None
 
         # Create quadrature reference using Hilbert transform
@@ -862,13 +876,12 @@ class PicoScopeDriver:
             elif self.device_type == '5000a':
                 return self._acquire_block_5000a(num_samples, decimation)
             else:
-                print(f"ERROR: Unknown device type {self.device_type}")
+                _logger.error(f"Unknown device type: {self.device_type}")
                 return None, None
 
         except Exception as e:
-            print(f"ERROR acquiring data: {e}")
-            import traceback
-            traceback.print_exc()
+            _logger.error(f"Error acquiring data: {e}")
+            _logger.debug(f"Acquisition exception traceback: {e.__class__.__name__}")
             return None, None
     
     def _acquire_block_5000a(self, num_samples, decimation):
@@ -1104,24 +1117,27 @@ class PicoScopeDriver:
                     self.status["stop"] = self.ps.ps5000aStop(self.chandle)
                     self.status["close"] = self.ps.ps5000aCloseUnit(self.chandle)
 
-                print("PicoScope connection closed")
+                _logger.debug("PicoScope connection closed")
                 self.connected = False
             except Exception as e:
-                print(f"Error closing PicoScope: {e}")
+                _logger.error(f"Error closing PicoScope: {e}")
 
 
 if __name__ == "__main__":
-    # Simple test
+    # Simple test - enable debug mode for standalone testing
+    import logging
+    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s: %(message)s')
+
     print("Testing PicoScope driver...")
-    
+
     scope = PicoScopeDriver()
-    
+
     if scope.connect():
         print("\nPerforming test lock-in measurement at 81 Hz...")
         scope.set_reference_frequency(81)
-        
+
         result = scope.software_lockin(81, num_cycles=50)
-        
+
         if result:
             print(f"\nLock-in results:")
             print(f"  X (in-phase):    {result['X']:+.6f} V")
@@ -1132,7 +1148,7 @@ if __name__ == "__main__":
             print(f"\n  Raw signal range:    {np.min(result['signal_data']):.4f} to {np.max(result['signal_data']):.4f} V")
             print(f"  Raw reference range: {np.min(result['reference_data']):.4f} to {np.max(result['reference_data']):.4f} V")
             print(f"\n  [OK] No clipping! (PicoScope has +/-20V range)")
-        
+
         scope.close()
     else:
         print("Failed to connect to PicoScope")

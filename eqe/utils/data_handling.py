@@ -255,7 +255,7 @@ class MeasurementDataLogger:
     def log(self, message: str, level: str = "INFO") -> None:
         """
         Log a message with timestamp.
-        
+
         Args:
             message: Message to log
             level: Log level (INFO, WARNING, ERROR)
@@ -263,15 +263,27 @@ class MeasurementDataLogger:
         timestamp = datetime.datetime.now().isoformat()
         entry = f"{timestamp} [{level}] {message}"
         self.log_entries.append(entry)
-        
+
         if self.log_file:
             try:
                 with open(self.log_file, 'a') as f:
                     f.write(entry + '\n')
             except Exception:
                 pass  # Silently ignore log file errors
-        
+
         print(entry)
+
+    def debug(self, message: str) -> None:
+        """Debug-level log (silent by default for backward compatibility)."""
+        # Only log to file, not console
+        if self.log_file:
+            timestamp = datetime.datetime.now().isoformat()
+            entry = f"{timestamp} [DEBUG] {message}"
+            try:
+                with open(self.log_file, 'a') as f:
+                    f.write(entry + '\n')
+            except Exception:
+                pass
     
     def get_log_entries(self) -> List[str]:
         """Get all log entries."""

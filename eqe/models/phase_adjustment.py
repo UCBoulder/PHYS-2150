@@ -207,7 +207,8 @@ class PhaseAdjustmentModel:
             else:
                 signal_magnitude = np.max(np.abs(signals))
             
-            self.logger.log(f"Phase analysis: Optimal phase = {optimal_phase:.1f}°, R² = {r_squared:.4f}")
+            # Debug level - summary logged by experiment model on completion
+            self.logger.debug(f"Phase fit: {optimal_phase:.1f}°, R² = {r_squared:.4f}")
             
             return optimal_phase, signal_magnitude, r_squared
             
@@ -235,8 +236,9 @@ class PhaseAdjustmentModel:
                 raise PhaseAdjustmentError("Failed to measure final signal")
             
             final_signal = result['R']  # Use magnitude
-            
-            self.logger.log(f"Optimal phase: {optimal_phase:.1f}°, signal magnitude: {final_signal:.6f} V")
+
+            # Debug level - phase already reported by _fit_sine_to_phase_data
+            self.logger.debug(f"Confirmed signal magnitude: {final_signal:.6f} V")
             
             return final_signal
             
@@ -307,8 +309,7 @@ class PhaseAdjustmentModel:
                 'fit_signals': self.fit_signals.copy()
             }
             
-            self.logger.log(f"Phase adjustment completed for pixel {pixel_number}")
-            
+            # Note: Completion message logged by experiment model with R² value
             if self.completion_callback:
                 self.completion_callback(True, results)
                 

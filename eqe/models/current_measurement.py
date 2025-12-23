@@ -99,13 +99,16 @@ class CurrentMeasurementModel:
         
         return confirmed_wavelength
     
-    def _read_lockin_current(self) -> float:
+    def _read_lockin_current(self, wavelength_nm: float = None) -> float:
         """
         Read current using PicoScope software lock-in amplifier.
-        
+
+        Args:
+            wavelength_nm: Optional wavelength for logging context
+
         Returns:
             float: Measured current in Amps
-            
+
         Raises:
             CurrentMeasurementError: If measurement fails
         """
@@ -113,7 +116,10 @@ class CurrentMeasurementModel:
             # Read current using PicoScope software lock-in with robust averaging
             # Use configured number of measurements for stability
             num_measurements = CURRENT_MEASUREMENT_CONFIG.get("num_measurements", 5)
-            current = self.lockin.read_current(num_measurements=num_measurements)
+            current = self.lockin.read_current(
+                num_measurements=num_measurements,
+                wavelength_nm=wavelength_nm
+            )
             
             if current is None:
                 raise CurrentMeasurementError("Failed to read current from PicoScope")
@@ -144,11 +150,12 @@ class CurrentMeasurementModel:
             stabilization_time = CURRENT_MEASUREMENT_CONFIG.get("stabilization_time", 0.2)
             time.sleep(stabilization_time)
             
-            # Read current using software lock-in
-            current = self._read_lockin_current()
-            
-            self.logger.log(f"Current at {confirmed_wavelength:.1f} nm: {current:.6e} A")
-            
+            # Read current using software lock-in (wavelength passed for logging context)
+            current = self._read_lockin_current(wavelength_nm=confirmed_wavelength)
+
+            # Verbose log to debug level (stats already logged by controller)
+            self.logger.debug(f"Current at {confirmed_wavelength:.1f} nm: {current:.6e} A")
+
             return confirmed_wavelength, current
             
         except (CurrentMeasurementError, MonochromatorError) as e:
@@ -177,7 +184,7 @@ class CurrentMeasurementModel:
             # Set initial filter based on starting wavelength
             self.monochromator.set_filter_for_wavelength(start_wavelength)
             initial_filter = self.monochromator.get_filter_for_wavelength(start_wavelength)
-            self.logger.log(f"Set filter to {initial_filter}")
+            self.logger.debug(f"Set filter to {initial_filter}")
             
             # PicoScope doesn't need parameter configuration (it's software-based)
             
@@ -197,7 +204,7 @@ class CurrentMeasurementModel:
                     # Update filter if wavelength crossed a threshold
                     if self.monochromator.set_filter_for_wavelength(current_wavelength):
                         new_filter = self.monochromator.get_filter_for_wavelength(current_wavelength)
-                        self.logger.log(f"Set filter to {new_filter}")
+                        self.logger.debug(f"Set filter to {new_filter}")
 
                     # Measure current
                     confirmed_wavelength, current = self.measure_current_at_wavelength(current_wavelength)

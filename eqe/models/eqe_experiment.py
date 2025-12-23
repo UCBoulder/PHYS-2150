@@ -335,8 +335,8 @@ class EQEExperimentModel(QObject):
         """Handle phase adjustment completion."""
         if success:
             r_squared = results.get('r_squared', 0)
-            pixel_number = results.get('pixel_number', 0)
-            message = f"Phase adjustment completed for pixel {pixel_number} (R² = {r_squared:.4f})"
+            optimal_phase = results.get('optimal_phase', 0)
+            message = f"Phase adjustment: {optimal_phase:.1f}° (R² = {r_squared:.4f})"
         else:
             message = "Phase adjustment failed"
         self.logger.log(message)

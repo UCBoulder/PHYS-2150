@@ -21,6 +21,10 @@ from ..models.jv_experiment import JVExperimentModel, JVExperimentError
 from ..models.jv_measurement import JVMeasurementResult
 from ..utils.data_export import JVDataExporter
 from ..config.settings import GUI_CONFIG, VALIDATION_PATTERNS
+from common.utils import get_logger, get_error
+
+# Module-level logger for J-V main window
+_logger = get_logger("jv")
 
 
 class JVMainWindow(QMainWindow):
@@ -227,14 +231,18 @@ class JVMainWindow(QMainWindow):
         """Handle device status change."""
         if connected:
             self.controls_panel.set_enabled(True)
-            print(f"Device connected: {message}")
+            _logger.info(f"Device connected: {message}")
         else:
             self.controls_panel.set_enabled(False)
-            QMessageBox.critical(
-                self,
-                "Device Error",
-                f"Device connection failed: {message}"
-            )
+            error = get_error("keithley_not_found", "jv")
+            if error:
+                _logger.student_error(error.title, f"{error.message}\n\n{message}", error.causes, error.actions)
+            else:
+                QMessageBox.critical(
+                    self,
+                    "Device Error",
+                    f"Device connection failed: {message}"
+                )
 
     def _on_measurement_progress(
         self,
@@ -277,14 +285,14 @@ class JVMainWindow(QMainWindow):
         self.plot_widget.update_plot()
 
         if success and result.measurement_complete:
-            print("Measurement complete.")
+            _logger.info("J-V measurement complete")
 
             # Prompt to save data
             cell_number = self.controls_panel.get_cell_number()
             if cell_number:
                 self._prompt_save_data(result, cell_number)
         else:
-            print("Measurement stopped or failed.")
+            _logger.info("Measurement stopped or cancelled")
 
     def _prompt_save_data(
         self,
@@ -309,13 +317,17 @@ class JVMainWindow(QMainWindow):
         if file_path:
             try:
                 self.data_exporter.save_measurement(result, file_path)
-                print(f"Data saved to {file_path}")
+                _logger.info(f"Data saved: {file_path}")
             except Exception as e:
-                QMessageBox.critical(
-                    self,
-                    "Save Error",
-                    f"Failed to save file: {e}"
-                )
+                error = get_error("data_save_failed", "jv")
+                if error:
+                    _logger.student_error(error.title, f"{error.message}\n\nError: {e}", error.causes, error.actions)
+                else:
+                    QMessageBox.critical(
+                        self,
+                        "Save Error",
+                        f"Failed to save file: {e}"
+                    )
 
     def closeEvent(self, event) -> None:
         """Handle window close event."""

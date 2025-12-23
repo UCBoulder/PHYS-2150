@@ -769,59 +769,65 @@ class MonochromatorControlWidget(QGroupBox):
         # Green Dot alignment button at top
         layout.addWidget(self.align_button)
 
-        # Current wavelength display (actual monochromator state)
+        # Main content: two columns (status on left, manual control on right)
+        content_row = QHBoxLayout()
+
+        # Left column: Status displays
+        left_column = QVBoxLayout()
+        left_column.setSpacing(4)
+
+        # Wavelength row
         wavelength_row = QHBoxLayout()
         wl_label = QLabel("Wavelength:")
         wl_label.setStyleSheet(f"font-size: {font_size}px;")
-        wl_label.setFixedWidth(80)
+        wl_label.setFixedWidth(85)
         wavelength_row.addWidget(wl_label)
         wavelength_row.addWidget(self.wavelength_display)
         wavelength_row.addStretch()
-        layout.addLayout(wavelength_row)
+        left_column.addLayout(wavelength_row)
 
-        # Shutter row (indicator next to label, then buttons)
-        shutter_container = QWidget()
-        shutter_container.setFixedHeight(35)
-        shutter_row = QHBoxLayout(shutter_container)
-        shutter_row.setContentsMargins(0, 0, 0, 0)
+        # Shutter row
+        shutter_row = QHBoxLayout()
         shutter_row.setAlignment(Qt.AlignVCenter)
         shutter_label = QLabel("Shutter:")
         shutter_label.setStyleSheet(f"font-size: {font_size}px;")
-        shutter_label.setFixedWidth(80)
+        shutter_label.setFixedWidth(70)
         shutter_row.addWidget(shutter_label, 0, Qt.AlignVCenter)
-        self.shutter_indicator.setMinimumWidth(70)
+        self.shutter_indicator.setMinimumWidth(60)
         shutter_row.addWidget(self.shutter_indicator, 0, Qt.AlignVCenter)
         shutter_row.addWidget(self.open_shutter_button, 0, Qt.AlignVCenter)
         shutter_row.addWidget(self.close_shutter_button, 0, Qt.AlignVCenter)
         shutter_row.addStretch()
-        layout.addWidget(shutter_container)
+        left_column.addLayout(shutter_row)
 
         # Filter row
         filter_row = QHBoxLayout()
         filter_label_text = QLabel("Filter:")
         filter_label_text.setStyleSheet(f"font-size: {font_size}px;")
-        filter_label_text.setFixedWidth(80)
+        filter_label_text.setFixedWidth(70)
         filter_row.addWidget(filter_label_text)
         filter_row.addWidget(self.filter_label)
         filter_row.addStretch()
-        layout.addLayout(filter_row)
+        left_column.addLayout(filter_row)
 
-        # Separator for manual control section
-        separator = QLabel("─── Manual Control ───")
-        separator.setAlignment(Qt.AlignCenter)
-        separator.setStyleSheet(f"font-size: {font_size - 2}px; color: gray;")
-        layout.addWidget(separator)
+        content_row.addLayout(left_column, 1)
 
-        # Manual wavelength control row
-        manual_row = QHBoxLayout()
+        # Right column: Manual control
+        right_column = QVBoxLayout()
+        right_column.setSpacing(4)
+
         set_label = QLabel("Set to:")
-        set_label.setStyleSheet(f"font-size: {font_size}px;")
-        set_label.setFixedWidth(80)
-        manual_row.addWidget(set_label)
-        manual_row.addWidget(self.wavelength_spinbox, 1)
-        manual_row.addWidget(self.go_button)
-        layout.addLayout(manual_row)
+        set_label.setStyleSheet(f"font-size: {font_size}px; color: gray;")
+        set_label.setAlignment(Qt.AlignCenter)
+        right_column.addWidget(set_label)
 
+        right_column.addWidget(self.wavelength_spinbox)
+        right_column.addWidget(self.go_button)
+        right_column.addStretch()
+
+        content_row.addLayout(right_column)
+
+        layout.addLayout(content_row)
         self.setLayout(layout)
 
     def _connect_signals(self) -> None:

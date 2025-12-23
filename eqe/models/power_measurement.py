@@ -156,7 +156,7 @@ class PowerMeasurementModel:
             # Set initial filter based on starting wavelength
             self.monochromator.set_filter_for_wavelength(start_wavelength)
             initial_filter = self.monochromator.get_filter_for_wavelength(start_wavelength)
-            self.logger.log(f"Set filter to {initial_filter}")
+            self.logger.debug(f"Set filter to {initial_filter}")
             
             # Calculate total number of measurements for progress
             total_measurements = int((end_wavelength - start_wavelength) / step_size) + 1
@@ -168,7 +168,7 @@ class PowerMeasurementModel:
                     # Update filter if wavelength crossed a threshold
                     if self.monochromator.set_filter_for_wavelength(current_wavelength):
                         new_filter = self.monochromator.get_filter_for_wavelength(current_wavelength)
-                        self.logger.log(f"Set filter to {new_filter}")
+                        self.logger.debug(f"Set filter to {new_filter}")
 
                     # Measure power
                     confirmed_wavelength, power = self.measure_power_at_wavelength(current_wavelength)

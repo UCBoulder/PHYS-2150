@@ -12,6 +12,10 @@ import numpy as np
 
 from ..drivers.picoscope_driver import PicoScopeDriver
 from ..config.settings import DEVICE_CONFIGS, DeviceType, CURRENT_MEASUREMENT_CONFIG
+from common.utils import get_logger, MeasurementStats, get_error
+
+# Module-level logger for lock-in controller
+_logger = get_logger("eqe")
 
 
 class PicoScopeError(Exception):
@@ -252,7 +256,7 @@ class PicoScopeController:
             # Restore original cycles
             self._num_cycles = original_cycles
 
-    def read_current(self, num_measurements: int = 5) -> Optional[float]:
+    def read_current(self, num_measurements: int = 5, wavelength_nm: float = None) -> Optional[float]:
         """
         Read photocurrent using software lock-in with robust averaging.
 
@@ -261,6 +265,7 @@ class PicoScopeController:
 
         Args:
             num_measurements: Number of measurements to average (default: 5)
+            wavelength_nm: Optional wavelength for logging context
 
         Returns:
             Optional[float]: Measured current in Amps, or None if error
@@ -282,7 +287,7 @@ class PicoScopeController:
                     # R = sqrt(X^2 + Y^2) gives us the signal amplitude regardless of phase
                     R_values.append(result['R'])
                 else:
-                    print(f"Warning: Lock-in measurement {i+1}/{num_measurements} failed")
+                    _logger.info(f"Lock-in measurement {i+1}/{num_measurements} failed, retrying...")
             
             if not R_values:
                 raise PicoScopeError("All lock-in measurements failed")
@@ -312,19 +317,34 @@ class PicoScopeController:
             
             # Calculate coefficient of variation for quality metric
             cv = 100 * std_signal / average_signal if average_signal > 0 else 0
-            
-            print(f"Lock-in measurement: {average_signal:.6f} ± {std_signal:.6f} V "
-                  f"(n={len(R_trimmed)}/{num_measurements}, outliers={n_outliers}, CV={cv:.2f}%)")
-            
-            # Check for saturation
-            if abs(average_signal) > self._saturation_threshold_v:
-                print(f"Warning: Signal near saturation ({average_signal:.3f} V)")
 
-            # Apply transimpedance amplifier gain
+            # Check for saturation - student-facing warning (before conversion)
+            if abs(average_signal) > self._saturation_threshold_v:
+                error = get_error("signal_saturation", "eqe")
+                if error:
+                    _logger.student_error(error.title, error.message, error.causes, error.actions)
+
+            # Apply transimpedance amplifier gain to convert voltage to current
             # Note: The correction factor (0.5) is already applied in perform_lockin_measurement
             # via the driver. Here we just convert voltage to current using TIA gain.
             current = average_signal * self._transimpedance_gain
-            
+            current_std = std_signal * self._transimpedance_gain
+
+            # Create measurement statistics for student display (CRITICAL for learning objectives!)
+            # Show current (not voltage) since that's what students care about
+            stats = MeasurementStats(
+                mean=current,
+                std_dev=current_std,
+                n_measurements=len(R_trimmed),
+                n_total=num_measurements,
+                n_outliers=n_outliers,
+                cv_percent=cv,
+                unit="A",
+                wavelength_nm=wavelength_nm
+            )
+            # Log to console and emit to GUI stats widget
+            _logger.student_stats(stats)
+
             return current
             
         except Exception as e:
@@ -369,9 +389,15 @@ class PicoScopeController:
             # For now, we'll use a simplified quality metric
             # Higher R indicates better signal
             quality_metric = min(1.0, R / self._signal_quality_reference_v)
-            
-            print(f"Phase response: Phase={optimal_phase:.1f}°, Magnitude={signal_magnitude:.6f} V, Quality={quality_metric:.4f}")
-            
+
+            _logger.debug(f"Phase response: Phase={optimal_phase:.1f}°, Magnitude={signal_magnitude:.6f} V, Quality={quality_metric:.4f}")
+
+            # Check for low quality - may indicate lamp issues
+            if quality_metric < 0.5:
+                error = get_error("phase_quality_low", "eqe")
+                if error:
+                    _logger.student_error(error.title, error.message, error.causes, error.actions)
+
             return optimal_phase, signal_magnitude, quality_metric
             
         except Exception as e:

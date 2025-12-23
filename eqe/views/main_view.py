@@ -22,6 +22,7 @@ from ..config.settings import GUI_CONFIG, ERROR_MESSAGES, FILE_NAMING, PHASE_ADJ
 from .measurement_tab import MeasurementTab
 from .stability_test_tab import StabilityTestTab
 from .eqe_analysis_tab import EQEAnalysisTab
+from common.utils import TieredLogger, MeasurementStats
 import datetime
 
 
@@ -79,6 +80,12 @@ class MainApplicationView(QMainWindow):
         self._staff_mode_enabled = False
         self.eqe_analysis_tab = EQEAnalysisTab()
 
+        # Staff debug mode (Ctrl+Shift+D to show technical debug output)
+        self._staff_debug_mode = False
+
+        # Connect tiered logger to measurement stats widget
+        self._setup_logger_callbacks()
+
         # Disable all interactive buttons until device initialization completes
         # This prevents focus issues when native PicoScope splash screen is shown
         self._disable_buttons_during_init()
@@ -120,6 +127,64 @@ class MainApplicationView(QMainWindow):
         self.status_timer = QTimer()
         self.status_timer.timeout.connect(self._update_status)
         self.status_timer.start(1000)  # Update every second
+
+    def _setup_logger_callbacks(self) -> None:
+        """
+        Connect the tiered logger to GUI components.
+
+        This routes measurement statistics to the stats widget and
+        enables error dialogs for student-friendly error messages.
+        """
+        eqe_logger = TieredLogger.get_logger("eqe")
+
+        # Connect stats callback to update measurement stats widget
+        eqe_logger.set_stats_callback(self._on_measurement_stats)
+
+        # Connect error callback for student-friendly error dialogs
+        eqe_logger.set_error_callback(self._on_student_error)
+
+        # Connect GUI status callback for status bar updates
+        eqe_logger.set_gui_callback(self._on_logger_status)
+
+    def _on_measurement_stats(self, stats: MeasurementStats) -> None:
+        """
+        Handle measurement statistics from the tiered logger.
+
+        Routes statistics to the measurement stats widget for display.
+        """
+        self.measurement_tab.update_measurement_stats(stats)
+
+    def _on_student_error(self, title: str, message: str,
+                          causes: list, actions: list) -> None:
+        """
+        Handle student-friendly error messages from the tiered logger.
+
+        Displays an error dialog with context and suggested actions.
+        """
+        # Build detailed message
+        full_message = message
+
+        if causes:
+            full_message += "\n\nPossible causes:\n"
+            for cause in causes:
+                full_message += f"  - {cause}\n"
+
+        if actions:
+            full_message += "\nWhat to do:\n"
+            for action in actions:
+                full_message += f"  - {action}\n"
+
+        QMessageBox.warning(self, title, full_message.strip())
+
+    def _on_logger_status(self, message: str) -> None:
+        """
+        Handle status messages from the tiered logger.
+
+        Updates the status display with student-facing messages.
+        """
+        # Update status in the progress group
+        status_display = self.measurement_tab.get_status_display()
+        status_display.status_label.setText(message)
 
     def _disable_buttons_during_init(self) -> None:
         """
@@ -570,6 +635,8 @@ class MainApplicationView(QMainWindow):
             # Start current measurement
             if self.experiment_model.start_current_measurement(self._current_pixel_number):
                 plot_widget.set_current_measuring(True)
+                # Auto-switch to Current Measurement tab to show stats
+                self.measurement_tab.show_current_measurement_tab()
                 status_display = self.measurement_tab.get_status_display()
                 status_display.set_status_message(f"Starting current measurement for pixel {self._current_pixel_number}...")
             else:
@@ -744,10 +811,15 @@ class MainApplicationView(QMainWindow):
         Handle key press events.
 
         Ctrl+Shift+E toggles hidden staff mode (EQE Analysis tab).
+        Ctrl+Shift+D toggles staff debug mode (technical debug output in console).
         """
-        if (event.modifiers() == (Qt.ControlModifier | Qt.ShiftModifier)
-                and event.key() == Qt.Key_E):
-            self._toggle_staff_mode()
+        if event.modifiers() == (Qt.ControlModifier | Qt.ShiftModifier):
+            if event.key() == Qt.Key_E:
+                self._toggle_staff_mode()
+            elif event.key() == Qt.Key_D:
+                self._toggle_debug_mode()
+            else:
+                super().keyPressEvent(event)
         else:
             super().keyPressEvent(event)
 
@@ -770,6 +842,37 @@ class MainApplicationView(QMainWindow):
             # Switch to the new tab
             self.tab_widget.setCurrentWidget(self.eqe_analysis_tab)
             self.logger.info("Staff mode enabled (Ctrl+Shift+E)")
+
+    def _toggle_debug_mode(self) -> None:
+        """
+        Toggle staff debug mode.
+
+        When enabled, technical debug output (samples, timebases, SDK calls)
+        appears in the console. When disabled, only INFO-level messages appear.
+
+        This is for staff troubleshooting only - students should not need this.
+        """
+        self._staff_debug_mode = not self._staff_debug_mode
+        TieredLogger.set_staff_debug_mode(self._staff_debug_mode)
+
+        if self._staff_debug_mode:
+            self.logger.info("Staff debug mode ENABLED (Ctrl+Shift+D) - technical output visible in console")
+            QMessageBox.information(
+                self,
+                "Debug Mode Enabled",
+                "Staff debug mode is now ON.\n\n"
+                "Technical debug output (samples, timebases, SDK calls) "
+                "will appear in the console.\n\n"
+                "Press Ctrl+Shift+D again to disable."
+            )
+        else:
+            self.logger.info("Staff debug mode disabled")
+            QMessageBox.information(
+                self,
+                "Debug Mode Disabled",
+                "Staff debug mode is now OFF.\n\n"
+                "Technical output hidden from console."
+            )
 
     def closeEvent(self, event) -> None:
         """Handle application close event."""

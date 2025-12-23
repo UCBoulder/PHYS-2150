@@ -6,13 +6,15 @@ It encapsulates all the UI components for power and current measurements.
 """
 
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout
+    QWidget, QVBoxLayout, QHBoxLayout, QTabWidget
 )
 from PySide6.QtCore import Signal
 from typing import Dict, Any
 
 from .plot_widgets import MultiPlotWidget
 from .control_widgets import ParameterInputWidget, StatusDisplayWidget, MonochromatorControlWidget
+from .measurement_stats_widget import MeasurementStatsWidget
+from common.utils import MeasurementStats
 
 
 class MeasurementTab(QWidget):
@@ -43,6 +45,7 @@ class MeasurementTab(QWidget):
         self.parameter_input = ParameterInputWidget()
         self.status_display = StatusDisplayWidget()
         self.monochromator_control = MonochromatorControlWidget()
+        self.measurement_stats = MeasurementStatsWidget()
         self.plot_widget = MultiPlotWidget()
 
         # Set up layout
@@ -65,10 +68,16 @@ class MeasurementTab(QWidget):
         left_column.addWidget(self.status_display.device_group)
         left_column.addStretch()
 
-        # Right column: Progress + Monochromator Controls (stacked)
+        # Right column: Progress + Tabbed widget for Stats/Monochromator
         right_column = QVBoxLayout()
         right_column.addWidget(self.status_display.progress_group)
-        right_column.addWidget(self.monochromator_control)
+
+        # Create tabbed widget for Monochromator and Current Measurement
+        self.controls_tab_widget = QTabWidget()
+        self.controls_tab_widget.addTab(self.monochromator_control, "Monochromator")
+        self.controls_tab_widget.addTab(self.measurement_stats, "Current Measurement")
+        # Monochromator tab (index 0) is default
+        right_column.addWidget(self.controls_tab_widget)
         right_column.addStretch()
 
         top_row.addLayout(left_column)
@@ -143,18 +152,22 @@ class MeasurementTab(QWidget):
     def set_measurement_active(self, active: bool, measurement_type: str = None) -> None:
         """
         Set measurement active state.
-        
+
         Args:
             active: Whether measurement is active
             measurement_type: Type of measurement ('power', 'current', or None)
         """
-        # Enable/disable buttons based on state
-        if active:
-            # Disable start buttons when measuring
-            pass  # Handled by plot_widget
-        else:
-            # Enable buttons when not measuring
-            pass  # Handled by plot_widget
+        # Auto-switch to Current Measurement tab when measurement starts
+        if active and measurement_type == 'current':
+            self.show_current_measurement_tab()
+
+    def show_current_measurement_tab(self) -> None:
+        """Switch to the Current Measurement tab."""
+        self.controls_tab_widget.setCurrentIndex(1)
+
+    def show_monochromator_tab(self) -> None:
+        """Switch to the Monochromator Controls tab."""
+        self.controls_tab_widget.setCurrentIndex(0)
     
     def get_plot_widget(self) -> MultiPlotWidget:
         """Get the plot widget (for direct access if needed)."""
@@ -184,3 +197,27 @@ class MeasurementTab(QWidget):
     def get_monochromator_control(self) -> MonochromatorControlWidget:
         """Get the monochromator control widget."""
         return self.monochromator_control
+
+    def get_measurement_stats(self) -> MeasurementStatsWidget:
+        """Get the measurement stats widget."""
+        return self.measurement_stats
+
+    def update_measurement_stats(self, stats: MeasurementStats) -> None:
+        """
+        Update the measurement statistics display.
+
+        This is called by the tiered logger to show students
+        the current measurement's statistical information.
+
+        Args:
+            stats: MeasurementStats object with mean, std_dev, etc.
+        """
+        self.measurement_stats.update_stats(stats)
+
+    def set_measurement_wavelength(self, wavelength_nm: float) -> None:
+        """Set the current wavelength for the stats display."""
+        self.measurement_stats.set_wavelength(wavelength_nm)
+
+    def clear_measurement_stats(self) -> None:
+        """Clear the measurement statistics display."""
+        self.measurement_stats.clear()

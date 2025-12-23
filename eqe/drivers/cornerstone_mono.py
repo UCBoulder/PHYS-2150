@@ -1,5 +1,10 @@
 import threading
 
+from common.utils import get_logger, get_error
+
+# Module-level logger for monochromator driver
+_logger = get_logger("eqe")
+
 # Find a CornerstoneB connected to the USB.
 def FindUsbCSB(rm, sernum_str="0", verbose=False):
     found_unit = False
@@ -9,13 +14,13 @@ def FindUsbCSB(rm, sernum_str="0", verbose=False):
     instr_list = rm.list_resources()
 
     if verbose:
-        print("usb instr list:", instr_list)
+        _logger.debug(f"USB instrument list: {instr_list}")
 
     # Examine each entry in the instrument list.
     for instr in instr_list:
         fields = instr.split('::')
         if verbose:
-            print(fields, len(fields))
+            _logger.debug(f"Examining: {fields}")
 
         if len(fields) == 5:  # 5 fields in a usbtmc device entry of the instrument list.
             if fields[0] == "USB0":  # ... should probably not care about the '0'...
@@ -27,7 +32,7 @@ def FindUsbCSB(rm, sernum_str="0", verbose=False):
                             break  # Found one! Stop examining the instrument list
 
     if verbose and found_unit:
-        print(fields[0], fields[1], fields[2], addr_str)
+        _logger.debug(f"Found device: {fields[0]} {fields[1]} {fields[2]} at {addr_str}")
 
     return found_unit, addr_str
 
@@ -37,21 +42,21 @@ def GetUsbUnit(rm, sernum_str="0", verbose=False):
     thisUnit = None
 
     if sernum_str != "0" and verbose:
-        print("get looking for sn ", sernum_str)
+        _logger.debug(f"Looking for serial number: {sernum_str}")
 
     bOk, addr_str = FindUsbCSB(rm, sernum_str, verbose)
 
     if bOk:
         if verbose:
-            print("addr_str:", addr_str)
+            _logger.debug(f"Address: {addr_str}")
 
         thisUnit = rm.open_resource(addr_str)
 
     if verbose:
         if bOk:
-            print("Found Monochromator:", thisUnit)
+            _logger.debug(f"Found monochromator: {thisUnit}")
         else:
-            print("unit not found!")
+            _logger.debug("Monochromator not found in USB scan")
 
     return bOk, thisUnit, addr_str
 
@@ -61,11 +66,13 @@ class Cornerstone_Mono:
         self.serial_number = self.extract_serial_number(self.addr_str)
 
         if self.bFound:
-            print("Found Monochromator:", self.unit)
-            #print("Monochromator Serial Number:", self.serial_number)
+            _logger.info(f"Monochromator connected: {self.unit}")
             self.unit.timeout = timeout_msec
         else:
-            print("Did not find Monochromator on", rem_ifc, "- make sure it is turned on and connected to the computer.")
+            _logger.error(f"Monochromator not found on {rem_ifc}")
+            error = get_error("monochromator_not_found", "eqe")
+            if error:
+                _logger.student_error(error.title, error.message, error.causes, error.actions)
 
         # Use python's mutual exclusion feature to allow multiple threads to talk
         # safely with the unit. This is a real bacon-saver.
@@ -87,7 +94,7 @@ class Cornerstone_Mono:
         self.lock.acquire()
 
         if verbose:
-            print("cmd:", cmd_str.strip())
+            _logger.debug(f"Mono cmd: {cmd_str.strip()}")
 
         self.unit.write(cmd_str)
 
@@ -98,12 +105,12 @@ class Cornerstone_Mono:
 
         try:
             if verbose:
-                print("query:", qry_str.strip())
+                _logger.debug(f"Mono query: {qry_str.strip()}")
 
             qry_response = self.unit.query(qry_str)
         except:
             qry_response = " "
-            print("possible timeout:", qry_str)
+            _logger.warning(f"Monochromator query timeout: {qry_str.strip()}")
 
         self.lock.release()
 

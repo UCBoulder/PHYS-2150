@@ -20,6 +20,10 @@ from dataclasses import dataclass, field
 
 from ..controllers.keithley_2450 import Keithley2450Controller, Keithley2450Error
 from ..config.settings import JV_MEASUREMENT_CONFIG
+from common.utils import get_logger, get_error
+
+# Module-level logger for J-V measurement
+_logger = get_logger("jv")
 
 
 class JVMeasurementError(Exception):
@@ -291,9 +295,12 @@ class JVMeasurementModel:
             success = True
 
         except Keithley2450Error as e:
-            print(f"Measurement error: {e}")
+            error = get_error("measurement_error", "jv")
+            if error:
+                _logger.student_error(error.title, error.message, error.causes, error.actions)
+            _logger.error(f"Keithley error: {e}")
         except Exception as e:
-            print(f"Unexpected error during measurement: {e}")
+            _logger.error(f"Unexpected error during measurement: {e}")
         finally:
             # Turn off output
             try:
@@ -367,7 +374,7 @@ class JVMeasurementModel:
                     )
 
             except Keithley2450Error as e:
-                print(f"Error during {direction} sweep at {voltage}V: {e}")
+                _logger.warning(f"Error during {direction} sweep at {voltage}V: {e}")
                 return False
 
         return True

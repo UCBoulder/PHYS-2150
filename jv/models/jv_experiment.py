@@ -25,7 +25,11 @@ from ..config.settings import (
     VALIDATION_PATTERNS,
 )
 from ..config import settings
+from common.utils import get_logger
 import re
+
+# Module-level logger for J-V experiment
+_logger = get_logger("jv")
 
 
 class JVExperimentError(Exception):
@@ -111,7 +115,7 @@ class JVExperimentModel(QObject):
                 f"Connected: {address}"
             )
 
-            print(f"Keithley 2450 initialized: {device_id}")
+            _logger.info(f"Keithley 2450 connected: {device_id}")
             return True
 
         except Keithley2450Error as e:
@@ -306,7 +310,7 @@ class JVExperimentModel(QObject):
             self._device_initialized = False
 
         except Exception as e:
-            print(f"Cleanup error: {e}")
+            _logger.debug(f"Cleanup error: {e}")
 
     def __del__(self):
         """Destructor to ensure cleanup."""
