@@ -54,23 +54,28 @@ class JVApi(QObject):
         from .config import settings
         offline_mode = getattr(settings, 'OFFLINE_MODE', False)
 
+        # In offline mode, we're never "really" connected to hardware
+        if offline_mode:
+            return json.dumps({
+                "connected": False,
+                "message": "Offline mode",
+                "offline_mode": True
+            })
+
+        # Check real hardware connection
         if self._experiment:
             connected = self._experiment.is_initialized()
-            if connected:
-                message = "Keithley 2450"
-            elif offline_mode:
-                message = "Offline mode"
-            else:
-                message = "Not connected"
+            message = "Keithley 2450" if connected else "Not connected"
             return json.dumps({
                 "connected": connected,
                 "message": message,
-                "offline_mode": offline_mode
+                "offline_mode": False
             })
+
         return json.dumps({
             "connected": False,
             "message": "No experiment model",
-            "offline_mode": offline_mode
+            "offline_mode": False
         })
 
     @Slot(str, result=str)

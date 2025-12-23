@@ -151,19 +151,6 @@
         </div>
     </div>
 
-    <!-- Save Data Modal -->
-    <div class="modal-overlay" id="save-modal">
-        <div class="modal">
-            <div class="modal-title">Measurement Complete</div>
-            <div class="modal-body">
-                <p>Would you like to save the measurement data?</p>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeSaveModal()">Discard</button>
-                <button class="btn btn-primary" onclick="confirmSave()">Save</button>
-            </div>
-        </div>
-    </div>
 
     <script>
         /**
@@ -377,17 +364,6 @@
             }
         });
 
-        // Allow Enter key to save, Escape to discard in save modal
-        document.getElementById('save-modal').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                confirmSave();
-            } else if (e.key === 'Escape') {
-                e.preventDefault();
-                closeSaveModal();
-            }
-        });
-
         function closePixelModal() {
             document.getElementById('pixel-modal').classList.remove('active');
         }
@@ -521,27 +497,11 @@
             updateMeasuringState(false);
 
             if (success) {
-                // Enable save button and show save modal
+                // Enable save button and prompt to save immediately
                 document.getElementById('save-btn').disabled = false;
-                showSaveModal();
                 console.log('Measurement complete');
+                saveData();
             }
-        }
-
-        /**
-         * Save modal functions
-         */
-        function showSaveModal() {
-            document.getElementById('save-modal').classList.add('active');
-        }
-
-        function closeSaveModal() {
-            document.getElementById('save-modal').classList.remove('active');
-        }
-
-        function confirmSave() {
-            closeSaveModal();
-            saveData();
         }
 
         /**
