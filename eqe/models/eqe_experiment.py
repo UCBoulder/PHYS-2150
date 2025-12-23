@@ -222,21 +222,12 @@ class EQEExperimentModel(QObject):
     def _initialize_lockin(self) -> None:
         """Initialize PicoScope software lock-in amplifier."""
         try:
-            config = DEVICE_CONFIGS[DeviceType.PICOSCOPE_LOCKIN]
             self.lockin = PicoScopeController()
-            
-            # Connect to PicoScope
+
+            # Connect to PicoScope (controller loads config in __init__)
             if not self.lockin.connect():
                 raise PicoScopeError("Failed to connect to PicoScope")
-            
-            # Configure with default parameters from settings
-            chopper_freq = config["default_chopper_freq"]
-            num_cycles = config["default_num_cycles"]
-            
-            self.lockin.set_reference_frequency(chopper_freq)
-            self.lockin.set_num_cycles(num_cycles)
-            # No correction factor needed - software lock-in uses actual square wave reference!
-            
+
             self._notify_device_status("PicoScope Lock-in", True, "Connected")
             self.logger.log("PicoScope lock-in initialized")
         except PicoScopeError as e:

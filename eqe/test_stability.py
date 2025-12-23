@@ -98,17 +98,11 @@ class StabilityTest:
             serial_number = self.monochromator.serial_number
             print(f"✓ Monochromator connected (S/N: {serial_number})")
             
-            # Initialize PicoScope lock-in
+            # Initialize PicoScope lock-in (controller loads config in __init__)
             print("\n[3/3] Initializing PicoScope Lock-in...")
-            config = DEVICE_CONFIGS[DeviceType.PICOSCOPE_LOCKIN]
             self.lockin = PicoScopeController()
             if not self.lockin.connect():
                 raise Exception("Failed to connect to PicoScope")
-            
-            chopper_freq = config["default_chopper_freq"]
-            num_cycles = config["default_num_cycles"]
-            self.lockin.set_reference_frequency(chopper_freq)
-            self.lockin.set_num_cycles(num_cycles)
             print("✓ PicoScope connected")
             
             # Create measurement models

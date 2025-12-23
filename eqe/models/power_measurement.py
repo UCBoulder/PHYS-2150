@@ -13,8 +13,6 @@ from ..controllers.thorlabs_power_meter import ThorlabsPowerMeterController, Tho
 from ..controllers.monochromator import MonochromatorController, MonochromatorError
 from ..config.settings import (
     POWER_MEASUREMENT_CONFIG,
-    FILTER_THRESHOLD_LOWER,
-    FILTER_THRESHOLD_UPPER,
     PHASE_ADJUSTMENT_CONFIG,
 )
 from ..utils.data_handling import MeasurementDataLogger
@@ -154,21 +152,11 @@ class PowerMeasurementModel:
             
             # Prepare monochromator
             self.monochromator.open_shutter()
-            
-            # Set initial filter based on starting wavelength and track current filter
-            # Filter positions: 1 = 400 nm filter, 2 = 780 nm filter, 3 = no filter
-            if start_wavelength <= FILTER_THRESHOLD_LOWER:
-                current_filter = 3  # No filter
-                self.monochromator.set_filter(current_filter)
-                self.logger.log("Set filter to 3 (no filter)")
-            elif start_wavelength <= FILTER_THRESHOLD_UPPER:
-                current_filter = 1  # 400 nm filter
-                self.monochromator.set_filter(current_filter)
-                self.logger.log("Set filter to 1 (400 nm)")
-            else:
-                current_filter = 2  # 780 nm filter
-                self.monochromator.set_filter(current_filter)
-                self.logger.log("Set filter to 2 (780 nm)")
+
+            # Set initial filter based on starting wavelength
+            self.monochromator.set_filter_for_wavelength(start_wavelength)
+            initial_filter = self.monochromator.get_filter_for_wavelength(start_wavelength)
+            self.logger.log(f"Set filter to {initial_filter}")
             
             # Calculate total number of measurements for progress
             total_measurements = int((end_wavelength - start_wavelength) / step_size) + 1
@@ -177,16 +165,11 @@ class PowerMeasurementModel:
             current_wavelength = start_wavelength
             while current_wavelength <= end_wavelength and not self._stop_requested:
                 try:
-                    # Update filter only when crossing thresholds
-                    if current_wavelength > FILTER_THRESHOLD_LOWER and current_filter == 3:
-                        current_filter = 1  # Switch to 400 nm filter
-                        self.monochromator.set_filter(current_filter)
-                        self.logger.log("Set filter to 1 (400 nm)")
-                    elif current_wavelength > FILTER_THRESHOLD_UPPER and current_filter == 1:
-                        current_filter = 2  # Switch to 780 nm filter
-                        self.monochromator.set_filter(current_filter)
-                        self.logger.log("Set filter to 2 (780 nm)")
-                    
+                    # Update filter if wavelength crossed a threshold
+                    if self.monochromator.set_filter_for_wavelength(current_wavelength):
+                        new_filter = self.monochromator.get_filter_for_wavelength(current_wavelength)
+                        self.logger.log(f"Set filter to {new_filter}")
+
                     # Measure power
                     confirmed_wavelength, power = self.measure_power_at_wavelength(current_wavelength)
                     
@@ -223,10 +206,7 @@ class PowerMeasurementModel:
             try:
                 alignment_wl = PHASE_ADJUSTMENT_CONFIG["alignment_wavelength"]
                 self.logger.log(f"Setting monochromator to green alignment position ({alignment_wl} nm)")
-                self.monochromator.set_filter(1)
-                self.monochromator.set_grating(1)
-                self.monochromator.set_wavelength(alignment_wl)
-                self.monochromator.open_shutter()
+                self.monochromator.align_for_measurement(alignment_wl)
             except MonochromatorError as e:
                 self.logger.log(f"Warning: Failed to set alignment position: {e}", "WARNING")
                 
@@ -319,14 +299,11 @@ class PowerMeasurementModel:
         Args:
             alignment_wavelength: Wavelength for alignment in nm (defaults to config value)
         """
-        if alignment_wavelength is None:
-            alignment_wavelength = PHASE_ADJUSTMENT_CONFIG["alignment_wavelength"]
         try:
+            if alignment_wavelength is None:
+                alignment_wavelength = PHASE_ADJUSTMENT_CONFIG["alignment_wavelength"]
             self.logger.log(f"Aligning monochromator to {alignment_wavelength} nm")
-            self.monochromator.set_filter(1)
-            self.monochromator.set_grating(1)
-            self.monochromator.set_wavelength(alignment_wavelength)
-            self.monochromator.open_shutter()
+            self.monochromator.align_for_measurement(alignment_wavelength)
         except MonochromatorError as e:
             raise PowerMeasurementError(f"Failed to align monochromator: {e}")
     

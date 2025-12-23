@@ -240,8 +240,7 @@ class PicoScopeController:
 
             # Convert R (voltage) to current using TIA gain
             # R is in volts, TIA gain is 1 MΩ, so I = V / R_tia = V * 1e-6
-            from ..config.settings import CURRENT_MEASUREMENT_CONFIG
-            tia_gain = CURRENT_MEASUREMENT_CONFIG.get("transimpedance_gain", 1e-6)
+            tia_gain = CURRENT_MEASUREMENT_CONFIG["transimpedance_gain"]
             current = result['R'] * tia_gain
 
             return current

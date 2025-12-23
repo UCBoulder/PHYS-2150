@@ -17,6 +17,7 @@ from ..config.settings import (
     DEVICE_CONFIGS,
     FILTER_THRESHOLD_LOWER,
     FILTER_THRESHOLD_UPPER,
+    PHASE_ADJUSTMENT_CONFIG,
 )
 
 
@@ -209,19 +210,37 @@ class MonochromatorController:
         
         self.set_wavelength(wavelength)
     
-    def set_filter_for_wavelength(self, wavelength: float) -> None:
+    def get_filter_for_wavelength(self, wavelength: float) -> int:
         """
-        Set appropriate filter based on wavelength.
-        
+        Get the appropriate filter number for a given wavelength.
+
         Args:
             wavelength: Wavelength in nanometers
+
+        Returns:
+            int: Filter position (1=400nm, 2=780nm, 3=no filter)
         """
         if wavelength <= FILTER_THRESHOLD_LOWER:
-            self.set_filter(3)  # No filter
+            return 3  # No filter
         elif wavelength <= FILTER_THRESHOLD_UPPER:
-            self.set_filter(1)  # 400 nm filter
+            return 1  # 400 nm filter
         else:
-            self.set_filter(2)  # 780 nm filter
+            return 2  # 780 nm filter
+
+    def set_filter_for_wavelength(self, wavelength: float) -> bool:
+        """
+        Set appropriate filter based on wavelength.
+
+        Args:
+            wavelength: Wavelength in nanometers
+
+        Returns:
+            bool: True if filter was changed, False if already at correct position
+        """
+        new_filter = self.get_filter_for_wavelength(wavelength)
+        old_filter = self._current_filter
+        self.set_filter(new_filter)
+        return old_filter != new_filter
     
     def configure_for_wavelength(self, wavelength: float) -> float:
         """
@@ -243,11 +262,32 @@ class MonochromatorController:
         # Get confirmed wavelength
         return self.get_wavelength()
     
+    def align_for_measurement(self, wavelength: float = None) -> None:
+        """
+        Configure monochromator for visual alignment.
+
+        Sets filter, grating, and wavelength for alignment, then opens shutter.
+        Typically used before measurements to visually verify beam position.
+
+        Args:
+            wavelength: Alignment wavelength in nm (defaults to config value)
+
+        Raises:
+            MonochromatorError: If alignment fails
+        """
+        if wavelength is None:
+            wavelength = PHASE_ADJUSTMENT_CONFIG["alignment_wavelength"]
+
+        self.set_filter(1)
+        self.set_grating(1)
+        self.set_wavelength(wavelength)
+        self.open_shutter()
+
     def __enter__(self):
         """Context manager entry."""
         self.connect()
         return self
-    
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Context manager exit."""
         self.disconnect()
