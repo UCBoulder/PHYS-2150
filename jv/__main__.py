@@ -6,7 +6,7 @@ Allows running the JV application as a module:
     python -m jv --offline
 """
 
-from .main import main
+from .web_main import main
 
 if __name__ == "__main__":
     main()
