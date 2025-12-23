@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PHYS 2150 Measurement Suite</title>
+    <link rel="stylesheet" href="css/theme.css">
+    <!-- Qt WebChannel JS library -->
+    <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+</head>
+<body class="dark-mode">
+    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme (Ctrl+Shift+C)" aria-label="Toggle light/dark theme">
+        <svg id="sun-icon" class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"/>
+            <line x1="12" y1="1" x2="12" y2="3"/>
+            <line x1="12" y1="21" x2="12" y2="23"/>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+            <line x1="1" y1="12" x2="3" y2="12"/>
+            <line x1="21" y1="12" x2="23" y2="12"/>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+        <svg id="moon-icon" class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+    </button>
+
+    <h1>PHYS 2150 Measurement Suite</h1>
+    <p class="subtitle">Select a measurement application:</p>
+
+    <div class="button-container">
+        <button class="measurement-btn btn-eqe" onclick="launchEQE()" id="btn-eqe">
+            <span class="title">EQE Measurement</span>
+            <span class="description">External Quantum Efficiency<br>Spectral response measurement</span>
+        </button>
+
+        <button class="measurement-btn btn-jv" onclick="launchJV()" id="btn-jv">
+            <span class="title">J-V Measurement</span>
+            <span class="description">Current-Voltage Curves<br>Solar cell characterization</span>
+        </button>
+    </div>
+
+    <p class="footer">CU Boulder Physics Undergraduate Labs</p>
+
+    <script>
+        /**
+         * PHYS 2150 Launcher - Qt WebChannel Version
+         */
+
+        // Python API reference (set when QWebChannel connects)
+        let api = null;
+
+        // Theme management - just light and dark
+        let isDarkMode = true;
+
+        function toggleTheme() {
+            isDarkMode = !isDarkMode;
+            applyTheme(isDarkMode);
+        }
+
+        function applyTheme(dark) {
+            const body = document.body;
+            if (dark) {
+                body.classList.add('dark-mode');
+                body.classList.remove('light-mode');
+            } else {
+                body.classList.add('light-mode');
+                body.classList.remove('dark-mode');
+            }
+            localStorage.setItem('theme', dark ? 'dark' : 'light');
+        }
+
+        function loadSavedTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            isDarkMode = savedTheme !== 'light';
+            applyTheme(isDarkMode);
+        }
+
+        // Application launching
+        function launchEQE() {
+            if (!api) {
+                alert('Not connected to backend');
+                return;
+            }
+            const btn = document.getElementById('btn-eqe');
+            btn.classList.add('loading');
+
+            api.launch_eqe(function(result) {
+                const response = JSON.parse(result);
+                if (!response.success) {
+                    alert('Failed to launch EQE: ' + response.message);
+                    btn.classList.remove('loading');
+                }
+            });
+        }
+
+        function launchJV() {
+            if (!api) {
+                alert('Not connected to backend');
+                return;
+            }
+            const btn = document.getElementById('btn-jv');
+            btn.classList.add('loading');
+
+            api.launch_jv(function(result) {
+                const response = JSON.parse(result);
+                if (!response.success) {
+                    alert('Failed to launch J-V: ' + response.message);
+                    btn.classList.remove('loading');
+                }
+            });
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.shiftKey && e.key === 'C') {
+                e.preventDefault();
+                toggleTheme();
+            }
+        });
+
+        // Initialize QWebChannel connection
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSavedTheme();
+
+            // Connect to Qt WebChannel
+            if (typeof QWebChannel !== 'undefined') {
+                new QWebChannel(qt.webChannelTransport, function(channel) {
+                    api = channel.objects.api;
+                    console.log('Connected to Qt WebChannel');
+                });
+            } else {
+                console.warn('QWebChannel not available - running in standalone browser mode');
+            }
+        });
+    </script>
+</body>
+</html>

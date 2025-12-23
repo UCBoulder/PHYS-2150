@@ -1,0 +1,261 @@
+/* PHYS 2150 Theme - CU Boulder Brand Colors */
+
+:root {
+    /* CU Boulder Brand */
+    --ucb-gold: #CFB87C;
+    --ucb-gold-light: #D6C590;
+    --ucb-black: #000000;
+
+    /* Grays */
+    --gray-50: #fafafa;
+    --gray-100: #f5f5f5;
+    --gray-200: #eeeeee;
+    --gray-300: #e0e0e0;
+    --gray-400: #bdbdbd;
+    --gray-500: #9e9e9e;
+    --gray-600: #757575;
+    --gray-700: #616161;
+    --gray-800: #424242;
+    --gray-900: #333333;
+    --gray-950: #2a2a2a;
+
+    /* Semantic Colors - Light Mode */
+    --bg-primary: #ffffff;
+    --bg-secondary: #f5f5f5;
+    --bg-tertiary: #eeeeee;
+    --text-primary: #1a1a1a;
+    --text-secondary: #595959;
+    --text-muted: #757575;
+
+    /* Button Colors */
+    --eqe-blue: #4A90D9;
+    --eqe-blue-hover: #3A7BC8;
+    --eqe-blue-active: #2E6BB5;
+    --jv-green: #5DAE5D;
+    --jv-green-hover: #4C9D4C;
+    --jv-green-active: #3D8C3D;
+
+    /* Status */
+    --success: #2e7d32;
+    --warning: #e65100;
+    --error: #c62828;
+    --info: #1565c0;
+}
+
+/* Dark Mode */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg-primary: #222222;
+        --bg-secondary: #2a2a2a;
+        --bg-tertiary: #333333;
+        --text-primary: #eeeeee;
+        --text-secondary: #bbbbbb;
+        --text-muted: #999999;
+    }
+}
+
+/* Force dark mode class */
+.dark-mode {
+    --bg-primary: #222222;
+    --bg-secondary: #2a2a2a;
+    --bg-tertiary: #333333;
+    --text-primary: #eeeeee;
+    --text-secondary: #bbbbbb;
+    --text-muted: #999999;
+}
+
+/* Force light mode class */
+.light-mode {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f5f5f5;
+    --bg-tertiary: #eeeeee;
+    --text-primary: #1a1a1a;
+    --text-secondary: #595959;
+    --text-muted: #757575;
+}
+
+/* Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+/* Typography */
+h1 {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    text-align: center;
+}
+
+.subtitle {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+/* Button Container */
+.button-container {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 40px;
+}
+
+/* Measurement Buttons */
+.measurement-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 200px;
+    height: 100px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: transform 0.15s, box-shadow 0.15s, background-color 0.15s;
+}
+
+.measurement-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.measurement-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.measurement-btn:focus-visible {
+    outline: 3px solid var(--ucb-gold);
+    outline-offset: 2px;
+}
+
+.measurement-btn .title {
+    font-size: 16px;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 4px;
+}
+
+.measurement-btn .description {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.9);
+    text-align: center;
+    line-height: 1.3;
+}
+
+/* EQE Button */
+.btn-eqe {
+    background-color: var(--eqe-blue);
+}
+
+.btn-eqe:hover {
+    background-color: var(--eqe-blue-hover);
+}
+
+.btn-eqe:active {
+    background-color: var(--eqe-blue-active);
+}
+
+/* J-V Button */
+.btn-jv {
+    background-color: var(--jv-green);
+}
+
+.btn-jv:hover {
+    background-color: var(--jv-green-hover);
+}
+
+.btn-jv:active {
+    background-color: var(--jv-green-active);
+}
+
+/* Footer */
+.footer {
+    color: var(--text-muted);
+    font-size: 12px;
+    text-align: center;
+}
+
+/* Loading State */
+.measurement-btn.loading {
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.measurement-btn.loading .title::after {
+    content: '...';
+    animation: dots 1.5s infinite;
+}
+
+@keyframes dots {
+    0%, 20% { content: '.'; }
+    40% { content: '..'; }
+    60%, 100% { content: '...'; }
+}
+
+/* Theme Toggle */
+.theme-toggle {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: transparent;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.theme-toggle:hover {
+    color: var(--text-primary);
+}
+
+.theme-toggle:focus-visible {
+    outline: 2px solid var(--ucb-gold);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+.theme-icon {
+    width: 22px;
+    height: 22px;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* Show sun in dark mode, moon in light mode */
+#sun-icon {
+    display: none;
+}
+
+#moon-icon {
+    display: block;
+}
+
+.dark-mode #sun-icon {
+    display: block;
+}
+
+.dark-mode #moon-icon {
+    display: none;
+}

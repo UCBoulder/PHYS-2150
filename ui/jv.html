@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>J-V Measurement - PHYS 2150</title>
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="css/theme.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/layout.css">
+
+    <!-- Plotly.js for interactive plots (local copy) -->
+    <script src="js/plotly.min.js"></script>
+
+    <!-- Qt WebChannel -->
+    <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+
+    <!-- Shared modules -->
+    <script src="js/api.js"></script>
+    <script src="js/theme.js"></script>
+</head>
+<body class="dark-mode">
+    <div class="app-container">
+        <!-- Controls Panel (Left) -->
+        <aside class="controls-panel">
+            <!-- Device Status -->
+            <div class="controls-section">
+                <div class="controls-section-title">Device Status</div>
+                <div class="status-indicator" id="device-status">
+                    <span class="status-dot disconnected" id="status-dot"></span>
+                    <span id="status-text">Connecting...</span>
+                </div>
+            </div>
+
+            <div class="controls-divider"></div>
+
+            <!-- Voltage Parameters -->
+            <div class="controls-section">
+                <div class="controls-section-title">Voltage Sweep</div>
+
+                <div class="input-group">
+                    <label for="start-voltage">Start Voltage</label>
+                    <div class="input-with-unit">
+                        <input type="number" id="start-voltage" value="-0.1" step="0.1">
+                        <span class="unit">V</span>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="stop-voltage">Stop Voltage</label>
+                    <div class="input-with-unit">
+                        <input type="number" id="stop-voltage" value="0.7" step="0.1">
+                        <span class="unit">V</span>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="step-voltage">Step Voltage</label>
+                    <div class="input-with-unit">
+                        <input type="number" id="step-voltage" value="0.02" step="0.01">
+                        <span class="unit">V</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls-divider"></div>
+
+            <!-- Cell Info -->
+            <div class="controls-section">
+                <div class="controls-section-title">Sample</div>
+
+                <div class="input-group">
+                    <label for="cell-number">Cell Number</label>
+                    <input type="text" id="cell-number" readonly placeholder="Not set">
+                </div>
+
+                <button class="btn btn-secondary btn-block" onclick="setCellNumber()">
+                    Set Cell Number
+                </button>
+            </div>
+
+            <div class="controls-spacer"></div>
+
+            <!-- Measurement Control -->
+            <div class="controls-section">
+                <button class="btn btn-primary btn-block" id="measure-btn" onclick="toggleMeasurement()">
+                    Start Measurement
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content (Right) -->
+        <main class="main-content">
+            <!-- Header -->
+            <div class="main-header">
+                <h1 class="main-title">J-V Characterization</h1>
+                <div class="header-actions">
+                    <span id="pixel-label" class="text-muted">Pixel: --</span>
+                    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme (Ctrl+Shift+C)" aria-label="Toggle theme">
+                        <svg id="sun-icon" class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="5"/>
+                            <line x1="12" y1="1" x2="12" y2="3"/>
+                            <line x1="12" y1="21" x2="12" y2="23"/>
+                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                            <line x1="1" y1="12" x2="3" y2="12"/>
+                            <line x1="21" y1="12" x2="23" y2="12"/>
+                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                        </svg>
+                        <svg id="moon-icon" class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Plot Area -->
+            <div class="plot-container" id="plot-container">
+                <div id="jv-plot"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Cell Number Modal -->
+    <div class="modal-overlay" id="cell-modal">
+        <div class="modal">
+            <div class="modal-title">Enter Cell Number</div>
+            <div class="modal-body">
+                <div class="input-group mb-0">
+                    <label for="cell-input">Cell Number (e.g., 195)</label>
+                    <input type="text" id="cell-input" pattern="[0-9]{3}" maxlength="3" placeholder="000">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeCellModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="confirmCellNumber()">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pixel Selection Modal -->
+    <div class="modal-overlay" id="pixel-modal">
+        <div class="modal">
+            <div class="modal-title">Select Pixel</div>
+            <div class="modal-body">
+                <div class="input-group mb-0">
+                    <label for="pixel-input">Pixel Number (1-9)</label>
+                    <input type="number" id="pixel-input" min="1" max="9" value="1">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closePixelModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="confirmPixel()">Start</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * J-V Measurement Application
+         */
+
+        // State
+        let isMeasuring = false;
+        let currentPixel = null;
+        let forwardData = { x: [], y: [] };
+        let reverseData = { x: [], y: [] };
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', async () => {
+            LabTheme.init();
+            await LabAPI.init();
+
+            // Small delay to ensure Plotly is ready
+            setTimeout(() => {
+                initPlot();
+                checkDeviceStatus();
+            }, 50);
+        });
+
+        /**
+         * Initialize Plotly chart
+         */
+        function initPlot() {
+            clearPlot();
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (typeof Plotly !== 'undefined') {
+                Plotly.Plots.resize('jv-plot');
+            }
+        });
+
+        function getPlotColors(isDark) {
+            return {
+                text: isDark ? '#eeeeee' : '#1a1a1a',
+                grid: isDark ? '#444444' : '#dddddd',
+                forward: '#4A90D9',
+                reverse: '#e57373'
+            };
+        }
+
+        function updatePlotTheme(isDark) {
+            const colors = getPlotColors(isDark);
+            Plotly.relayout('jv-plot', {
+                'title.font.color': colors.text,
+                'xaxis.color': colors.text,
+                'xaxis.gridcolor': colors.grid,
+                'yaxis.color': colors.text,
+                'yaxis.gridcolor': colors.grid,
+                'font.color': colors.text
+            });
+        }
+
+        /**
+         * Check device connection status
+         */
+        async function checkDeviceStatus() {
+            try {
+                const api = LabAPI.get();
+                if (api && api.get_device_status) {
+                    api.get_device_status((result) => {
+                        const status = JSON.parse(result);
+                        updateDeviceStatus(status.connected, status.message);
+                    });
+                } else {
+                    // Mock for development
+                    updateDeviceStatus(true, 'Keithley 2450 (Mock)');
+                }
+            } catch (error) {
+                updateDeviceStatus(false, 'Connection failed');
+            }
+        }
+
+        function updateDeviceStatus(connected, message) {
+            const dot = document.getElementById('status-dot');
+            const text = document.getElementById('status-text');
+            const btn = document.getElementById('measure-btn');
+
+            if (connected) {
+                dot.className = 'status-dot connected';
+                text.textContent = message || 'Connected';
+            } else {
+                dot.className = 'status-dot disconnected';
+                text.textContent = message || 'Not connected (Mock mode)';
+            }
+            // Always enable button - mock mode works without hardware
+            btn.disabled = false;
+        }
+
+        /**
+         * Cell number modal
+         */
+        function setCellNumber() {
+            document.getElementById('cell-modal').classList.add('active');
+            document.getElementById('cell-input').focus();
+        }
+
+        function closeCellModal() {
+            document.getElementById('cell-modal').classList.remove('active');
+        }
+
+        function confirmCellNumber() {
+            const input = document.getElementById('cell-input');
+            const value = input.value.trim();
+
+            if (!/^\d{3}$/.test(value)) {
+                alert('Please enter a 3-digit cell number');
+                return;
+            }
+
+            document.getElementById('cell-number').value = value;
+            closeCellModal();
+        }
+
+        /**
+         * Pixel selection modal
+         */
+        function showPixelModal() {
+            document.getElementById('pixel-modal').classList.add('active');
+            document.getElementById('pixel-input').focus();
+        }
+
+        function closePixelModal() {
+            document.getElementById('pixel-modal').classList.remove('active');
+        }
+
+        function confirmPixel() {
+            const input = document.getElementById('pixel-input');
+            const pixel = parseInt(input.value);
+
+            if (pixel < 1 || pixel > 9) {
+                alert('Please enter a pixel number between 1 and 9');
+                return;
+            }
+
+            closePixelModal();
+            startMeasurement(pixel);
+        }
+
+        /**
+         * Measurement control
+         */
+        function toggleMeasurement() {
+            if (isMeasuring) {
+                stopMeasurement();
+            } else {
+                // Check cell number first
+                const cellNumber = document.getElementById('cell-number').value;
+                if (!cellNumber) {
+                    setCellNumber();
+                    return;
+                }
+                showPixelModal();
+            }
+        }
+
+        async function startMeasurement(pixel) {
+            currentPixel = pixel;
+            isMeasuring = true;
+            updateMeasuringState(true);
+
+            // Clear previous data
+            forwardData = { x: [], y: [] };
+            reverseData = { x: [], y: [] };
+            clearPlot();
+            updatePixelLabel(pixel);
+
+            // Get parameters
+            const params = {
+                start_voltage: parseFloat(document.getElementById('start-voltage').value),
+                stop_voltage: parseFloat(document.getElementById('stop-voltage').value),
+                step_voltage: parseFloat(document.getElementById('step-voltage').value),
+                cell_number: document.getElementById('cell-number').value,
+                pixel: pixel
+            };
+
+            // Always run mock measurement for now (hardware integration later)
+            console.log('Starting mock measurement with params:', params);
+            mockMeasurement(params);
+        }
+
+        function stopMeasurement() {
+            isMeasuring = false;
+            updateMeasuringState(false);
+
+            const api = LabAPI.get();
+            if (api && api.stop_measurement) {
+                api.stop_measurement(() => {});
+            }
+        }
+
+        function updateMeasuringState(measuring) {
+            const btn = document.getElementById('measure-btn');
+            const inputs = document.querySelectorAll('.controls-panel input');
+
+            if (measuring) {
+                btn.textContent = 'Stop Measurement';
+                btn.className = 'btn btn-danger btn-block';
+                inputs.forEach(input => input.disabled = true);
+            } else {
+                btn.textContent = 'Start Measurement';
+                btn.className = 'btn btn-primary btn-block';
+                inputs.forEach(input => {
+                    // Re-enable except cell number (readonly)
+                    if (input.id !== 'cell-number') {
+                        input.disabled = false;
+                    }
+                });
+            }
+        }
+
+        function updatePixelLabel(pixel) {
+            document.getElementById('pixel-label').textContent = `Pixel: ${pixel}`;
+        }
+
+        /**
+         * Plot updates - called from Python via WebChannel
+         */
+        function onMeasurementPoint(direction, voltage, current) {
+            if (direction === 'forward') {
+                forwardData.x.push(voltage);
+                forwardData.y.push(current);
+            } else {
+                reverseData.x.push(voltage);
+                reverseData.y.push(current);
+            }
+            updatePlot();
+        }
+
+        function onMeasurementComplete(success) {
+            isMeasuring = false;
+            updateMeasuringState(false);
+
+            if (success) {
+                // Could prompt to save here
+                console.log('Measurement complete');
+            }
+        }
+
+        function getPlotLayout() {
+            const colors = getPlotColors(LabTheme.isDark());
+            return {
+                title: { text: 'J-V Characterization', font: { size: 18, color: colors.text } },
+                xaxis: { title: 'Voltage (V)', color: colors.text, gridcolor: colors.grid },
+                yaxis: { title: 'Current (mA)', color: colors.text, gridcolor: colors.grid },
+                paper_bgcolor: 'transparent',
+                plot_bgcolor: 'transparent',
+                font: { color: colors.text },
+                showlegend: true,
+                legend: { x: 0.02, y: 0.98 },
+                margin: { t: 50, r: 40, b: 60, l: 70 },
+                autosize: true
+            };
+        }
+
+        function clearPlot() {
+            const plotDiv = document.getElementById('jv-plot');
+            const traces = [
+                { x: [], y: [], mode: 'markers', type: 'scatter', name: 'Forward', marker: { color: '#4A90D9', size: 8 } },
+                { x: [], y: [], mode: 'markers', type: 'scatter', name: 'Reverse', marker: { color: '#e57373', size: 8 } }
+            ];
+            const layout = {
+                title: 'J-V Characterization',
+                xaxis: { title: 'Voltage (V)' },
+                yaxis: { title: 'Current (mA)' }
+            };
+            Plotly.newPlot(plotDiv, traces, layout);
+        }
+
+        function updatePlot() {
+            const plotDiv = document.getElementById('jv-plot');
+            const traces = [
+                { x: forwardData.x, y: forwardData.y, mode: 'markers', type: 'scatter', name: 'Forward', marker: { color: '#4A90D9', size: 8 } },
+                { x: reverseData.x, y: reverseData.y, mode: 'markers', type: 'scatter', name: 'Reverse', marker: { color: '#e57373', size: 8 } }
+            ];
+            const layout = {
+                title: 'J-V Characterization',
+                xaxis: { title: 'Voltage (V)' },
+                yaxis: { title: 'Current (mA)' }
+            };
+            Plotly.newPlot(plotDiv, traces, layout);
+        }
+
+        /**
+         * Mock measurement for development/testing
+         */
+        function mockMeasurement(params) {
+            const start = params.start_voltage;
+            const stop = params.stop_voltage;
+            const step = params.step_voltage;
+
+            let voltage = start;
+            const interval = setInterval(() => {
+                if (!isMeasuring || voltage > stop) {
+                    clearInterval(interval);
+                    // Reverse sweep
+                    if (isMeasuring) {
+                        mockReverseSweep(stop, start, step);
+                    }
+                    return;
+                }
+
+                // Mock current (simple diode model)
+                const current = 0.01 * (Math.exp(voltage / 0.026) - 1) + (Math.random() - 0.5) * 0.001;
+                onMeasurementPoint('forward', voltage, current * 1000);
+                voltage += step;
+            }, 50);
+        }
+
+        function mockReverseSweep(start, stop, step) {
+            let voltage = start;
+            const interval = setInterval(() => {
+                if (!isMeasuring || voltage < stop) {
+                    clearInterval(interval);
+                    onMeasurementComplete(true);
+                    return;
+                }
+
+                const current = 0.01 * (Math.exp(voltage / 0.026) - 1) + (Math.random() - 0.5) * 0.001;
+                onMeasurementPoint('reverse', voltage, current * 1000);
+                voltage -= step;
+            }, 50);
+        }
+
+        // Make functions available to Python
+        window.onMeasurementPoint = onMeasurementPoint;
+        window.onMeasurementComplete = onMeasurementComplete;
+        window.updateDeviceStatus = updateDeviceStatus;
+    </script>
+</body>
+</html>

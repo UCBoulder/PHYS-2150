@@ -1,0 +1,203 @@
+/**
+ * Layout Patterns
+ *
+ * Common layout structures for lab applications.
+ */
+
+/* ============================================
+   App Shell - Controls + Main Content
+   ============================================ */
+
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+.app-container {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+}
+
+
+/* ============================================
+   Controls Panel (Left Sidebar)
+   ============================================ */
+
+.controls-panel {
+    flex: 0 0 260px;
+    width: 260px;
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--gray-400);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow-y: auto;
+    box-sizing: border-box;
+}
+
+.controls-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.controls-section-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+
+.controls-divider {
+    height: 1px;
+    background: var(--gray-400);
+    margin: 8px 0;
+}
+
+.controls-spacer {
+    flex: 1;
+}
+
+
+/* ============================================
+   Main Content Area
+   ============================================ */
+
+.main-content {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.main-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-shrink: 0;
+}
+
+.main-title {
+    font-size: 20px;
+    font-weight: 600;
+}
+
+
+/* ============================================
+   Plot Container
+   ============================================ */
+
+.plot-container {
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-secondary);
+    border: 1px solid var(--gray-400);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+#jv-plot {
+    width: 100%;
+    height: 100%;
+}
+
+/* Plotly.js overrides for theme */
+.plot-container .js-plotly-plot .plotly .main-svg {
+    background: transparent !important;
+}
+
+
+/* ============================================
+   Header Bar
+   ============================================ */
+
+.header-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--gray-400);
+}
+
+.header-title {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.header-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+
+/* ============================================
+   Device Status Bar
+   ============================================ */
+
+.device-status-bar {
+    display: flex;
+    gap: 16px;
+    padding: 8px 12px;
+    background: var(--bg-tertiary);
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.device-status-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+
+/* ============================================
+   Footer
+   ============================================ */
+
+.app-footer {
+    padding: 12px 20px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-muted);
+    border-top: 1px solid var(--gray-400);
+}
+
+
+/* ============================================
+   Utility Classes
+   ============================================ */
+
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-center { justify-content: center; }
+.justify-between { justify-content: space-between; }
+.gap-sm { gap: 8px; }
+.gap-md { gap: 16px; }
+.gap-lg { gap: 24px; }
+
+.mt-auto { margin-top: auto; }
+.mb-0 { margin-bottom: 0; }
+
+.text-center { text-align: center; }
+.text-muted { color: var(--text-muted); }
+
+.w-full { width: 100%; }
+.h-full { height: 100%; }

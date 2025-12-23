@@ -29,7 +29,7 @@ dev = [
 ]
 
 [project.scripts]
-phys2150 = "launcher:main"
+phys2150 = "qtwebengine_launcher:main"
 phys2150-eqe = "eqe.main:main"
 phys2150-jv = "jv.main:main"
 
