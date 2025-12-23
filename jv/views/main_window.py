@@ -119,8 +119,13 @@ class JVMainWindow(QMainWindow):
             Qt.QueuedConnection
         )
 
-    def show_cell_number_popup(self) -> None:
-        """Show popup to enter cell number."""
+    def show_cell_number_popup(self) -> bool:
+        """
+        Show popup to enter cell number.
+
+        Returns:
+            bool: True if cell number was set, False if cancelled
+        """
         cell_pattern = VALIDATION_PATTERNS["cell_number"]
 
         while True:
@@ -131,15 +136,14 @@ class JVMainWindow(QMainWindow):
             )
 
             if not ok:
-                # User cancelled - close window
-                self.close()
-                return
+                # User cancelled - allow them to explore the interface
+                return False
 
             if cell_number and re.match(cell_pattern, cell_number):
                 self.controls_panel.set_cell_number(cell_number)
                 if self.experiment_model:
                     self.experiment_model.set_parameter("cell_number", cell_number)
-                break
+                return True
             else:
                 QMessageBox.warning(
                     self,
@@ -152,6 +156,12 @@ class JVMainWindow(QMainWindow):
         if not self.experiment_model:
             QMessageBox.critical(self, "Error", "Experiment model not initialized")
             return
+
+        # Ensure cell number is set before measurement
+        cell_number = self.controls_panel.get_cell_number()
+        if not cell_number:
+            if not self.show_cell_number_popup():
+                return  # User cancelled
 
         # Prompt for pixel number
         pixel_range = VALIDATION_PATTERNS["pixel_range"]

@@ -102,8 +102,8 @@ class JVApplication:
             int: Application exit code
         """
         try:
-            # Show main window
-            self.main_window.showMaximized()
+            # Show main window at configured size
+            self.main_window.show()
             logging.info("Main window displayed")
 
             # Initialize device after window is shown

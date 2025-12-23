@@ -29,7 +29,7 @@ DEFAULT_MEASUREMENT_PARAMS = {
     "start_wavelength": 350.0,  # nm - beginning of wavelength sweep
     "end_wavelength": 750.0,    # nm - end of wavelength sweep
     "step_size": 10.0,          # nm - wavelength increment between measurements
-    "cell_number": "167",       # Three-digit cell identifier for file naming
+    "cell_number": "",          # Three-digit cell identifier for file naming (user must enter)
     "pixel_number": 1,          # Which pixel (1-8) on the solar cell to measure
 }
 
@@ -120,7 +120,7 @@ FILE_NAMING = {
 # Controls appearance and behavior of the PySide6 application window
 GUI_CONFIG = {
     "window_title": "PHYS 2150 EQE Measurement - MVC Architecture",
-    "window_size": (1200, 800),       # pixels (width, height) - initial window dimensions
+    "window_size": (1400, 950),       # pixels (width, height) - initial window dimensions
     "plot_size": (300, 300),          # pixels - minimum size for plot widgets
     "plot_max_size": (400, 400),      # pixels - maximum size for plot widgets
     "live_monitor_interval_ms": 500,  # ms - how often to update live signal display

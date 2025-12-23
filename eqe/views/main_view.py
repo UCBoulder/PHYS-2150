@@ -84,9 +84,6 @@ class MainApplicationView(QMainWindow):
         """Configure the main window properties."""
         self.setWindowTitle(GUI_CONFIG["window_title"])
         self.setGeometry(100, 100, *GUI_CONFIG["window_size"])
-        
-        # Show maximized
-        self.showMaximized()
     
     def _setup_layout(self) -> None:
         """Set up the main window layout."""
@@ -181,25 +178,50 @@ class MainApplicationView(QMainWindow):
         self.stability_tab.set_stability_model(self.stability_model)
         self.logger.info("Stability test model initialized with shared hardware controllers")
     
-    def _show_initial_cell_number_dialog(self) -> None:
-        """Show cell number input dialog on application startup."""
-        cell_number, ok = QInputDialog.getText(
-            self, "Enter Cell Number",
-            "Enter Cell Number (three digits, e.g., 167, 001):"
-        )
-        
-        if ok and cell_number:
-            if self.data_handler.validate_cell_number(cell_number):
+    def _show_cell_number_dialog(self) -> bool:
+        """
+        Show cell number input dialog.
+
+        Returns:
+            bool: True if cell number was set, False if cancelled
+        """
+        while True:
+            cell_number, ok = QInputDialog.getText(
+                self, "Enter Cell Number",
+                "Enter Cell Number (three digits, e.g., 167, 001):"
+            )
+
+            if not ok:
+                # User cancelled - allow them to explore the interface
+                return False
+
+            if cell_number and self.data_handler.validate_cell_number(cell_number):
                 current_params = self.measurement_tab.get_parameters()
                 current_params['cell_number'] = cell_number
                 self.measurement_tab.load_parameters(current_params)
+                return True
             else:
                 QMessageBox.warning(self, "Invalid Input", ERROR_MESSAGES["invalid_cell_number"])
-                self._show_initial_cell_number_dialog()
-        else:
-            # User cancelled, show again
-            self._show_initial_cell_number_dialog()
-    
+
+    def _show_initial_cell_number_dialog(self) -> None:
+        """Show cell number input dialog on application startup."""
+        self._show_cell_number_dialog()
+
+    def _ensure_cell_number(self) -> bool:
+        """
+        Ensure cell number is set before measurement.
+
+        If cell number is not set, prompts the user to enter one.
+
+        Returns:
+            bool: True if cell number is set, False if user cancelled
+        """
+        params = self.measurement_tab.get_parameters()
+        cell_number = params.get('cell_number', '')
+        if not cell_number or not self.data_handler.validate_cell_number(cell_number):
+            return self._show_cell_number_dialog()
+        return True
+
     def _on_parameters_changed(self, params: Dict[str, Any]) -> None:
         """
         Handle parameter changes from the input widget.
@@ -413,7 +435,11 @@ class MainApplicationView(QMainWindow):
         if not self.experiment_model:
             self._show_error("Experiment model not initialized")
             return
-        
+
+        # Ensure cell number is set before measurement
+        if not self._ensure_cell_number():
+            return  # User cancelled
+
         try:
             # Validate parameters
             parameter_input = self.measurement_tab.get_parameter_input()
@@ -440,14 +466,18 @@ class MainApplicationView(QMainWindow):
     def _start_current_measurement(self, pixel_number: int) -> None:
         """
         Start current measurement for specified pixel.
-        
+
         Args:
             pixel_number: Pixel number to measure
         """
         if not self.experiment_model:
             self._show_error("Experiment model not initialized")
             return
-        
+
+        # Ensure cell number is set before measurement
+        if not self._ensure_cell_number():
+            return  # User cancelled
+
         try:
             # Validate parameters
             parameter_input = self.measurement_tab.get_parameter_input()
