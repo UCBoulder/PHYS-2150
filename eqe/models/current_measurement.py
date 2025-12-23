@@ -14,7 +14,6 @@ from ..controllers.picoscope_lockin import PicoScopeController, PicoScopeError
 from ..controllers.monochromator import MonochromatorController, MonochromatorError
 from ..config.settings import (
     CURRENT_MEASUREMENT_CONFIG,
-    MONOCHROMATOR_CORRECTION_FACTORS,
     FILTER_THRESHOLD_LOWER,
     FILTER_THRESHOLD_UPPER,
     PHASE_ADJUSTMENT_CONFIG,
@@ -86,20 +85,6 @@ class CurrentMeasurementModel:
             callback: Function(success)
         """
         self.completion_callback = callback
-    
-    def get_correction_factor(self) -> float:
-        """
-        Get correction factor based on monochromator serial number.
-        
-        NOTE: Previously returned 0.45 for SR510 analog lock-in harmonic loss.
-        With PicoScope software lock-in, no correction needed (returns 1.0).
-        Method kept for API compatibility but effectively does nothing.
-        
-        Returns:
-            float: Correction factor (always 1.0 with PicoScope)
-        """
-        serial_number = self.monochromator.serial_number
-        return MONOCHROMATOR_CORRECTION_FACTORS.get(serial_number, 1.0)
     
     def _configure_for_wavelength(self, wavelength: float) -> float:
         """

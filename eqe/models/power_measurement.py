@@ -13,7 +13,6 @@ from ..controllers.thorlabs_power_meter import ThorlabsPowerMeterController, Tho
 from ..controllers.monochromator import MonochromatorController, MonochromatorError
 from ..config.settings import (
     POWER_MEASUREMENT_CONFIG,
-    MONOCHROMATOR_CORRECTION_FACTORS,
     FILTER_THRESHOLD_LOWER,
     FILTER_THRESHOLD_UPPER,
     PHASE_ADJUSTMENT_CONFIG,
@@ -83,20 +82,6 @@ class PowerMeasurementModel:
             callback: Function(success)
         """
         self.completion_callback = callback
-    
-    def get_correction_factor(self) -> float:
-        """
-        Get correction factor based on monochromator serial number.
-        
-        NOTE: The MONOCHROMATOR_CORRECTION_FACTORS were actually SR510 lock-in
-        corrections (0.45), not optical corrections. Now returns 1.0 for all.
-        Method kept for API compatibility but effectively does nothing.
-        
-        Returns:
-            float: Correction factor (always 1.0)
-        """
-        serial_number = self.monochromator.serial_number
-        return MONOCHROMATOR_CORRECTION_FACTORS.get(serial_number, 1.0)
     
     def _configure_for_wavelength(self, wavelength: float) -> float:
         """

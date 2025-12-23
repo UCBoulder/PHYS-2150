@@ -85,17 +85,6 @@ DEVICE_CONFIGS = {
     }
 }
 
-# Monochromator correction factors by serial number
-# NOTE: The previous 0.45 factors were for SR510 analog lock-in harmonic loss,
-# not for monochromator optical efficiency. With PicoScope software lock-in,
-# no correction is needed (uses actual square wave reference, preserving harmonics).
-# If optical corrections are needed in the future, they should be measured separately.
-MONOCHROMATOR_CORRECTION_FACTORS = {
-    "130B5203": 1.0,  # EQE2 - no correction needed with software lock-in
-    "130B5201": 1.0,  # EQE3 - no correction needed with software lock-in
-    "130B5202": 1.0,  # EQE1 - no correction needed with software lock-in
-}
-
 # Filter wavelength thresholds (nm)
 # These define when to switch between filter positions
 FILTER_THRESHOLD_LOWER = 420   # Below this: no filter (position 3)
