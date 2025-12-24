@@ -23,33 +23,27 @@
 </head>
 <body class="dark-mode eqe-body">
     <div class="eqe-app">
-        <!-- Header Row -->
-        <div class="eqe-header">
-            <h1>EQE</h1>
-            <div class="header-actions">
-                <span id="pixel-label" class="text-muted">Pixel: --</span>
-                <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
-                    <svg id="sun-icon" class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="5"/>
-                        <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
-                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-                        <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
-                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-                    </svg>
-                    <svg id="moon-icon" class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-                    </svg>
-                </button>
-            </div>
-        </div>
-
-        <!-- Tab Navigation -->
+        <!-- Tab Navigation with Header Actions -->
         <div class="tab-bar">
             <button class="tab-btn active" onclick="switchTab('measurement')">Measurement</button>
             <button class="tab-btn" onclick="switchTab('stability')">Stability Test</button>
             <button class="tab-btn staff-tab" id="analysis-tab-btn" onclick="switchTab('analysis')" style="display: none;">
                 EQE Analysis
                 <span class="staff-badge-small">STAFF</span>
+            </button>
+            <div class="tab-bar-spacer"></div>
+            <span id="pixel-label" class="text-muted">Pixel: --</span>
+            <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                <svg id="sun-icon" class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="5"/>
+                    <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                    <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                </svg>
+                <svg id="moon-icon" class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
             </button>
         </div>
 
@@ -294,20 +288,19 @@
             <div class="top-section">
                 <div class="params-panel analysis-source-panel">
                     <div class="panel-title">Data Source</div>
-                    <div class="analysis-data-section">
-                        <button class="btn btn-primary btn-small" id="use-session-btn" onclick="useSessionData()" disabled>
-                            Use Current Session
-                        </button>
-                        <span class="analysis-separator">--- OR load from files ---</span>
-                        <div class="analysis-btn-group">
-                            <button class="btn btn-secondary btn-small" onclick="loadPowerCSV()">Load Power CSV</button>
-                            <span class="analysis-file-status" id="power-file-status">No file</span>
+                    <div class="analysis-source-layout">
+                        <div class="analysis-data-grid">
+                            <span class="analysis-data-label">Power:</span>
+                            <button class="btn btn-secondary btn-xs" id="use-power-session-btn" onclick="usePowerSession()" disabled>Session</button>
+                            <button class="btn btn-secondary btn-xs" onclick="loadPowerCSV()">Load File</button>
+                            <span class="analysis-file-status" id="power-file-status">No data</span>
+
+                            <span class="analysis-data-label">Current:</span>
+                            <button class="btn btn-secondary btn-xs" id="use-current-session-btn" onclick="useCurrentSession()" disabled>Session</button>
+                            <button class="btn btn-secondary btn-xs" onclick="loadCurrentCSV()">Load File</button>
+                            <span class="analysis-file-status" id="current-file-status">No data</span>
                         </div>
-                        <div class="analysis-btn-group">
-                            <button class="btn btn-secondary btn-small" onclick="loadCurrentCSV()">Load Current CSV</button>
-                            <span class="analysis-file-status" id="current-file-status">No file</span>
-                        </div>
-                        <button class="btn btn-primary btn-small" id="calculate-eqe-btn" onclick="calculateEQE()" disabled>
+                        <button class="btn btn-primary" id="calculate-eqe-btn" onclick="calculateEQE()" disabled>
                             Calculate EQE
                         </button>
                     </div>
@@ -516,7 +509,13 @@
                 setTimeout(() => initStabilityPlots(), 50);
             } else if (tabName === 'analysis') {
                 setTimeout(() => {
-                    initEQEPlot();
+                    const plotDiv = document.getElementById('eqe-plot');
+                    // Only init if plot doesn't exist yet; otherwise just resize
+                    if (!plotDiv.data) {
+                        initEQEPlot();
+                    } else {
+                        Plotly.Plots.resize('eqe-plot');
+                    }
                     updateSessionDataButton();
                 }, 50);
             } else {
@@ -645,18 +644,28 @@
 
         window.addEventListener('themechange', (e) => {
             const isDark = e.detail.dark;
-            ['power-plot', 'current-plot', 'phase-plot'].forEach(id => {
+            // Update all plots: measurement, stability, and analysis
+            const plotIds = [
+                'power-plot', 'current-plot', 'phase-plot',  // Measurement
+                'stability-time-plot', 'stability-hist-plot',  // Stability
+                'eqe-plot'  // Analysis
+            ];
+            plotIds.forEach(id => {
                 const plotDiv = document.getElementById(id);
                 if (plotDiv && plotDiv.data) {
                     const colors = {
                         text: isDark ? '#eeeeee' : '#1a1a1a',
                         grid: isDark ? '#444444' : '#dddddd',
-                        zeroline: isDark ? '#666666' : '#999999'
+                        zeroline: isDark ? '#666666' : '#999999',
+                        paper: isDark ? '#2a2a2a' : '#ffffff',
+                        plot: isDark ? '#2a2a2a' : '#ffffff'
                     };
                     Plotly.relayout(plotDiv, {
                         'xaxis.color': colors.text, 'xaxis.gridcolor': colors.grid,
                         'yaxis.color': colors.text, 'yaxis.gridcolor': colors.grid,
-                        'font.color': colors.text
+                        'font.color': colors.text,
+                        'paper_bgcolor': colors.paper,
+                        'plot_bgcolor': colors.plot
                     });
                 }
             });
@@ -1802,7 +1811,8 @@
         function updateSessionDataButton() {
             const hasPower = state.powerData.x.length > 0;
             const hasCurrent = state.currentData.x.length > 0;
-            document.getElementById('use-session-btn').disabled = !(hasPower && hasCurrent);
+            document.getElementById('use-power-session-btn').disabled = !hasPower;
+            document.getElementById('use-current-session-btn').disabled = !hasCurrent;
         }
 
         function updateCalculateButton() {
@@ -1811,37 +1821,52 @@
             document.getElementById('calculate-eqe-btn').disabled = !(hasPower && hasCurrent);
         }
 
-        function useSessionData() {
-            if (state.powerData.x.length === 0 || state.currentData.x.length === 0) {
-                setAnalysisStatus('No session data available', 'error');
+        function usePowerSession() {
+            if (state.powerData.x.length === 0) {
+                setAnalysisStatus('No power data in session', 'error');
                 return;
             }
 
-            // Convert session data to analysis format (power is in µW, current is in nA in the state)
             state.analysis.powerData = {
                 wavelengths: [...state.powerData.x],
                 values: state.powerData.y.map(p => p * 1e-6)  // µW -> W
             };
+
+            document.getElementById('power-file-status').textContent = `Session (${state.powerData.x.length} pts)`;
+            document.getElementById('power-file-status').classList.add('loaded');
+
+            updateCalculateButton();
+            setAnalysisStatus('Power data loaded from session');
+        }
+
+        function useCurrentSession() {
+            if (state.currentData.x.length === 0) {
+                setAnalysisStatus('No current data in session', 'error');
+                return;
+            }
+
             state.analysis.currentData = {
                 wavelengths: [...state.currentData.x],
                 values: state.currentData.y.map(c => c * 1e-9)  // nA -> A
             };
 
-            document.getElementById('power-file-status').textContent = `Session (${state.powerData.x.length} pts)`;
-            document.getElementById('power-file-status').classList.add('loaded');
             document.getElementById('current-file-status').textContent = `Session (${state.currentData.x.length} pts)`;
             document.getElementById('current-file-status').classList.add('loaded');
 
             updateCalculateButton();
-            setAnalysisStatus('Session data loaded - click Calculate EQE', 'success');
+            setAnalysisStatus('Current data loaded from session');
         }
 
         function loadPowerCSV() {
-            document.getElementById('power-file-input').click();
+            const input = document.getElementById('power-file-input');
+            input.value = '';  // Reset so same file can be selected again
+            input.click();
         }
 
         function loadCurrentCSV() {
-            document.getElementById('current-file-input').click();
+            const input = document.getElementById('current-file-input');
+            input.value = '';  // Reset so same file can be selected again
+            input.click();
         }
 
         function onPowerFileSelected(event) {

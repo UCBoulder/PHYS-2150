@@ -391,9 +391,11 @@ body:not(.dark-mode) .plot-panel .modebar-container {
 
 .tab-bar {
     display: flex;
+    align-items: center;
     gap: 0;
     border-bottom: 1px solid var(--gray-400);
     flex-shrink: 0;
+    padding: 0 16px 0 0;
 }
 
 .tab-btn {
@@ -422,6 +424,20 @@ body:not(.dark-mode) .plot-panel .modebar-container {
 .tab-btn:focus-visible {
     outline: 2px solid var(--ucb-gold);
     outline-offset: -2px;
+}
+
+.tab-bar-spacer {
+    flex: 1;
+}
+
+.tab-bar #pixel-label {
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+.tab-bar .theme-toggle {
+    position: static;
+    margin-left: 16px;
 }
 
 .tab-content {
@@ -644,8 +660,16 @@ body:not(.dark-mode) .plot-panel .modebar-container {
 }
 
 /* Analysis tab specific layout */
-.analysis-source-panel {
-    flex: 2;  /* Take more space for buttons */
+
+.analysis-source-layout {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+.analysis-source-layout > .btn {
+    margin-left: auto;
+    white-space: nowrap;
 }
 
 .analysis-plots-row {
@@ -665,40 +689,30 @@ body:not(.dark-mode) .plot-panel .modebar-container {
     flex-direction: column;
 }
 
-.analysis-data-section {
-    display: flex;
-    gap: 12px;
+.analysis-data-grid {
+    display: grid;
+    grid-template-columns: auto auto auto 1fr;
+    gap: 6px 10px;
     align-items: center;
-    flex-wrap: wrap;
 }
 
-.analysis-data-section .btn {
-    white-space: nowrap;
+.analysis-data-label {
+    font-size: 12px;
+    color: var(--text-secondary);
 }
 
-.analysis-btn-group {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+.btn-xs {
+    padding: 3px 8px;
+    font-size: 11px;
 }
 
 .analysis-file-status {
-    font-size: 12px;
+    font-size: 11px;
     color: var(--text-muted);
-    max-width: 200px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
 .analysis-file-status.loaded {
     color: var(--success);
-}
-
-.analysis-separator {
-    color: var(--text-muted);
-    font-size: 12px;
-    padding: 0 8px;
 }
 
 /* eqe-plot uses the standard .plot class styling */
