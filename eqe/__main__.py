@@ -6,7 +6,7 @@ Allows running the EQE application as a module:
     python -m eqe --offline
 """
 
-from .main import main
+from .web_main import main
 
 if __name__ == "__main__":
     main()

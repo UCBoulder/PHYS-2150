@@ -1,0 +1,1246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EQE Measurement - PHYS 2150</title>
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="css/theme.css">
+    <link rel="stylesheet" href="css/components.css">
+
+    <!-- Plotly.js for interactive plots (local copy) -->
+    <script src="js/plotly.min.js"></script>
+
+    <!-- Qt WebChannel -->
+    <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+
+    <!-- Shared modules -->
+    <script src="js/api.js"></script>
+    <script src="js/theme.js"></script>
+
+    <style>
+        /* EQE Layout - matching old Qt UI pattern */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 12px;
+            gap: 12px;
+            box-sizing: border-box;
+            background: var(--bg-primary);
+        }
+
+        /* Header row */
+        .header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .header-row h1 {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        /* Top section: Parameters + Progress side by side */
+        .top-section {
+            display: flex;
+            gap: 16px;
+            flex-shrink: 0;
+        }
+
+        .params-panel, .progress-panel {
+            flex: 1;
+            background: var(--bg-secondary);
+            border: 1px solid var(--gray-400);
+            border-radius: 6px;
+            padding: 12px 16px;
+        }
+
+        .panel-title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+
+        /* Parameters grid - compact horizontal layout */
+        .params-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            align-items: end;
+        }
+
+        .param-field label {
+            display: block;
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .param-field input {
+            width: 100%;
+            padding: 6px 10px;
+            font-size: 14px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--gray-400);
+            border-radius: 4px;
+            color: var(--text-primary);
+            box-sizing: border-box;
+        }
+
+        .param-field input:focus {
+            outline: none;
+            border-color: var(--ucb-gold);
+        }
+
+        /* Progress panel */
+        .progress-content {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .progress-status {
+            font-size: 14px;
+            font-weight: 500;
+            text-align: center;
+        }
+
+        .progress-bar-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .progress-bar {
+            flex: 1;
+            height: 6px;
+            background: var(--bg-tertiary);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: var(--ucb-gold);
+            transition: width 0.3s;
+        }
+
+        .progress-percent {
+            font-size: 12px;
+            min-width: 35px;
+            text-align: right;
+        }
+
+        .live-reading {
+            font-size: 20px;
+            font-weight: 600;
+            font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+            color: #4caf50;
+            text-align: center;
+        }
+
+        /* Device status row */
+        .device-status-row {
+            display: flex;
+            gap: 24px;
+            padding: 8px 16px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--gray-400);
+            border-radius: 6px;
+            flex-shrink: 0;
+        }
+
+        .device-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+        }
+
+        .device-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--gray-500);
+        }
+
+        .device-dot.connected { background: #4caf50; }
+        .device-dot.disconnected { background: #f44336; }
+        .device-dot.warning { background: #ff9800; }
+
+        .device-name {
+            color: var(--text-secondary);
+        }
+
+        .device-status {
+            color: var(--text-muted);
+            font-size: 11px;
+        }
+
+        /* Monochromator controls - inline */
+        .mono-controls-inline {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-left: auto;
+            padding-left: 24px;
+            border-left: 1px solid var(--gray-400);
+        }
+
+        .mono-state {
+            font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+            font-size: 13px;
+        }
+
+        .mono-controls-inline input {
+            width: 70px;
+            padding: 4px 8px;
+            font-size: 12px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--gray-400);
+            border-radius: 4px;
+            color: var(--text-primary);
+        }
+
+        .mono-controls-inline .btn-small {
+            padding: 4px 10px;
+            font-size: 11px;
+        }
+
+        .shutter-badge {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .shutter-badge.open {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4caf50;
+        }
+
+        .shutter-badge.closed {
+            background: rgba(158, 158, 158, 0.2);
+            color: var(--text-muted);
+        }
+
+        /* Three plots row */
+        .plots-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .plot-panel {
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-secondary);
+            border: 1px solid var(--gray-400);
+            border-radius: 6px;
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        .plot-container {
+            flex: 1;
+            min-height: 0;
+        }
+
+        .plot {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Stats panel (below phase plot) */
+        .stats-row {
+            padding: 8px 12px;
+            border-top: 1px solid var(--gray-400);
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stats-row.hidden {
+            display: none;
+        }
+
+        .stat-item {
+            color: var(--text-muted);
+        }
+
+        .stat-value {
+            font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+            color: var(--text-primary);
+        }
+
+        .quality-badge {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .quality-excellent { background: #2e7d32; color: white; }
+        .quality-good { background: #689f38; color: white; }
+        .quality-fair { background: #f9a825; color: black; }
+        .quality-check { background: #e65100; color: white; }
+
+        /* Buttons row */
+        .buttons-row {
+            display: flex;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+
+        .buttons-row .btn {
+            flex: 1;
+            padding: 12px 20px;
+            font-size: 14px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            font-family: inherit;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.15s, opacity 0.15s;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background-color: #2e7d32;
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background-color: #1b5e20;
+        }
+
+        .btn-danger {
+            background-color: #c62828;
+            color: white;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background-color: #b71c1c;
+        }
+
+        .btn-secondary {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--gray-400);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background-color: var(--bg-secondary);
+        }
+
+        /* Theme toggle in header */
+        .theme-toggle {
+            position: static;
+            background: transparent;
+            border: none;
+            padding: 6px;
+            cursor: pointer;
+            color: var(--text-primary);
+            border-radius: 4px;
+        }
+
+        .theme-toggle:hover {
+            background: var(--bg-tertiary);
+        }
+
+        /* Hide number spinners */
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+    </style>
+</head>
+<body class="dark-mode">
+    <div class="app-container">
+        <!-- Header Row -->
+        <div class="header-row">
+            <h1>EQE Measurement</h1>
+            <div class="header-actions">
+                <span id="pixel-label" class="text-muted" style="font-size: 13px;">Pixel: --</span>
+                <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                    <svg id="sun-icon" class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px">
+                        <circle cx="12" cy="12" r="5"/>
+                        <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                        <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                    </svg>
+                    <svg id="moon-icon" class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Top Section: Parameters + Progress -->
+        <div class="top-section">
+            <div class="params-panel">
+                <div class="panel-title">Measurement Parameters</div>
+                <div class="params-grid">
+                    <div class="param-field">
+                        <label>Start (nm)</label>
+                        <input type="number" id="start-wavelength" value="350" step="10">
+                    </div>
+                    <div class="param-field">
+                        <label>End (nm)</label>
+                        <input type="number" id="end-wavelength" value="750" step="10">
+                    </div>
+                    <div class="param-field">
+                        <label>Step (nm)</label>
+                        <input type="number" id="step-size" value="10" step="1">
+                    </div>
+                    <div class="param-field">
+                        <label>Cell Number</label>
+                        <input type="text" id="cell-number" placeholder="e.g. 140" maxlength="3">
+                    </div>
+                </div>
+            </div>
+
+            <div class="progress-panel">
+                <div class="panel-title">Progress</div>
+                <div class="progress-content">
+                    <div class="progress-status" id="progress-status">Ready</div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar">
+                            <div class="progress-bar-fill" id="progress-fill" style="width: 0%"></div>
+                        </div>
+                        <span class="progress-percent" id="progress-percent">0%</span>
+                    </div>
+                    <div class="live-reading" id="live-reading" style="display: none;">
+                        <span id="live-value">--</span> nA
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Device Status Row with Monochromator Controls -->
+        <div class="device-status-row">
+            <div class="device-item">
+                <span class="device-dot disconnected" id="picoscope-dot"></span>
+                <span class="device-name">PicoScope:</span>
+                <span class="device-status" id="picoscope-status">Connecting...</span>
+            </div>
+            <div class="device-item">
+                <span class="device-dot disconnected" id="mono-dot"></span>
+                <span class="device-name">Monochromator:</span>
+                <span class="device-status" id="mono-status">Connecting...</span>
+            </div>
+            <div class="device-item">
+                <span class="device-dot disconnected" id="power-dot"></span>
+                <span class="device-name">Power Meter:</span>
+                <span class="device-status" id="power-status">Connecting...</span>
+            </div>
+
+            <div class="mono-controls-inline">
+                <span class="mono-state"><span id="mono-wavelength">--</span> nm</span>
+                <span class="shutter-badge closed" id="shutter-badge">Closed</span>
+                <input type="number" id="wavelength-input" placeholder="nm" min="200" max="1200">
+                <button class="btn btn-secondary btn-small" onclick="goToWavelength()">Go</button>
+                <button class="btn btn-secondary btn-small" id="shutter-btn" onclick="toggleShutter()">Open</button>
+                <button class="btn btn-secondary btn-small" onclick="alignMonochromator()">Align</button>
+            </div>
+        </div>
+
+        <!-- Three Plots Row -->
+        <div class="plots-row">
+            <div class="plot-panel">
+                <div class="plot-container">
+                    <div id="power-plot" class="plot"></div>
+                </div>
+            </div>
+
+            <div class="plot-panel">
+                <div class="plot-container">
+                    <div id="current-plot" class="plot"></div>
+                </div>
+            </div>
+
+            <div class="plot-panel">
+                <div class="plot-container">
+                    <div id="phase-plot" class="plot"></div>
+                </div>
+                <div class="stats-row hidden" id="stats-row">
+                    <span class="stat-item">n: <span class="stat-value" id="stats-n">--</span></span>
+                    <span class="stat-item">outliers: <span class="stat-value" id="stats-outliers">0</span></span>
+                    <span class="stat-item">CV: <span class="stat-value" id="stats-cv">--%</span></span>
+                    <span class="quality-badge" id="stats-quality">--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Buttons Row -->
+        <div class="buttons-row">
+            <button class="btn btn-primary" id="power-btn" onclick="startPowerMeasurement()">
+                Start Power Measurement
+            </button>
+            <button class="btn btn-primary" id="current-btn" onclick="startCurrentMeasurement()">
+                Start Current Measurement
+            </button>
+            <button class="btn btn-danger" id="stop-btn" onclick="stopMeasurement()" disabled>
+                Stop
+            </button>
+            <button class="btn btn-secondary" id="live-btn" onclick="toggleLiveMonitor()">
+                Live Monitor
+            </button>
+        </div>
+    </div>
+
+    <!-- Pixel Selection Modal -->
+    <div class="modal-overlay" id="pixel-modal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;z-index:1000;">
+        <div class="modal" style="background:var(--bg-primary);border-radius:8px;padding:24px;min-width:280px;">
+            <div style="font-size:16px;font-weight:600;margin-bottom:16px;">Select Pixel</div>
+            <div style="margin-bottom:16px;">
+                <label style="display:block;font-size:13px;color:var(--text-secondary);margin-bottom:6px;">Pixel Number (1-8)</label>
+                <input type="number" id="pixel-input" min="1" max="8" value="1" style="width:100%;padding:8px 12px;font-size:14px;background:var(--bg-secondary);border:1px solid var(--gray-400);border-radius:4px;color:var(--text-primary);box-sizing:border-box;">
+            </div>
+            <div style="display:flex;gap:12px;justify-content:flex-end;">
+                <button class="btn btn-secondary" onclick="closePixelModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="confirmPixel()">Start</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * EQE Measurement Application - Redesigned Layout
+         */
+
+        // State
+        const state = {
+            devices: {
+                picoscope: { connected: false, message: '' },
+                monochromator: { connected: false, message: '' },
+                power_meter: { connected: false, message: '' }
+            },
+            offlineMode: false,
+            measurementState: 'idle',
+            currentPixel: null,
+            cellNumber: '',
+            wavelength: 0,
+            shutterOpen: false,
+            filter: 0,
+
+            powerData: { x: [], y: [] },
+            currentData: { x: [], y: [] },
+            phaseData: { x: [], y: [] },
+            stats: null
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            LabTheme.init();
+            await LabAPI.init();
+
+            setTimeout(() => {
+                initPlots();
+            }, 50);
+
+            setTimeout(() => {
+                const anyDeviceSet = state.devices.picoscope.message ||
+                                     state.devices.monochromator.message ||
+                                     state.devices.power_meter.message;
+                if (!anyDeviceSet) {
+                    checkDeviceStatus();
+                }
+            }, 500);
+        });
+
+        // ==================== Plots ====================
+
+        function getPlotLayout(isDark, title, xLabel, yLabel) {
+            const colors = {
+                text: isDark ? '#eeeeee' : '#1a1a1a',
+                grid: isDark ? '#444444' : '#dddddd',
+                zeroline: isDark ? '#666666' : '#999999'
+            };
+            return {
+                title: { text: title, font: { size: 13 } },
+                xaxis: {
+                    title: { text: xLabel, font: { size: 11 } },
+                    color: colors.text,
+                    gridcolor: colors.grid,
+                    zerolinecolor: colors.zeroline
+                },
+                yaxis: {
+                    title: { text: yLabel, font: { size: 11 } },
+                    color: colors.text,
+                    gridcolor: colors.grid,
+                    zerolinecolor: colors.zeroline
+                },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: colors.text, size: 10 },
+                margin: { t: 35, r: 15, b: 45, l: 55 }
+            };
+        }
+
+        const plotConfig = {
+            displayModeBar: true,
+            modeBarButtonsToRemove: ['lasso2d', 'select2d'],
+            displaylogo: false,
+            responsive: true
+        };
+
+        function initPlots() {
+            const isDark = LabTheme.isDark();
+
+            Plotly.newPlot('power-plot',
+                [{ x: [], y: [], mode: 'markers+lines', type: 'scattergl', name: 'Power',
+                   marker: { color: '#4A90D9', size: 6 }, line: { color: '#4A90D9', width: 1 } }],
+                getPlotLayout(isDark, 'Incident Light Power', 'Wavelength (nm)', 'Power (µW)'),
+                plotConfig
+            );
+
+            Plotly.newPlot('current-plot',
+                [{ x: [], y: [], mode: 'markers+lines', type: 'scattergl', name: 'Current',
+                   marker: { color: '#66bb6a', size: 6 }, line: { color: '#66bb6a', width: 1 } }],
+                getPlotLayout(isDark, 'PV Current', 'Wavelength (nm)', 'Current (nA)'),
+                plotConfig
+            );
+
+            Plotly.newPlot('phase-plot',
+                [
+                    { x: [], y: [], mode: 'markers', type: 'scattergl', name: 'Measured',
+                      marker: { color: '#ff9800', size: 8 } },
+                    { x: [], y: [], mode: 'lines', type: 'scattergl', name: 'Sine Fit',
+                      line: { color: '#e57373', width: 2 } }
+                ],
+                getPlotLayout(isDark, 'Phase Response and Sine Fit', 'Phase (degrees)', 'Signal (V)'),
+                plotConfig
+            );
+        }
+
+        window.addEventListener('resize', () => {
+            if (typeof Plotly !== 'undefined') {
+                Plotly.Plots.resize('power-plot');
+                Plotly.Plots.resize('current-plot');
+                Plotly.Plots.resize('phase-plot');
+            }
+        });
+
+        window.addEventListener('themechange', (e) => {
+            const isDark = e.detail.dark;
+            ['power-plot', 'current-plot', 'phase-plot'].forEach(id => {
+                const plotDiv = document.getElementById(id);
+                if (plotDiv && plotDiv.data) {
+                    const colors = {
+                        text: isDark ? '#eeeeee' : '#1a1a1a',
+                        grid: isDark ? '#444444' : '#dddddd',
+                        zeroline: isDark ? '#666666' : '#999999'
+                    };
+                    Plotly.relayout(plotDiv, {
+                        'xaxis.color': colors.text, 'xaxis.gridcolor': colors.grid,
+                        'yaxis.color': colors.text, 'yaxis.gridcolor': colors.grid,
+                        'font.color': colors.text
+                    });
+                }
+            });
+        });
+
+        // ==================== Device Status ====================
+
+        async function checkDeviceStatus() {
+            try {
+                const api = LabAPI.get();
+                if (api && api.get_device_status) {
+                    api.get_device_status((result) => {
+                        const status = JSON.parse(result);
+                        state.offlineMode = status.offline_mode;
+                        updateDeviceIndicator('picoscope', status.picoscope);
+                        updateDeviceIndicator('mono', status.monochromator);
+                        updateDeviceIndicator('power', status.power_meter);
+                        state.devices.picoscope = status.picoscope;
+                        state.devices.monochromator = status.monochromator;
+                        state.devices.power_meter = status.power_meter;
+                        updateButtonStates();
+                    });
+                }
+            } catch (error) {
+                console.error('Device status check failed:', error);
+            }
+        }
+
+        function updateDeviceIndicator(name, status) {
+            const dot = document.getElementById(name + '-dot');
+            const text = document.getElementById(name + '-status');
+            if (status.connected) {
+                dot.className = 'device-dot connected';
+            } else if (state.offlineMode) {
+                dot.className = 'device-dot warning';
+            } else {
+                dot.className = 'device-dot disconnected';
+            }
+            text.textContent = status.message || (status.connected ? 'Connected' : 'Not connected');
+        }
+
+        function updateButtonStates() {
+            const canMeasure = state.offlineMode ||
+                (state.devices.picoscope.connected && state.devices.monochromator.connected);
+            const canPower = state.offlineMode ||
+                (state.devices.power_meter.connected && state.devices.monochromator.connected);
+
+            document.getElementById('power-btn').disabled = !canPower;
+            document.getElementById('current-btn').disabled = !canMeasure;
+            document.getElementById('live-btn').disabled = !canMeasure;
+        }
+
+        function onDeviceStatusChanged(deviceName, connected, message) {
+            const nameMap = { 'Thorlabs Power Meter': 'power', 'Monochromator': 'mono', 'PicoScope Lock-in': 'picoscope' };
+            const stateKeyMap = { 'Thorlabs Power Meter': 'power_meter', 'Monochromator': 'monochromator', 'PicoScope Lock-in': 'picoscope' };
+            const id = nameMap[deviceName];
+            const stateKey = stateKeyMap[deviceName];
+            if (id && stateKey) {
+                if (message && message.includes('OFFLINE')) state.offlineMode = true;
+                updateDeviceIndicator(id, { connected, message });
+                state.devices[stateKey] = { connected, message };
+                updateButtonStates();
+            }
+        }
+
+        // ==================== Monochromator ====================
+
+        function updateMonochromatorDisplay() {
+            document.getElementById('mono-wavelength').textContent = state.wavelength.toFixed(1);
+            const badge = document.getElementById('shutter-badge');
+            const btn = document.getElementById('shutter-btn');
+            if (state.shutterOpen) {
+                badge.className = 'shutter-badge open';
+                badge.textContent = 'Open';
+                btn.textContent = 'Close';
+            } else {
+                badge.className = 'shutter-badge closed';
+                badge.textContent = 'Closed';
+                btn.textContent = 'Open';
+            }
+        }
+
+        function goToWavelength() {
+            const wavelength = parseFloat(document.getElementById('wavelength-input').value);
+            if (isNaN(wavelength) || wavelength < 200 || wavelength > 1200) {
+                alert('Enter wavelength between 200-1200 nm');
+                return;
+            }
+            if (state.offlineMode) {
+                state.wavelength = wavelength;
+                updateMonochromatorDisplay();
+                return;
+            }
+            const api = LabAPI.get();
+            if (api && api.set_wavelength) {
+                api.set_wavelength(wavelength, (result) => {
+                    const r = JSON.parse(result);
+                    if (!r.success) alert('Failed: ' + r.message);
+                });
+            }
+        }
+
+        function toggleShutter() {
+            if (state.offlineMode) {
+                state.shutterOpen = !state.shutterOpen;
+                updateMonochromatorDisplay();
+                return;
+            }
+            const api = LabAPI.get();
+            if (state.shutterOpen) {
+                if (api && api.close_shutter) api.close_shutter(() => {});
+            } else {
+                if (api && api.open_shutter) api.open_shutter(() => {});
+            }
+        }
+
+        function alignMonochromator() {
+            if (state.offlineMode) {
+                state.wavelength = 532;
+                state.shutterOpen = true;
+                updateMonochromatorDisplay();
+                return;
+            }
+            const api = LabAPI.get();
+            if (api && api.align_monochromator) {
+                api.align_monochromator((result) => {
+                    const r = JSON.parse(result);
+                    if (!r.success) alert('Failed: ' + r.message);
+                });
+            }
+        }
+
+        function onMonochromatorStateChanged(wavelength, shutterOpen, filterNumber) {
+            state.wavelength = wavelength;
+            state.shutterOpen = shutterOpen;
+            state.filter = filterNumber;
+            updateMonochromatorDisplay();
+        }
+
+        // ==================== Measurements ====================
+
+        function getParams() {
+            return {
+                start_wavelength: parseFloat(document.getElementById('start-wavelength').value),
+                end_wavelength: parseFloat(document.getElementById('end-wavelength').value),
+                step_size: parseFloat(document.getElementById('step-size').value),
+                cell_number: document.getElementById('cell-number').value || '000'
+            };
+        }
+
+        function startPowerMeasurement() {
+            const cell = document.getElementById('cell-number').value;
+            if (!cell || !/^\d{1,3}$/.test(cell)) {
+                alert('Please enter a valid cell number');
+                document.getElementById('cell-number').focus();
+                return;
+            }
+
+            state.measurementState = 'power';
+            state.powerData = { x: [], y: [] };
+            clearPlot('power');
+            setMeasuringState(true);
+            updateProgress(0, 'Starting power measurement...');
+
+            if (state.offlineMode) {
+                mockPowerMeasurement();
+                return;
+            }
+
+            const api = LabAPI.get();
+            if (api && api.start_power_measurement) {
+                api.start_power_measurement(JSON.stringify(getParams()), (result) => {
+                    const r = JSON.parse(result);
+                    if (!r.success) {
+                        alert('Failed: ' + r.message);
+                        setMeasuringState(false);
+                    }
+                });
+            }
+        }
+
+        function startCurrentMeasurement() {
+            const cell = document.getElementById('cell-number').value;
+            if (!cell || !/^\d{1,3}$/.test(cell)) {
+                alert('Please enter a valid cell number');
+                document.getElementById('cell-number').focus();
+                return;
+            }
+            showPixelModal();
+        }
+
+        function showPixelModal() {
+            document.getElementById('pixel-modal').style.display = 'flex';
+            setTimeout(() => document.getElementById('pixel-input').focus(), 100);
+        }
+
+        function closePixelModal() {
+            document.getElementById('pixel-modal').style.display = 'none';
+        }
+
+        function confirmPixel() {
+            const pixel = parseInt(document.getElementById('pixel-input').value);
+            if (pixel < 1 || pixel > 8) {
+                alert('Pixel must be 1-8');
+                return;
+            }
+            closePixelModal();
+            startCurrentMeasurementWithPixel(pixel);
+        }
+
+        document.getElementById('pixel-input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') confirmPixel();
+        });
+
+        function startCurrentMeasurementWithPixel(pixel) {
+            state.currentPixel = pixel;
+            state.measurementState = 'phase';
+            state.phaseData = { x: [], y: [] };
+            state.currentData = { x: [], y: [] };
+            clearPlot('phase');
+            clearPlot('current');
+            setMeasuringState(true);
+            updateProgress(0, 'Phase adjustment...');
+            document.getElementById('pixel-label').textContent = 'Pixel: ' + pixel;
+            document.getElementById('stats-row').classList.remove('hidden');
+
+            if (state.offlineMode) {
+                mockPhaseThenCurrentMeasurement(pixel);
+                return;
+            }
+
+            const params = { ...getParams(), pixel };
+            const api = LabAPI.get();
+            if (api && api.start_current_measurement) {
+                api.start_current_measurement(JSON.stringify(params), (result) => {
+                    const r = JSON.parse(result);
+                    if (!r.success) {
+                        alert('Failed: ' + r.message);
+                        setMeasuringState(false);
+                    }
+                });
+            }
+        }
+
+        function stopMeasurement() {
+            if (state.offlineMode) {
+                state.measurementState = 'idle';
+                setMeasuringState(false);
+                return;
+            }
+            const api = LabAPI.get();
+            if (api && api.stop_measurement) api.stop_measurement(() => {});
+            state.measurementState = 'idle';
+            setMeasuringState(false);
+        }
+
+        function setMeasuringState(measuring) {
+            document.getElementById('power-btn').disabled = measuring;
+            document.getElementById('current-btn').disabled = measuring;
+            document.getElementById('stop-btn').disabled = !measuring;
+            document.getElementById('live-btn').disabled = measuring;
+
+            const inputs = document.querySelectorAll('.params-grid input, .mono-controls-inline input');
+            inputs.forEach(input => input.disabled = measuring);
+
+            if (!measuring) {
+                updateButtonStates();
+                document.getElementById('stats-row').classList.add('hidden');
+            }
+        }
+
+        function updateProgress(percent, status) {
+            document.getElementById('progress-fill').style.width = percent + '%';
+            document.getElementById('progress-percent').textContent = Math.round(percent) + '%';
+            document.getElementById('progress-status').textContent = status;
+        }
+
+        // ==================== Plot Updates ====================
+
+        function onPowerProgress(wavelength, power, percent) {
+            const powerUW = power * 1e6;
+            state.powerData.x.push(wavelength);
+            state.powerData.y.push(powerUW);
+
+            const isDark = LabTheme.isDark();
+            Plotly.newPlot('power-plot',
+                [{ x: state.powerData.x, y: state.powerData.y, mode: 'markers+lines', type: 'scattergl',
+                   name: 'Power', marker: { color: '#4A90D9', size: 6 }, line: { color: '#4A90D9', width: 1 } }],
+                getPlotLayout(isDark, 'Incident Light Power', 'Wavelength (nm)', 'Power (µW)'),
+                plotConfig
+            );
+            updateProgress(percent, `Measuring at ${wavelength.toFixed(0)} nm`);
+        }
+
+        function onCurrentProgress(wavelength, current, percent) {
+            const currentNA = current * 1e9;
+            state.currentData.x.push(wavelength);
+            state.currentData.y.push(currentNA);
+
+            if (state.measurementState === 'phase') {
+                state.measurementState = 'current';
+            }
+
+            const isDark = LabTheme.isDark();
+            Plotly.newPlot('current-plot',
+                [{ x: state.currentData.x, y: state.currentData.y, mode: 'markers+lines', type: 'scattergl',
+                   name: 'Current', marker: { color: '#66bb6a', size: 6 }, line: { color: '#66bb6a', width: 1 } }],
+                getPlotLayout(isDark, 'PV Current', 'Wavelength (nm)', 'Current (nA)'),
+                plotConfig
+            );
+            updateProgress(percent, `Measuring at ${wavelength.toFixed(0)} nm`);
+        }
+
+        function onPhaseProgress(phase, signal) {
+            state.phaseData.x.push(phase);
+            state.phaseData.y.push(signal);
+
+            const isDark = LabTheme.isDark();
+            Plotly.newPlot('phase-plot',
+                [
+                    { x: state.phaseData.x, y: state.phaseData.y, mode: 'markers', type: 'scattergl',
+                      name: 'Measured', marker: { color: '#ff9800', size: 8 } },
+                    { x: [], y: [], mode: 'lines', type: 'scattergl', name: 'Sine Fit',
+                      line: { color: '#e57373', width: 2 } }
+                ],
+                getPlotLayout(isDark, 'Phase Response and Sine Fit', 'Phase (degrees)', 'Signal (V)'),
+                plotConfig
+            );
+            updateProgress(0, `Phase adjustment: ${phase.toFixed(0)}°`);
+        }
+
+        function onMeasurementComplete(success, message) {
+            state.measurementState = 'idle';
+            setMeasuringState(false);
+            updateProgress(100, success ? 'Complete' : 'Stopped');
+
+            if (success) {
+                if (state.powerData.x.length > 0) savePowerData();
+                else if (state.currentData.x.length > 0) saveCurrentData();
+            }
+        }
+
+        function onMeasurementStats(stats) {
+            state.stats = stats;
+            document.getElementById('stats-n').textContent = `${stats.n}/${stats.total}`;
+            document.getElementById('stats-outliers').textContent = stats.outliers;
+            document.getElementById('stats-cv').textContent = stats.cv_percent.toFixed(1) + '%';
+            const badge = document.getElementById('stats-quality');
+            badge.textContent = stats.quality;
+            badge.className = 'quality-badge quality-' + stats.quality.toLowerCase();
+        }
+
+        function clearPlot(type) {
+            const isDark = LabTheme.isDark();
+            if (type === 'power') {
+                Plotly.newPlot('power-plot',
+                    [{ x: [], y: [], mode: 'markers+lines', type: 'scattergl', name: 'Power',
+                       marker: { color: '#4A90D9', size: 6 }, line: { color: '#4A90D9', width: 1 } }],
+                    getPlotLayout(isDark, 'Incident Light Power', 'Wavelength (nm)', 'Power (µW)'),
+                    plotConfig
+                );
+            } else if (type === 'current') {
+                Plotly.newPlot('current-plot',
+                    [{ x: [], y: [], mode: 'markers+lines', type: 'scattergl', name: 'Current',
+                       marker: { color: '#66bb6a', size: 6 }, line: { color: '#66bb6a', width: 1 } }],
+                    getPlotLayout(isDark, 'PV Current', 'Wavelength (nm)', 'Current (nA)'),
+                    plotConfig
+                );
+            } else if (type === 'phase') {
+                Plotly.newPlot('phase-plot',
+                    [
+                        { x: [], y: [], mode: 'markers', type: 'scattergl', name: 'Measured',
+                          marker: { color: '#ff9800', size: 8 } },
+                        { x: [], y: [], mode: 'lines', type: 'scattergl', name: 'Sine Fit',
+                          line: { color: '#e57373', width: 2 } }
+                    ],
+                    getPlotLayout(isDark, 'Phase Response and Sine Fit', 'Phase (degrees)', 'Signal (V)'),
+                    plotConfig
+                );
+            }
+        }
+
+        // ==================== Live Monitor ====================
+
+        let liveMonitorActive = false;
+
+        function toggleLiveMonitor() {
+            if (liveMonitorActive) {
+                stopLiveMonitor();
+            } else {
+                startLiveMonitor();
+            }
+        }
+
+        function startLiveMonitor() {
+            liveMonitorActive = true;
+            state.measurementState = 'live_monitor';
+            document.getElementById('live-btn').textContent = 'Stop Monitor';
+            document.getElementById('live-btn').className = 'btn btn-danger';
+            document.getElementById('live-reading').style.display = 'block';
+            document.getElementById('power-btn').disabled = true;
+            document.getElementById('current-btn').disabled = true;
+            updateProgress(0, 'Live monitoring at 532 nm');
+
+            if (state.offlineMode) {
+                mockLiveMonitor();
+                return;
+            }
+
+            const api = LabAPI.get();
+            if (api && api.start_live_monitor) api.start_live_monitor(() => {});
+        }
+
+        function stopLiveMonitor() {
+            liveMonitorActive = false;
+            state.measurementState = 'idle';
+            document.getElementById('live-btn').textContent = 'Live Monitor';
+            document.getElementById('live-btn').className = 'btn btn-secondary';
+            document.getElementById('live-reading').style.display = 'none';
+            updateButtonStates();
+            updateProgress(0, 'Ready');
+
+            if (!state.offlineMode) {
+                const api = LabAPI.get();
+                if (api && api.stop_live_monitor) api.stop_live_monitor(() => {});
+            }
+        }
+
+        function onLiveSignalUpdate(currentNA) {
+            document.getElementById('live-value').textContent = currentNA.toFixed(2);
+        }
+
+        // ==================== Data Export ====================
+
+        function savePowerData() {
+            let csv = 'Wavelength (nm),Power (uW)\n';
+            for (let i = 0; i < state.powerData.x.length; i++) {
+                csv += `${state.powerData.x[i].toFixed(1)},${state.powerData.y[i].toFixed(6)}\n`;
+            }
+            const api = LabAPI.get();
+            if (api && api.save_power_data) {
+                api.save_power_data(csv, document.getElementById('cell-number').value, (result) => {
+                    const r = JSON.parse(result);
+                    if (r.success) console.log('Saved:', r.path);
+                    else if (r.message !== 'Cancelled') alert('Save failed: ' + r.message);
+                });
+            }
+        }
+
+        function saveCurrentData() {
+            let csv = 'Wavelength (nm),Current (nA)\n';
+            for (let i = 0; i < state.currentData.x.length; i++) {
+                csv += `${state.currentData.x[i].toFixed(1)},${state.currentData.y[i].toFixed(6)}\n`;
+            }
+            const api = LabAPI.get();
+            if (api && api.save_current_data) {
+                api.save_current_data(csv, document.getElementById('cell-number').value, state.currentPixel, (result) => {
+                    const r = JSON.parse(result);
+                    if (r.success) console.log('Saved:', r.path);
+                    else if (r.message !== 'Cancelled') alert('Save failed: ' + r.message);
+                });
+            }
+        }
+
+        // ==================== Mock Measurements ====================
+
+        function mockPowerMeasurement() {
+            const params = getParams();
+            let wavelength = params.start_wavelength;
+            const end = params.end_wavelength;
+            const step = params.step_size;
+            const total = Math.ceil((end - wavelength) / step) + 1;
+            let count = 0;
+
+            const interval = setInterval(() => {
+                if (state.measurementState !== 'power' || wavelength > end) {
+                    clearInterval(interval);
+                    if (state.measurementState === 'power') {
+                        onMeasurementComplete(true, 'Complete');
+                    }
+                    return;
+                }
+                const power = 2e-6 * Math.exp(-Math.pow((wavelength - 550) / 100, 2)) * (0.9 + 0.2 * Math.random());
+                count++;
+                onPowerProgress(wavelength, power, (count / total) * 100);
+                wavelength += step;
+            }, 100);
+        }
+
+        function mockPhaseThenCurrentMeasurement(pixel) {
+            let phase = 0;
+            const phaseInterval = setInterval(() => {
+                if (state.measurementState === 'idle' || phase > 360) {
+                    clearInterval(phaseInterval);
+                    if (state.measurementState !== 'idle') {
+                        state.measurementState = 'current';
+                        mockCurrentMeasurement();
+                    }
+                    return;
+                }
+                const signal = 0.5 + 0.4 * Math.sin((phase - 45) * Math.PI / 180) + 0.02 * Math.random();
+                onPhaseProgress(phase, signal);
+                phase += 15;
+            }, 50);
+        }
+
+        function mockCurrentMeasurement() {
+            const params = getParams();
+            let wavelength = params.start_wavelength;
+            const end = params.end_wavelength;
+            const step = params.step_size;
+            const total = Math.ceil((end - wavelength) / step) + 1;
+            let count = 0;
+
+            const interval = setInterval(() => {
+                if (state.measurementState !== 'current' || wavelength > end) {
+                    clearInterval(interval);
+                    if (state.measurementState === 'current') {
+                        onMeasurementComplete(true, 'Complete');
+                    }
+                    return;
+                }
+                const bandgap = 750;
+                let current;
+                if (wavelength < bandgap) {
+                    current = 2e-9 * (1 - Math.exp(-(wavelength - 350) / 50)) * (0.9 + 0.2 * Math.random());
+                } else {
+                    current = 2e-9 * Math.exp(-(wavelength - bandgap) / 30) * (0.9 + 0.2 * Math.random());
+                }
+                count++;
+
+                onMeasurementStats({
+                    mean: current * 1e9,
+                    std_dev: current * 1e9 * 0.02,
+                    n: 5, total: 5, outliers: 0,
+                    cv_percent: 2.0, quality: 'Excellent'
+                });
+
+                onCurrentProgress(wavelength, current, (count / total) * 100);
+                wavelength += step;
+            }, 150);
+        }
+
+        function mockLiveMonitor() {
+            const mockInterval = setInterval(() => {
+                if (!liveMonitorActive) {
+                    clearInterval(mockInterval);
+                    return;
+                }
+                onLiveSignalUpdate(1.5 + 0.5 * Math.random());
+            }, 500);
+        }
+
+        // Global callbacks for Python
+        window.onDeviceStatusChanged = onDeviceStatusChanged;
+        window.onMonochromatorStateChanged = onMonochromatorStateChanged;
+        window.onPowerProgress = onPowerProgress;
+        window.onCurrentProgress = onCurrentProgress;
+        window.onPhaseProgress = onPhaseProgress;
+        window.onMeasurementComplete = onMeasurementComplete;
+        window.onMeasurementStats = onMeasurementStats;
+        window.onLiveSignalUpdate = onLiveSignalUpdate;
+    </script>
+</body>
+</html>
