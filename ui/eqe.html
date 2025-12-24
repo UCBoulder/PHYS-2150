@@ -25,7 +25,7 @@
     <div class="eqe-app">
         <!-- Header Row -->
         <div class="eqe-header">
-            <h1>EQE Measurement</h1>
+            <h1>EQE</h1>
             <div class="header-actions">
                 <span id="pixel-label" class="text-muted">Pixel: --</span>
                 <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
@@ -42,6 +42,53 @@
                 </button>
             </div>
         </div>
+
+        <!-- Tab Navigation -->
+        <div class="tab-bar">
+            <button class="tab-btn active" onclick="switchTab('measurement')">Measurement</button>
+            <button class="tab-btn" onclick="switchTab('stability')">Stability Test</button>
+            <button class="tab-btn staff-tab" id="analysis-tab-btn" onclick="switchTab('analysis')" style="display: none;">
+                EQE Analysis
+                <span class="staff-badge-small">STAFF</span>
+            </button>
+        </div>
+
+        <!-- Hidden file inputs for EQE Analysis -->
+        <input type="file" id="power-file-input" accept=".csv" style="display: none;" onchange="onPowerFileSelected(event)">
+        <input type="file" id="current-file-input" accept=".csv" style="display: none;" onchange="onCurrentFileSelected(event)">
+
+        <!-- Device Status Row with Monochromator Controls (shared across tabs) -->
+        <div class="device-status-row">
+            <span class="row-section-title">Device Status</span>
+            <div class="device-item">
+                <span class="device-dot disconnected" id="picoscope-dot"></span>
+                <span class="device-name">PicoScope:</span>
+                <span class="device-status" id="picoscope-status">Connecting...</span>
+            </div>
+            <div class="device-item">
+                <span class="device-dot disconnected" id="mono-dot"></span>
+                <span class="device-name">Monochromator:</span>
+                <span class="device-status" id="mono-status">Connecting...</span>
+            </div>
+            <div class="device-item">
+                <span class="device-dot disconnected" id="power-dot"></span>
+                <span class="device-name">Power Meter:</span>
+                <span class="device-status" id="power-status">Connecting...</span>
+            </div>
+
+            <div class="mono-controls-inline">
+                <span class="row-section-title">Monochromator</span>
+                <span class="mono-state"><span id="mono-wavelength">--</span> nm</span>
+                <span class="shutter-badge closed" id="shutter-badge">Closed</span>
+                <input type="number" id="wavelength-input" placeholder="nm" min="200" max="1200">
+                <button class="btn btn-secondary btn-small" onclick="goToWavelength()">Go</button>
+                <button class="btn btn-secondary btn-small" id="shutter-btn" onclick="toggleShutter()">Open</button>
+                <button class="btn btn-secondary btn-small" onclick="alignMonochromator()">Align</button>
+            </div>
+        </div>
+
+        <!-- ==================== MEASUREMENT TAB ==================== -->
+        <div id="tab-measurement" class="tab-content active">
 
         <!-- Top Section: Parameters + Progress -->
         <div class="top-section">
@@ -81,36 +128,6 @@
                         <span id="live-value">--</span> nA
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <!-- Device Status Row with Monochromator Controls -->
-        <div class="device-status-row">
-            <span class="row-section-title">Device Status</span>
-            <div class="device-item">
-                <span class="device-dot disconnected" id="picoscope-dot"></span>
-                <span class="device-name">PicoScope:</span>
-                <span class="device-status" id="picoscope-status">Connecting...</span>
-            </div>
-            <div class="device-item">
-                <span class="device-dot disconnected" id="mono-dot"></span>
-                <span class="device-name">Monochromator:</span>
-                <span class="device-status" id="mono-status">Connecting...</span>
-            </div>
-            <div class="device-item">
-                <span class="device-dot disconnected" id="power-dot"></span>
-                <span class="device-name">Power Meter:</span>
-                <span class="device-status" id="power-status">Connecting...</span>
-            </div>
-
-            <div class="mono-controls-inline">
-                <span class="row-section-title">Monochromator</span>
-                <span class="mono-state"><span id="mono-wavelength">--</span> nm</span>
-                <span class="shutter-badge closed" id="shutter-badge">Closed</span>
-                <input type="number" id="wavelength-input" placeholder="nm" min="200" max="1200">
-                <button class="btn btn-secondary btn-small" onclick="goToWavelength()">Go</button>
-                <button class="btn btn-secondary btn-small" id="shutter-btn" onclick="toggleShutter()">Open</button>
-                <button class="btn btn-secondary btn-small" onclick="alignMonochromator()">Align</button>
             </div>
         </div>
 
@@ -161,6 +178,180 @@
                 Live Monitor
             </button>
         </div>
+
+        </div><!-- End Measurement Tab -->
+
+        <!-- ==================== STABILITY TEST TAB ==================== -->
+        <div id="tab-stability" class="tab-content">
+
+        <!-- Configuration Row -->
+        <div class="stability-config">
+            <div class="stability-config-panel">
+                <div class="config-header">
+                    <div class="panel-title">Test Configuration</div>
+                    <div class="test-type-selector">
+                        <label>Test Type:</label>
+                        <div class="radio-group">
+                            <label class="radio-option">
+                                <input type="radio" name="stability-type" value="power" checked onchange="onStabilityTypeChange()">
+                                <span>Power</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="stability-type" value="current" onchange="onStabilityTypeChange()">
+                                <span>Current</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="params-grid" style="grid-template-columns: repeat(3, 1fr);">
+                    <div class="param-field">
+                        <label>Wavelength (nm)</label>
+                        <input type="number" id="stability-wavelength" value="550" step="10">
+                    </div>
+                    <div class="param-field">
+                        <label>Duration (min)</label>
+                        <input type="number" id="stability-duration" value="5" min="1" max="60">
+                    </div>
+                    <div class="param-field">
+                        <label>Interval (sec)</label>
+                        <input type="number" id="stability-interval" value="2" min="1" max="60">
+                    </div>
+                </div>
+            </div>
+
+            <div class="progress-panel">
+                <div class="panel-title">Status</div>
+                <div class="progress-content">
+                    <div class="progress-status" id="stability-status">Ready</div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar">
+                            <div class="progress-bar-fill" id="stability-progress-fill" style="width: 0%"></div>
+                        </div>
+                        <span class="progress-percent" id="stability-progress-percent">0%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dual Plots Row -->
+        <div class="stability-plots">
+            <div class="plot-panel">
+                <div class="plot-title">Time Series</div>
+                <div class="plot-container">
+                    <div id="stability-time-plot" class="plot"></div>
+                </div>
+            </div>
+            <div class="plot-panel">
+                <div class="plot-title">Histogram</div>
+                <div class="plot-container">
+                    <div id="stability-hist-plot" class="plot"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Bar -->
+        <div class="stability-stats-bar">
+            <div class="stability-stat">
+                <span class="stability-stat-label">Mean:</span>
+                <span class="stability-stat-value" id="stability-mean">--</span>
+            </div>
+            <div class="stability-stat">
+                <span class="stability-stat-label">Std Dev:</span>
+                <span class="stability-stat-value" id="stability-std">--</span>
+            </div>
+            <div class="stability-stat">
+                <span class="stability-stat-label">CV:</span>
+                <span class="stability-stat-value cv" id="stability-cv">--%</span>
+            </div>
+            <div class="stability-stat">
+                <span class="stability-stat-label">Count:</span>
+                <span class="stability-stat-value" id="stability-count">0</span>
+            </div>
+            <div class="stability-stat">
+                <span class="stability-stat-label">Range:</span>
+                <span class="stability-stat-value" id="stability-range">--</span>
+            </div>
+        </div>
+
+        <!-- Buttons Row -->
+        <div class="buttons-row">
+            <button class="btn btn-primary" id="stability-start-btn" onclick="startStabilityTest()">
+                Start Test
+            </button>
+            <button class="btn btn-danger" id="stability-stop-btn" onclick="stopStabilityTest()" disabled>
+                Stop Test
+            </button>
+            <button class="btn btn-secondary" id="stability-save-btn" onclick="saveStabilityData()" disabled>
+                Save Results
+            </button>
+        </div>
+
+        </div><!-- End Stability Tab -->
+
+        <!-- EQE Analysis Tab (Staff Mode - Ctrl+Shift+E) -->
+        <div id="tab-analysis" class="tab-content">
+            <!-- Top Section: Data Source + Status -->
+            <div class="top-section">
+                <div class="params-panel analysis-source-panel">
+                    <div class="panel-title">Data Source</div>
+                    <div class="analysis-data-section">
+                        <button class="btn btn-primary btn-small" id="use-session-btn" onclick="useSessionData()" disabled>
+                            Use Current Session
+                        </button>
+                        <span class="analysis-separator">--- OR load from files ---</span>
+                        <div class="analysis-btn-group">
+                            <button class="btn btn-secondary btn-small" onclick="loadPowerCSV()">Load Power CSV</button>
+                            <span class="analysis-file-status" id="power-file-status">No file</span>
+                        </div>
+                        <div class="analysis-btn-group">
+                            <button class="btn btn-secondary btn-small" onclick="loadCurrentCSV()">Load Current CSV</button>
+                            <span class="analysis-file-status" id="current-file-status">No file</span>
+                        </div>
+                        <button class="btn btn-primary btn-small" id="calculate-eqe-btn" onclick="calculateEQE()" disabled>
+                            Calculate EQE
+                        </button>
+                    </div>
+                </div>
+
+                <div class="progress-panel">
+                    <div class="panel-title">Status</div>
+                    <div class="progress-content">
+                        <div class="progress-status analysis-status-text" id="analysis-status">Ready - load power and current data to calculate EQE</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Plot Row: EQE Spectrum + Results -->
+            <div class="analysis-plots-row">
+                <div class="plot-panel analysis-eqe-panel">
+                    <div class="plot-title">EQE Spectrum</div>
+                    <div class="plot-container">
+                        <div id="eqe-plot" class="plot"></div>
+                    </div>
+                </div>
+
+                <div class="params-panel analysis-results-panel">
+                    <div class="panel-title">Results</div>
+                    <div class="analysis-metrics">
+                        <div class="analysis-metric">
+                            <span class="analysis-metric-label">Peak EQE</span>
+                            <span class="analysis-metric-value peak" id="metric-peak-eqe">--%</span>
+                            <span class="analysis-metric-detail" id="metric-peak-wavelength">at -- nm</span>
+                        </div>
+                        <div class="analysis-metric">
+                            <span class="analysis-metric-label">Bandgap Edge</span>
+                            <span class="analysis-metric-value" id="metric-bandgap">-- nm</span>
+                            <span class="analysis-metric-detail" id="metric-bandgap-ev">(-- eV)</span>
+                        </div>
+                        <div class="analysis-metric">
+                            <span class="analysis-metric-label">Data Points</span>
+                            <span class="analysis-metric-value" id="metric-datapoints">--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div><!-- End Analysis Tab -->
+
     </div>
 
     <!-- Cell Number Modal (shown on startup) -->
@@ -232,6 +423,19 @@
         </div>
     </div>
 
+    <!-- Info Modal -->
+    <div class="modal-overlay" id="info-modal">
+        <div class="modal">
+            <div class="modal-title" id="info-modal-title">Info</div>
+            <div class="modal-body">
+                <p id="info-modal-message" style="color: var(--text-secondary); white-space: pre-line;"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="LabModals.closeInfo()">OK</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         /**
          * EQE Measurement Application - Redesigned Layout
@@ -239,6 +443,7 @@
 
         // State
         const state = {
+            activeTab: 'measurement',
             devices: {
                 picoscope: { connected: false, message: '' },
                 monochromator: { connected: false, message: '' },
@@ -255,8 +460,73 @@
             powerData: { x: [], y: [] },
             currentData: { x: [], y: [], stats: [] },  // stats array stores per-point statistics
             phaseData: { x: [], y: [] },
-            stats: null  // current measurement stats (for UI display)
+            stats: null,  // current measurement stats (for UI display)
+
+            // Stability test state
+            stability: {
+                testType: 'power',  // 'power' | 'current'
+                running: false,
+                pixel: null,
+                data: { times: [], values: [] },
+                stats: null,  // {mean, std, cv_percent, min, max, range, count}
+                startTime: null
+            },
+
+            // EQE Analysis state (staff mode)
+            analysis: {
+                visible: false,
+                powerData: null,   // {wavelengths: [], values: []}
+                currentData: null, // {wavelengths: [], values: []}
+                eqeData: null,     // {wavelengths: [], eqe: []}
+                metrics: null      // {peakEQE, peakWavelength, bandgapWavelength, bandgapEV, dataPoints}
+            },
+
+            // Debug mode
+            debugMode: false
         };
+
+        // ==================== Tab Navigation ====================
+
+        function switchTab(tabName) {
+            // Don't switch if a test is running
+            if (state.measurementState !== 'idle' && state.measurementState !== 'live_monitor') {
+                LabModals.showError('Cannot Switch', 'Please stop the current measurement before switching tabs.');
+                return;
+            }
+            if (state.stability.running) {
+                LabModals.showError('Cannot Switch', 'Please stop the stability test before switching tabs.');
+                return;
+            }
+
+            state.activeTab = tabName;
+
+            // Update tab buttons - use data attribute for reliable matching
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                const btnTab = btn.getAttribute('onclick')?.match(/switchTab\('(\w+)'\)/)?.[1];
+                btn.classList.toggle('active', btnTab === tabName);
+            });
+
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.toggle('active', content.id === 'tab-' + tabName);
+            });
+
+            // Initialize plots for the new tab if needed
+            if (tabName === 'stability') {
+                setTimeout(() => initStabilityPlots(), 50);
+            } else if (tabName === 'analysis') {
+                setTimeout(() => {
+                    initEQEPlot();
+                    updateSessionDataButton();
+                }, 50);
+            } else {
+                setTimeout(() => {
+                    Plotly.Plots.resize('power-plot');
+                    Plotly.Plots.resize('current-plot');
+                    Plotly.Plots.resize('phase-plot');
+                }, 50);
+            }
+        }
 
         // Initialize
         document.addEventListener('DOMContentLoaded', async () => {
@@ -1083,6 +1353,711 @@
             }, 500);
         }
 
+        // ==================== Stability Tests ====================
+
+        function initStabilityPlots() {
+            const isDark = LabTheme.isDark();
+
+            // Time series plot
+            Plotly.newPlot('stability-time-plot',
+                [
+                    { x: [], y: [], mode: 'lines+markers', type: 'scatter', name: 'Measured',
+                      line: { color: '#4A90D9' }, marker: { size: 6 } },
+                    { x: [], y: [], mode: 'lines', type: 'scatter', name: 'Mean',
+                      line: { color: '#e57373', dash: 'dash', width: 2 } },
+                    { x: [], y: [], mode: 'lines', type: 'scatter', name: '+1σ',
+                      line: { color: '#ffb74d', dash: 'dot', width: 1 }, showlegend: false },
+                    { x: [], y: [], mode: 'lines', type: 'scatter', name: '-1σ',
+                      line: { color: '#ffb74d', dash: 'dot', width: 1 }, showlegend: false }
+                ],
+                getPlotLayout(isDark, 'Time (s)', 'Value'),
+                plotConfig
+            );
+
+            // Histogram plot
+            Plotly.newPlot('stability-hist-plot',
+                [{ x: [], type: 'histogram', name: 'Distribution',
+                   marker: { color: '#4A90D9' } }],
+                {
+                    ...getPlotLayout(isDark, 'Value', 'Count'),
+                    bargap: 0.05
+                },
+                plotConfig
+            );
+        }
+
+        function onStabilityTypeChange() {
+            const testType = document.querySelector('input[name="stability-type"]:checked').value;
+            state.stability.testType = testType;
+        }
+
+        function getStabilityParams() {
+            return {
+                type: state.stability.testType,
+                wavelength: parseFloat(document.getElementById('stability-wavelength').value),
+                duration: parseFloat(document.getElementById('stability-duration').value),
+                interval: parseFloat(document.getElementById('stability-interval').value),
+                pixel: state.stability.pixel || 1
+            };
+        }
+
+        function startStabilityTest() {
+            const testType = document.querySelector('input[name="stability-type"]:checked').value;
+            state.stability.testType = testType;
+
+            // Validate wavelength first
+            const wavelength = parseFloat(document.getElementById('stability-wavelength').value);
+            if (isNaN(wavelength) || wavelength < 200 || wavelength > 1200) {
+                LabModals.showError('Invalid Wavelength', 'Enter wavelength between 200-1200 nm');
+                return;
+            }
+
+            // For current tests, show pixel modal first
+            if (testType === 'current') {
+                LabModals.showPixel(startStabilityTestWithPixel);
+            } else {
+                startStabilityTestWithPixel(null);
+            }
+        }
+
+        function startStabilityTestWithPixel(pixel) {
+            if (pixel !== null) {
+                state.stability.pixel = pixel;
+                document.getElementById('pixel-label').textContent = 'Pixel: ' + pixel;
+            }
+
+            const params = getStabilityParams();
+
+            // Reset state
+            state.stability.running = true;
+            state.stability.data = { times: [], values: [] };
+            state.stability.stats = null;
+            state.stability.startTime = Date.now();
+
+            // Update UI
+            setStabilityTestState(true);
+            updateStabilityProgress(0, 'Starting test...');
+            clearStabilityStats();
+
+            if (state.offlineMode) {
+                mockStabilityTest(params);
+                return;
+            }
+
+            const api = LabAPI.get();
+            if (api && api.start_stability_test) {
+                api.start_stability_test(JSON.stringify(params), (result) => {
+                    const r = JSON.parse(result);
+                    if (!r.success) {
+                        LabModals.showError('Test Failed', r.message);
+                        setStabilityTestState(false);
+                    } else if (r.phase === 'adjusting') {
+                        // Current test - show phase adjustment status
+                        updateStabilityProgress(0, 'Adjusting phase (locking to chopper)...');
+                    }
+                });
+            }
+        }
+
+        function stopStabilityTest() {
+            state.stability.running = false;
+
+            if (!state.offlineMode) {
+                const api = LabAPI.get();
+                if (api && api.stop_stability_test) api.stop_stability_test(() => {});
+            }
+
+            setStabilityTestState(false);
+            updateStabilityProgress(0, 'Stopped');
+        }
+
+        function setStabilityTestState(running) {
+            document.getElementById('stability-start-btn').disabled = running;
+            document.getElementById('stability-stop-btn').disabled = !running;
+
+            // Disable inputs during test
+            const inputs = document.querySelectorAll('#tab-stability .config-field input, #tab-stability input[type="radio"]');
+            inputs.forEach(input => input.disabled = running);
+
+            // Disable monochromator controls during test (shared across tabs)
+            document.getElementById('wavelength-input').disabled = running;
+            document.querySelectorAll('.mono-controls-inline .btn').forEach(btn => btn.disabled = running);
+
+            if (!running && state.stability.data.times.length > 0) {
+                document.getElementById('stability-save-btn').disabled = false;
+            }
+        }
+
+        function updateStabilityProgress(percent, status) {
+            document.getElementById('stability-progress-fill').style.width = percent + '%';
+            document.getElementById('stability-progress-percent').textContent = Math.round(percent) + '%';
+            document.getElementById('stability-status').textContent = status;
+        }
+
+        function onStabilityProgress(timestamp, value) {
+            state.stability.data.times.push(timestamp);
+            state.stability.data.values.push(value);
+
+            // Calculate statistics
+            const stats = calculateStabilityStats(state.stability.data.values);
+            state.stability.stats = stats;
+
+            // Update plots
+            updateStabilityPlots();
+
+            // Update stats display
+            updateStabilityStatsDisplay(stats);
+
+            // Update progress
+            const params = getStabilityParams();
+            const elapsed = timestamp;
+            const total = params.duration * 60;
+            const percent = Math.min(100, (elapsed / total) * 100);
+            updateStabilityProgress(percent, `Measuring... (${state.stability.data.times.length} points)`);
+        }
+
+        function calculateStabilityStats(values) {
+            if (values.length === 0) return null;
+
+            const n = values.length;
+            const mean = values.reduce((a, b) => a + b, 0) / n;
+            const variance = values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / n;
+            const std = Math.sqrt(variance);
+            const min = Math.min(...values);
+            const max = Math.max(...values);
+
+            return {
+                mean: mean,
+                std: std,
+                cv_percent: (std / Math.abs(mean)) * 100,
+                min: min,
+                max: max,
+                range: max - min,
+                count: n
+            };
+        }
+
+        function updateStabilityPlots() {
+            const isDark = LabTheme.isDark();
+            const times = state.stability.data.times;
+            const rawValues = state.stability.data.values;
+            const stats = state.stability.stats;
+
+            // Convert to display units (µW or nA)
+            const isPower = state.stability.testType === 'power';
+            const multiplier = isPower ? 1e6 : 1e9;
+            const values = rawValues.map(v => v * multiplier);
+
+            // Prepare mean and sigma lines (also converted)
+            let meanLine = [], plusSigma = [], minusSigma = [];
+            if (stats && times.length > 0) {
+                const meanVal = stats.mean * multiplier;
+                const stdVal = stats.std * multiplier;
+                meanLine = [{ x: [times[0], times[times.length - 1]], y: [meanVal, meanVal] }];
+                plusSigma = [{ x: [times[0], times[times.length - 1]], y: [meanVal + stdVal, meanVal + stdVal] }];
+                minusSigma = [{ x: [times[0], times[times.length - 1]], y: [meanVal - stdVal, meanVal - stdVal] }];
+            }
+
+            // Determine y-axis label based on test type
+            const yLabel = isPower ? 'Power (µW)' : 'Current (nA)';
+
+            // Time series plot with 2 decimal places
+            const timeLayout = getPlotLayout(isDark, 'Time (s)', yLabel);
+            timeLayout.yaxis.tickformat = '.2f';
+
+            Plotly.react('stability-time-plot',
+                [
+                    { x: times, y: values, mode: 'lines+markers', type: 'scatter', name: 'Measured',
+                      line: { color: '#4A90D9' }, marker: { size: 6 } },
+                    { x: meanLine[0]?.x || [], y: meanLine[0]?.y || [], mode: 'lines', type: 'scatter', name: 'Mean',
+                      line: { color: '#e57373', dash: 'dash', width: 2 } },
+                    { x: plusSigma[0]?.x || [], y: plusSigma[0]?.y || [], mode: 'lines', type: 'scatter', name: '±1σ',
+                      line: { color: '#ffb74d', dash: 'dot', width: 1 } },
+                    { x: minusSigma[0]?.x || [], y: minusSigma[0]?.y || [], mode: 'lines', type: 'scatter', name: '-1σ',
+                      line: { color: '#ffb74d', dash: 'dot', width: 1 }, showlegend: false }
+                ],
+                timeLayout,
+                plotConfig
+            );
+
+            // Histogram plot with 2 decimal places and more bottom margin
+            const histLayout = getPlotLayout(isDark, yLabel, 'Count');
+            histLayout.xaxis.tickformat = '.2f';
+            histLayout.margin = { ...histLayout.margin, b: 60, l: 50 };
+            histLayout.bargap = 0.05;
+
+            Plotly.react('stability-hist-plot',
+                [{ x: values, type: 'histogram', name: 'Distribution',
+                   marker: { color: '#4A90D9' },
+                   nbinsx: Math.min(20, Math.max(5, Math.floor(values.length / 2))) }],
+                histLayout,
+                plotConfig
+            );
+        }
+
+        function updateStabilityStatsDisplay(stats) {
+            if (!stats) return;
+
+            const isPower = state.stability.testType === 'power';
+            const unit = isPower ? ' µW' : ' nA';
+            const multiplier = isPower ? 1e6 : 1e9;
+
+            document.getElementById('stability-mean').textContent =
+                (stats.mean * multiplier).toFixed(3) + unit;
+            document.getElementById('stability-std').textContent =
+                (stats.std * multiplier).toFixed(3) + unit;
+
+            const cvEl = document.getElementById('stability-cv');
+            cvEl.textContent = stats.cv_percent.toFixed(2) + '%';
+            cvEl.className = 'stability-stat-value cv';
+            if (stats.cv_percent < 1.0) cvEl.classList.add('excellent');
+            else if (stats.cv_percent < 3.0) cvEl.classList.add('good');
+            else cvEl.classList.add('poor');
+
+            document.getElementById('stability-count').textContent = stats.count;
+            document.getElementById('stability-range').textContent =
+                (stats.min * multiplier).toFixed(3) + ' - ' + (stats.max * multiplier).toFixed(3) + unit;
+        }
+
+        function clearStabilityStats() {
+            document.getElementById('stability-mean').textContent = '--';
+            document.getElementById('stability-std').textContent = '--';
+            document.getElementById('stability-cv').textContent = '--%';
+            document.getElementById('stability-cv').className = 'stability-stat-value cv';
+            document.getElementById('stability-count').textContent = '0';
+            document.getElementById('stability-range').textContent = '--';
+
+            // Clear plots
+            initStabilityPlots();
+        }
+
+        function onStabilityComplete(success, message) {
+            state.stability.running = false;
+            setStabilityTestState(false);
+
+            if (success) {
+                const count = state.stability.data.times.length;
+                updateStabilityProgress(100, `Complete (${count} measurements)`);
+            } else {
+                updateStabilityProgress(0, message || 'Failed');
+                if (message && message !== 'Stopped') {
+                    LabModals.showError('Test Failed', message);
+                }
+            }
+        }
+
+        function saveStabilityData() {
+            const stats = state.stability.stats;
+            const params = getStabilityParams();
+            const isPower = state.stability.testType === 'power';
+            const unit = isPower ? 'W' : 'A';
+            const unitDisplay = isPower ? 'uW' : 'nA';
+            const multiplier = isPower ? 1e6 : 1e9;
+
+            // Build CSV with header comments
+            let csv = `# Stability Test Results\n`;
+            csv += `# Type: ${state.stability.testType}\n`;
+            csv += `# Wavelength: ${params.wavelength} nm\n`;
+            csv += `# Duration: ${params.duration} min\n`;
+            csv += `# Interval: ${params.interval} sec\n`;
+            if (stats) {
+                csv += `# Mean: ${(stats.mean * multiplier).toFixed(6)} ${unitDisplay}\n`;
+                csv += `# Std Dev: ${(stats.std * multiplier).toFixed(6)} ${unitDisplay}\n`;
+                csv += `# CV: ${stats.cv_percent.toFixed(4)}%\n`;
+                csv += `# Count: ${stats.count}\n`;
+            }
+            csv += `#\n`;
+            csv += `Time (s),Value (${unit}),Value (${unitDisplay})\n`;
+
+            for (let i = 0; i < state.stability.data.times.length; i++) {
+                const t = state.stability.data.times[i];
+                const v = state.stability.data.values[i];
+                csv += `${t.toFixed(2)},${v.toExponential(6)},${(v * multiplier).toFixed(6)}\n`;
+            }
+
+            const api = LabAPI.get();
+            if (api && api.save_stability_data) {
+                api.save_stability_data(csv, params.wavelength, state.stability.testType, (result) => {
+                    const r = JSON.parse(result);
+                    if (r.success) console.log('Saved:', r.path);
+                    else if (r.message !== 'Cancelled') LabModals.showError('Save Failed', r.message);
+                });
+            }
+        }
+
+        // ==================== Mock Stability Test ====================
+
+        function mockStabilityTest(params) {
+            const intervalMs = params.interval * 1000;
+            const durationMs = params.duration * 60 * 1000;
+            const isPower = params.type === 'power';
+
+            // Base value with some noise
+            const baseValue = isPower ? 2.5e-6 : 1.8e-9;  // 2.5 µW or 1.8 nA
+            const noiseLevel = baseValue * 0.02;  // 2% noise
+
+            // Open shutter and set wavelength
+            state.wavelength = params.wavelength;
+            state.shutterOpen = true;
+            updateMonochromatorDisplay();
+
+            let elapsed = 0;
+
+            const mockInterval = setInterval(() => {
+                if (!state.stability.running || elapsed >= durationMs) {
+                    clearInterval(mockInterval);
+                    state.shutterOpen = false;
+                    updateMonochromatorDisplay();
+                    if (state.stability.running) {
+                        onStabilityComplete(true, 'Complete');
+                    }
+                    return;
+                }
+
+                elapsed += intervalMs;
+                const timestamp = elapsed / 1000;
+                const value = baseValue + (Math.random() - 0.5) * 2 * noiseLevel;
+
+                onStabilityProgress(timestamp, value);
+            }, intervalMs);
+        }
+
+        // ==================== EQE Analysis (Staff Mode) ====================
+
+        // Physical constants for EQE calculation
+        const PLANCK = 6.62607015e-34;  // J·s
+        const SPEED_OF_LIGHT = 2.99792458e8;  // m/s
+        const ELECTRON_CHARGE = 1.602176634e-19;  // C
+
+        // Keyboard shortcuts for staff mode
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.shiftKey && e.key === 'E') {
+                e.preventDefault();
+                toggleAnalysisPanel();
+            } else if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+                e.preventDefault();
+                toggleDebugMode();
+            }
+        });
+
+        function toggleDebugMode() {
+            const api = LabAPI.get();
+            if (api && api.toggle_debug_mode) {
+                api.toggle_debug_mode((result) => {
+                    const r = JSON.parse(result);
+                    state.debugMode = r.enabled;
+                    if (r.enabled) {
+                        LabModals.showInfo('Debug Mode ENABLED',
+                            'Technical output (samples, SDK calls) now visible in console.\n\nPress Ctrl+Shift+D again to disable.');
+                    } else {
+                        LabModals.showInfo('Debug Mode DISABLED', 'Debug output turned off.');
+                    }
+                });
+            } else if (state.offlineMode) {
+                state.debugMode = !state.debugMode;
+                if (state.debugMode) {
+                    LabModals.showInfo('Debug Mode ENABLED', 'Offline mode - no effect on console output.');
+                } else {
+                    LabModals.showInfo('Debug Mode DISABLED', 'Debug output turned off.');
+                }
+            }
+        }
+
+        function toggleAnalysisPanel() {
+            state.analysis.visible = !state.analysis.visible;
+            const tabBtn = document.getElementById('analysis-tab-btn');
+
+            if (state.analysis.visible) {
+                // Show the tab and switch to it
+                tabBtn.style.display = '';
+                switchTab('analysis');
+            } else {
+                // Hide the tab and switch back to measurement
+                tabBtn.style.display = 'none';
+                switchTab('measurement');
+            }
+        }
+
+        function initEQEPlot() {
+            const isDark = LabTheme.isDark();
+            Plotly.newPlot('eqe-plot',
+                [
+                    { x: [], y: [], mode: 'lines+markers', type: 'scatter', name: 'EQE',
+                      line: { color: '#4A90D9', width: 2 }, marker: { size: 6 } },
+                    { x: [], y: [], mode: 'lines', type: 'scatter', name: 'Peak',
+                      line: { color: '#e57373', dash: 'dash', width: 1 } }
+                ],
+                {
+                    ...getPlotLayout(isDark, 'Wavelength (nm)', 'EQE (%)'),
+                    yaxis: {
+                        ...getPlotLayout(isDark, '', '').yaxis,
+                        title: 'EQE (%)',
+                        range: [0, 100]
+                    }
+                },
+                plotConfig
+            );
+        }
+
+        function updateSessionDataButton() {
+            const hasPower = state.powerData.x.length > 0;
+            const hasCurrent = state.currentData.x.length > 0;
+            document.getElementById('use-session-btn').disabled = !(hasPower && hasCurrent);
+        }
+
+        function updateCalculateButton() {
+            const hasPower = state.analysis.powerData !== null;
+            const hasCurrent = state.analysis.currentData !== null;
+            document.getElementById('calculate-eqe-btn').disabled = !(hasPower && hasCurrent);
+        }
+
+        function useSessionData() {
+            if (state.powerData.x.length === 0 || state.currentData.x.length === 0) {
+                setAnalysisStatus('No session data available', 'error');
+                return;
+            }
+
+            // Convert session data to analysis format (power is in µW, current is in nA in the state)
+            state.analysis.powerData = {
+                wavelengths: [...state.powerData.x],
+                values: state.powerData.y.map(p => p * 1e-6)  // µW -> W
+            };
+            state.analysis.currentData = {
+                wavelengths: [...state.currentData.x],
+                values: state.currentData.y.map(c => c * 1e-9)  // nA -> A
+            };
+
+            document.getElementById('power-file-status').textContent = `Session (${state.powerData.x.length} pts)`;
+            document.getElementById('power-file-status').classList.add('loaded');
+            document.getElementById('current-file-status').textContent = `Session (${state.currentData.x.length} pts)`;
+            document.getElementById('current-file-status').classList.add('loaded');
+
+            updateCalculateButton();
+            setAnalysisStatus('Session data loaded - click Calculate EQE', 'success');
+        }
+
+        function loadPowerCSV() {
+            document.getElementById('power-file-input').click();
+        }
+
+        function loadCurrentCSV() {
+            document.getElementById('current-file-input').click();
+        }
+
+        function onPowerFileSelected(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = parseCSV(e.target.result);
+                    state.analysis.powerData = data;
+                    document.getElementById('power-file-status').textContent = file.name;
+                    document.getElementById('power-file-status').classList.add('loaded');
+                    updateCalculateButton();
+                    setAnalysisStatus(`Power data loaded (${data.wavelengths.length} points)`, 'success');
+                } catch (err) {
+                    setAnalysisStatus('Failed to parse power CSV: ' + err.message, 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function onCurrentFileSelected(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = parseCSV(e.target.result);
+                    state.analysis.currentData = data;
+                    document.getElementById('current-file-status').textContent = file.name;
+                    document.getElementById('current-file-status').classList.add('loaded');
+                    updateCalculateButton();
+                    setAnalysisStatus(`Current data loaded (${data.wavelengths.length} points)`, 'success');
+                } catch (err) {
+                    setAnalysisStatus('Failed to parse current CSV: ' + err.message, 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function parseCSV(content) {
+            const lines = content.trim().split('\n');
+            const wavelengths = [];
+            const values = [];
+
+            // Skip header line and comment lines
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line || line.startsWith('#') || line.startsWith('Wavelength')) continue;
+
+                const parts = line.split(',');
+                if (parts.length >= 2) {
+                    const wl = parseFloat(parts[0]);
+                    const val = parseFloat(parts[1]);
+                    if (!isNaN(wl) && !isNaN(val)) {
+                        wavelengths.push(wl);
+                        values.push(val);
+                    }
+                }
+            }
+
+            if (wavelengths.length === 0) {
+                throw new Error('No valid data found');
+            }
+
+            return { wavelengths, values };
+        }
+
+        function calculateEQE() {
+            const power = state.analysis.powerData;
+            const current = state.analysis.currentData;
+
+            if (!power || !current) {
+                setAnalysisStatus('Missing power or current data', 'error');
+                return;
+            }
+
+            try {
+                // Interpolate power to match current wavelengths
+                const eqeWavelengths = [];
+                const eqeValues = [];
+
+                for (let i = 0; i < current.wavelengths.length; i++) {
+                    const wl = current.wavelengths[i];
+                    const I = current.values[i];  // Current in A
+
+                    // Find interpolated power at this wavelength
+                    const P = interpolate(power.wavelengths, power.values, wl);
+                    if (P === null || P <= 0) continue;
+
+                    // EQE = (I * h * c) / (q * P * λ)
+                    // λ must be in meters
+                    const lambda_m = wl * 1e-9;
+                    const eqe = (Math.abs(I) * PLANCK * SPEED_OF_LIGHT) / (ELECTRON_CHARGE * P * lambda_m);
+                    const eqePercent = eqe * 100;
+
+                    // Sanity check
+                    if (eqePercent >= 0 && eqePercent <= 150) {
+                        eqeWavelengths.push(wl);
+                        eqeValues.push(eqePercent);
+                    }
+                }
+
+                if (eqeWavelengths.length === 0) {
+                    setAnalysisStatus('No valid EQE values calculated', 'error');
+                    return;
+                }
+
+                state.analysis.eqeData = { wavelengths: eqeWavelengths, eqe: eqeValues };
+
+                // Calculate metrics
+                const peakEQE = Math.max(...eqeValues);
+                const peakIndex = eqeValues.indexOf(peakEQE);
+                const peakWavelength = eqeWavelengths[peakIndex];
+
+                // Find bandgap edge (50% of peak on red side)
+                const threshold = peakEQE * 0.5;
+                let bandgapWavelength = null;
+                for (let i = peakIndex; i < eqeWavelengths.length - 1; i++) {
+                    if (eqeValues[i] >= threshold && eqeValues[i + 1] < threshold) {
+                        // Linear interpolation to find exact crossing
+                        const x1 = eqeWavelengths[i], x2 = eqeWavelengths[i + 1];
+                        const y1 = eqeValues[i], y2 = eqeValues[i + 1];
+                        bandgapWavelength = x1 + (threshold - y1) * (x2 - x1) / (y2 - y1);
+                        break;
+                    }
+                }
+
+                state.analysis.metrics = {
+                    peakEQE: peakEQE,
+                    peakWavelength: peakWavelength,
+                    bandgapWavelength: bandgapWavelength,
+                    bandgapEV: bandgapWavelength ? 1240 / bandgapWavelength : null,
+                    dataPoints: eqeWavelengths.length
+                };
+
+                // Update plot
+                updateEQEPlot();
+
+                // Update metrics display
+                updateMetricsDisplay();
+
+                setAnalysisStatus('EQE calculated successfully', 'success');
+
+            } catch (err) {
+                setAnalysisStatus('Calculation error: ' + err.message, 'error');
+            }
+        }
+
+        function interpolate(xArray, yArray, x) {
+            if (x < xArray[0] || x > xArray[xArray.length - 1]) return null;
+
+            for (let i = 0; i < xArray.length - 1; i++) {
+                if (x >= xArray[i] && x <= xArray[i + 1]) {
+                    const t = (x - xArray[i]) / (xArray[i + 1] - xArray[i]);
+                    return yArray[i] + t * (yArray[i + 1] - yArray[i]);
+                }
+            }
+            return null;
+        }
+
+        function updateEQEPlot() {
+            const isDark = LabTheme.isDark();
+            const data = state.analysis.eqeData;
+            const metrics = state.analysis.metrics;
+
+            // Peak line data
+            const peakX = data.wavelengths.length > 0 ?
+                [data.wavelengths[0], data.wavelengths[data.wavelengths.length - 1]] : [];
+            const peakY = metrics ? [metrics.peakEQE, metrics.peakEQE] : [];
+
+            Plotly.react('eqe-plot',
+                [
+                    { x: data.wavelengths, y: data.eqe, mode: 'lines+markers', type: 'scatter', name: 'EQE',
+                      line: { color: '#4A90D9', width: 2 }, marker: { size: 6 } },
+                    { x: peakX, y: peakY, mode: 'lines', type: 'scatter', name: `Peak: ${metrics?.peakEQE?.toFixed(1)}%`,
+                      line: { color: '#e57373', dash: 'dash', width: 1 } }
+                ],
+                {
+                    ...getPlotLayout(isDark, 'Wavelength (nm)', 'EQE (%)'),
+                    yaxis: {
+                        ...getPlotLayout(isDark, '', '').yaxis,
+                        title: 'EQE (%)',
+                        range: [0, Math.max(100, (metrics?.peakEQE || 0) * 1.1)]
+                    }
+                },
+                plotConfig
+            );
+        }
+
+        function updateMetricsDisplay() {
+            const m = state.analysis.metrics;
+            if (!m) return;
+
+            document.getElementById('metric-peak-eqe').textContent = m.peakEQE.toFixed(1) + '%';
+            document.getElementById('metric-peak-wavelength').textContent = `at ${m.peakWavelength.toFixed(0)} nm`;
+
+            if (m.bandgapWavelength) {
+                document.getElementById('metric-bandgap').textContent = `~${m.bandgapWavelength.toFixed(0)} nm`;
+                document.getElementById('metric-bandgap-ev').textContent = `(${m.bandgapEV.toFixed(2)} eV)`;
+            } else {
+                document.getElementById('metric-bandgap').textContent = 'N/A';
+                document.getElementById('metric-bandgap-ev').textContent = '';
+            }
+
+            document.getElementById('metric-datapoints').textContent = m.dataPoints;
+        }
+
+        function setAnalysisStatus(message, type) {
+            const el = document.getElementById('analysis-status');
+            el.textContent = message;
+            el.className = 'progress-status analysis-status-text' + (type ? ' ' + type : '');
+        }
+
         // Global callbacks for Python
         window.onDeviceStatusChanged = onDeviceStatusChanged;
         window.onMonochromatorStateChanged = onMonochromatorStateChanged;
@@ -1093,6 +2068,8 @@
         window.onMeasurementComplete = onMeasurementComplete;
         window.onMeasurementStats = onMeasurementStats;
         window.onLiveSignalUpdate = onLiveSignalUpdate;
+        window.onStabilityProgress = onStabilityProgress;
+        window.onStabilityComplete = onStabilityComplete;
     </script>
 </body>
 </html>

@@ -82,6 +82,10 @@ class EQEExperimentModel(QObject):
         self._devices_initialized = False
         self._experiment_running = False
 
+        # Flag to skip auto-starting current measurement after phase adjustment
+        # (used when running stability test - caller will start stability test instead)
+        self._skip_auto_current_after_phase = False
+
         # Live signal monitor
         self._live_monitor_thread: Optional[threading.Thread] = None
         self._live_monitor_active = False
@@ -354,11 +358,16 @@ class EQEExperimentModel(QObject):
             self.phase_adjustment_complete.emit(phase_data)
 
             # Automatically start current measurement after successful phase adjustment
-            try:
-                self.start_current_measurement()
-            except EQEExperimentError as e:
-                self.logger.log(f"Failed to start current measurement: {e}", "ERROR")
-                self._notify_experiment_complete(False, f"Failed to start current measurement: {e}")
+            # (unless skip flag is set - used for stability tests)
+            if self._skip_auto_current_after_phase:
+                self._skip_auto_current_after_phase = False
+                self.logger.log("Phase adjustment complete (skipping auto-start of current measurement)")
+            else:
+                try:
+                    self.start_current_measurement()
+                except EQEExperimentError as e:
+                    self.logger.log(f"Failed to start current measurement: {e}", "ERROR")
+                    self._notify_experiment_complete(False, f"Failed to start current measurement: {e}")
         else:
             message = "Phase adjustment failed"
             self.logger.log(message)

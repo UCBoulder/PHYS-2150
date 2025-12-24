@@ -11,15 +11,16 @@ import sys
 import json
 from typing import Optional, Dict, Any
 
-from PySide6.QtCore import Qt, QObject, Slot, QUrl, QThread, Signal
+from PySide6.QtCore import Qt, QObject, Slot, QUrl, QThread, Signal, Slot as QtSlot
 from PySide6.QtWidgets import QApplication, QMainWindow, QFileDialog
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebChannel import QWebChannel
 
 from .models.eqe_experiment import EQEExperimentModel, EQEExperimentError
+from .models.stability_test import StabilityTestModel
 from .config.settings import GUI_CONFIG, DEFAULT_MEASUREMENT_PARAMS
 from .config import settings
-from common.utils import get_logger
+from common.utils import get_logger, TieredLogger
 
 _logger = get_logger("eqe")
 
@@ -31,10 +32,24 @@ class EQEApi(QObject):
     Handles device communication, measurement control, and data export.
     """
 
+    # Signals for thread-safe stability test callbacks
+    _stability_progress_signal = Signal(float, float)
+    _stability_complete_signal = Signal(bool, str)
+    _stability_mono_signal = Signal(float, bool)  # wavelength, shutter_open
+
     def __init__(self, window: 'EQEWebWindow'):
         super().__init__()
         self._window = window
         self._experiment: Optional[EQEExperimentModel] = None
+        self._stability_model: Optional[StabilityTestModel] = None
+
+        # Pending stability test (waiting for phase adjustment)
+        self._pending_stability_params: Optional[Dict[str, Any]] = None
+
+        # Connect signals to slots for thread-safe callbacks
+        self._stability_progress_signal.connect(self._emit_stability_progress)
+        self._stability_complete_signal.connect(self._emit_stability_complete)
+        self._stability_mono_signal.connect(self._emit_stability_mono)
 
     def set_experiment(self, experiment: EQEExperimentModel) -> None:
         """Set the experiment model and connect signals."""
@@ -284,6 +299,158 @@ class EQEApi(QObject):
 
         return json.dumps({"success": False, "message": "Cancelled"})
 
+    # ==================== Debug Mode ====================
+
+    @Slot(result=str)
+    def toggle_debug_mode(self) -> str:
+        """Toggle staff debug mode for verbose console output."""
+        current = TieredLogger._staff_debug_mode
+        new_mode = not current
+        TieredLogger.set_staff_debug_mode(new_mode)
+
+        if new_mode:
+            _logger.info("Staff debug mode ENABLED (Ctrl+Shift+D) - technical output visible in console")
+        else:
+            _logger.info("Staff debug mode DISABLED")
+
+        return json.dumps({"enabled": new_mode})
+
+    # ==================== Stability Tests ====================
+
+    def set_stability_model(self, model: StabilityTestModel) -> None:
+        """Set the stability test model and connect callbacks."""
+        self._stability_model = model
+
+        # Connect callbacks to forward to JS
+        model.set_measurement_callback(self._on_stability_progress)
+        model.set_completion_callback(self._on_stability_complete)
+        model.set_error_callback(self._on_stability_error)
+        model.set_status_callback(self._on_stability_status)
+        model.set_monochromator_callback(self._on_stability_mono)
+
+    @Slot(str, result=str)
+    def start_stability_test(self, params_json: str) -> str:
+        """Start a stability test."""
+        if not self._stability_model:
+            return json.dumps({"success": False, "message": "Stability model not available"})
+
+        try:
+            params = json.loads(params_json)
+            test_type = params.get("type", "power")
+            wavelength = params.get("wavelength", 550)
+            duration = params.get("duration", 5)  # minutes
+            interval = params.get("interval", 2)  # seconds
+            pixel = params.get("pixel", 1)
+
+            if test_type == "power":
+                # Power tests don't need phase adjustment
+                self._stability_model.start_power_test(wavelength, duration, interval)
+                return json.dumps({"success": True})
+            else:
+                # Current tests need phase adjustment first (to lock onto chopper)
+                if not self._experiment or not self._experiment.phase_model:
+                    return json.dumps({"success": False, "message": "Phase adjustment not available"})
+
+                # Store params for after phase adjustment completes
+                self._pending_stability_params = {
+                    "wavelength": wavelength,
+                    "duration": duration,
+                    "interval": interval,
+                    "pixel": pixel
+                }
+
+                # Tell experiment model NOT to auto-start current measurement after phase
+                self._experiment._skip_auto_current_after_phase = True
+
+                # Set pixel number in experiment parameters (needed for phase adjustment)
+                self._experiment.set_measurement_parameters(pixel_number=pixel)
+
+                # Start phase adjustment (stability test will start on completion)
+                _logger.info(f"Starting phase adjustment for current stability test (pixel {pixel})")
+                self._experiment.phase_model.start_adjustment(pixel_number=pixel)
+
+                return json.dumps({"success": True, "phase": "adjusting"})
+
+        except Exception as e:
+            _logger.error(f"Stability test start failed: {e}")
+            self._pending_stability_params = None
+            return json.dumps({"success": False, "message": str(e)})
+
+    @Slot(result=str)
+    def stop_stability_test(self) -> str:
+        """Stop the running stability test."""
+        if self._stability_model:
+            self._stability_model.stop_test()
+        return json.dumps({"success": True})
+
+    @Slot(str, float, str, result=str)
+    def save_stability_data(self, csv_content: str, wavelength: float, test_type: str) -> str:
+        """Save stability test data to file."""
+        from datetime import datetime
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        default_filename = f"stability_{test_type}_{wavelength:.0f}nm_{timestamp}.csv"
+
+        file_path, _ = QFileDialog.getSaveFileName(
+            self._window,
+            "Save Stability Test Data",
+            default_filename,
+            "CSV files (*.csv)"
+        )
+
+        if file_path:
+            try:
+                with open(file_path, 'w', newline='') as f:
+                    f.write(csv_content)
+                return json.dumps({"success": True, "path": file_path})
+            except Exception as e:
+                return json.dumps({"success": False, "message": str(e)})
+
+        return json.dumps({"success": False, "message": "Cancelled"})
+
+    def _on_stability_progress(self, timestamp: float, value: float) -> None:
+        """Forward stability progress to JS (called from background thread)."""
+        # Emit signal to marshal to main thread
+        self._stability_progress_signal.emit(timestamp, value)
+
+    def _on_stability_complete(self, timestamps: list, values: list) -> None:
+        """Forward stability completion to JS (called from background thread)."""
+        self._stability_complete_signal.emit(True, 'Complete')
+
+    def _on_stability_error(self, message: str) -> None:
+        """Forward stability error to JS (called from background thread)."""
+        self._stability_complete_signal.emit(False, message)
+
+    def _on_stability_status(self, message: str) -> None:
+        """Forward stability status to JS (optional, for status bar)."""
+        # Status updates are handled by progress callback for now
+        pass
+
+    def _on_stability_mono(self, wavelength: float, shutter_open: bool) -> None:
+        """Forward monochromator state to JS (called from background thread)."""
+        self._stability_mono_signal.emit(wavelength, shutter_open)
+
+    @QtSlot(float, float)
+    def _emit_stability_progress(self, timestamp: float, value: float) -> None:
+        """Emit stability progress to JS (runs on main thread)."""
+        js = f"onStabilityProgress({timestamp}, {value})"
+        self._window.run_js(js)
+
+    @QtSlot(bool, str)
+    def _emit_stability_complete(self, success: bool, message: str) -> None:
+        """Emit stability completion to JS (runs on main thread)."""
+        # Escape for JS string (backslashes, quotes, and newlines)
+        escaped = message.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n")
+        js = f"onStabilityComplete({str(success).lower()}, '{escaped}')"
+        self._window.run_js(js)
+
+    @QtSlot(float, bool)
+    def _emit_stability_mono(self, wavelength: float, shutter_open: bool) -> None:
+        """Emit monochromator state to JS (runs on main thread)."""
+        # Reuse the existing onMonochromatorStateChanged JS function
+        js = f"onMonochromatorStateChanged({wavelength}, {str(shutter_open).lower()}, 0)"
+        self._window.run_js(js)
+
     # ==================== Signal Handlers ====================
 
     def _on_device_status_changed(self, device_name: str, is_connected: bool, message: str) -> None:
@@ -305,6 +472,18 @@ class EQEApi(QObject):
 
     def _on_experiment_complete(self, success: bool, message: str) -> None:
         """Forward experiment completion to JS."""
+        # Check if this is a phase adjustment failure for a pending stability test
+        if not success and self._pending_stability_params:
+            # Phase adjustment failed while trying to start stability test
+            self._pending_stability_params = None
+            # Also clear the skip flag if it was set
+            if self._experiment:
+                self._experiment._skip_auto_current_after_phase = False
+
+            # Notify stability test completion with failure
+            self._stability_complete_signal.emit(False, message)
+            return  # Don't also send to measurement complete
+
         # Escape message for JS string (single quotes and newlines)
         escaped_message = message.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n")
         js = f"onMeasurementComplete({str(success).lower()}, '{escaped_message}')"
@@ -325,6 +504,25 @@ class EQEApi(QObject):
         phase_json = json.dumps(phase_data)
         js = f"onPhaseAdjustmentComplete({phase_json})"
         self._window.run_js(js)
+
+        # If we have pending stability test params, start the stability test now
+        if self._pending_stability_params:
+            params = self._pending_stability_params
+            self._pending_stability_params = None  # Clear before starting
+
+            _logger.info(f"Phase adjustment complete, starting current stability test")
+
+            # Start the stability test
+            try:
+                self._stability_model.start_current_test(
+                    wavelength=params["wavelength"],
+                    duration=params["duration"],
+                    interval=params["interval"],
+                    pixel_number=params["pixel"]
+                )
+            except Exception as e:
+                _logger.error(f"Failed to start stability test after phase adjustment: {e}")
+                self._stability_complete_signal.emit(False, f"Failed to start: {str(e)}")
 
 
 class EQEWebWindow(QMainWindow):
@@ -401,6 +599,10 @@ class EQEWebWindow(QMainWindow):
 
     def closeEvent(self, event) -> None:
         """Handle window close."""
+        # Stop stability test if running
+        if self.api._stability_model and self.api._stability_model.is_running():
+            self.api._stability_model.stop_test()
+
         if self._experiment:
             self._experiment.stop_all_measurements()
             self._experiment.cleanup()
@@ -419,6 +621,7 @@ class EQEWebApplication:
         self.app = QApplication.instance() or QApplication(sys.argv)
         self.window = EQEWebWindow()
         self.experiment = EQEExperimentModel()
+        self.stability_model: Optional[StabilityTestModel] = None
 
         # Connect experiment to window
         self.window.set_experiment(self.experiment)
@@ -450,6 +653,15 @@ class EQEWebApplication:
         except EQEExperimentError as e:
             _logger.warning(f"Device initialization failed: {e}")
             # Continue anyway - UI will show disconnected status
+
+        # Initialize stability test model with shared hardware controllers
+        self.stability_model = StabilityTestModel(
+            power_meter=self.experiment.power_meter,
+            monochromator=self.experiment.monochromator,
+            lockin=self.experiment.lockin,
+            logger=_logger
+        )
+        self.window.api.set_stability_model(self.stability_model)
 
         self.window.show()
 

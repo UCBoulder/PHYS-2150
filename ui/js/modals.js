@@ -256,6 +256,30 @@ function closeErrorModal() {
     hideModal('error-modal');
 }
 
+// ==================== Info Modal ====================
+
+/**
+ * Show an info/notification modal with a message.
+ * @param {string} title - The modal title
+ * @param {string} message - The modal message
+ */
+function showInfoModal(title, message) {
+    const titleEl = document.getElementById('info-modal-title');
+    const messageEl = document.getElementById('info-modal-message');
+
+    if (titleEl) titleEl.textContent = title;
+    if (messageEl) messageEl.textContent = message;
+
+    showModal('info-modal');
+}
+
+/**
+ * Hide the info modal.
+ */
+function closeInfoModal() {
+    hideModal('info-modal');
+}
+
 // ==================== HTML Templates ====================
 
 /**
@@ -359,6 +383,25 @@ function getErrorModalHTML() {
 }
 
 /**
+ * Get the HTML for an info modal.
+ * @returns {string} Modal HTML
+ */
+function getInfoModalHTML() {
+    return `
+    <div class="modal-overlay" id="info-modal">
+        <div class="modal">
+            <div class="modal-title" id="info-modal-title">Info</div>
+            <div class="modal-body">
+                <p id="info-modal-message" style="color: var(--text-secondary); white-space: pre-line;"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="LabModals.closeInfo()">OK</button>
+            </div>
+        </div>
+    </div>`;
+}
+
+/**
  * Initialize all modal event listeners.
  * Call this after DOM is ready.
  */
@@ -399,6 +442,11 @@ window.LabModals = {
     showError: showErrorModal,
     closeError: closeErrorModal,
     getErrorHTML: getErrorModalHTML,
+
+    // Info modal
+    showInfo: showInfoModal,
+    closeInfo: closeInfoModal,
+    getInfoHTML: getInfoModalHTML,
 };
 
 // Also expose individual functions globally for onclick handlers

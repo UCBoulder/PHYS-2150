@@ -203,6 +203,25 @@ class TieredLogger:
         """Check if staff debug mode is enabled."""
         return cls._staff_debug_mode
 
+    @classmethod
+    def debug_output(cls, message: str) -> None:
+        """
+        Output debug message to console if staff debug mode is enabled.
+
+        This is a convenience method for quick debug output without needing
+        a logger instance. Uses the first available logger or prints directly.
+
+        Args:
+            message: Debug message to output
+        """
+        if not cls._staff_debug_mode:
+            return
+
+        import sys
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        print(f"{timestamp} {message}", flush=True)
+
     def set_gui_callback(self, callback: Optional[Callable[[str], None]]) -> None:
         """Set callback for student-tier GUI messages."""
         self.gui_callback = callback
