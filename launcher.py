@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
     QPushButton, QLabel, QFrame,
 )
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QFont, QIcon
 
 
 class LauncherWindow(QMainWindow):
@@ -26,6 +26,11 @@ class LauncherWindow(QMainWindow):
 
         self.setWindowTitle("PHYS 2150 Measurement Suite")
         self.setFixedSize(500, 350)
+
+        # Set window icon
+        icon_path = os.path.join(os.path.dirname(__file__), "assets", "icon.ico")
+        if os.path.exists(icon_path):
+            self.setWindowIcon(QIcon(icon_path))
 
         # Center window on screen
         self._center_window()

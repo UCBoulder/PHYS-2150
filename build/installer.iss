@@ -40,9 +40,7 @@ DisableProgramGroupPage=yes
 ; Output configuration
 OutputDir=..\dist
 OutputBaseFilename=PHYS2150-Setup
-SetupIconFile=
-; Uncomment and set icon path if available:
-; SetupIconFile=..\assets\icon.ico
+SetupIconFile=..\assets\icon.ico
 
 ; Compression settings
 Compression=lzma2

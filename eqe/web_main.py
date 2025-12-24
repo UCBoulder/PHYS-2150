@@ -13,6 +13,7 @@ from typing import Optional, Dict, Any
 
 from PySide6.QtCore import Qt, QObject, Slot, QUrl, QThread, Signal, Slot as QtSlot
 from PySide6.QtWidgets import QApplication, QMainWindow, QFileDialog
+from PySide6.QtGui import QIcon
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebChannel import QWebChannel
 
@@ -557,6 +558,12 @@ class EQEWebWindow(QMainWindow):
         super().__init__()
 
         self.setWindowTitle("EQE Measurement - PHYS 2150")
+
+        # Set window icon
+        icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "icon.ico")
+        if os.path.exists(icon_path):
+            self.setWindowIcon(QIcon(icon_path))
+
         # Match existing GUI_CONFIG window size
         self.resize(1400, 750)
         self.setMinimumSize(1000, 600)

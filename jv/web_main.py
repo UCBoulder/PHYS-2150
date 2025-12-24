@@ -13,6 +13,7 @@ from typing import Optional
 
 from PySide6.QtCore import Qt, QObject, Slot, QUrl, QThread, Signal
 from PySide6.QtWidgets import QApplication, QMainWindow, QFileDialog
+from PySide6.QtGui import QIcon
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebChannel import QWebChannel
 
@@ -218,6 +219,12 @@ class JVWebWindow(QMainWindow):
         super().__init__()
 
         self.setWindowTitle("J-V Measurement - PHYS 2150")
+
+        # Set window icon
+        icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "icon.ico")
+        if os.path.exists(icon_path):
+            self.setWindowIcon(QIcon(icon_path))
+
         # Start with reasonable size, allow resizing
         self.resize(1200, 800)
         self.setMinimumSize(800, 600)
