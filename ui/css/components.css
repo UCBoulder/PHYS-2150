@@ -152,14 +152,18 @@ input[type="number"] {
     box-shadow: none;
 }
 
-/* Primary button (start, confirm) */
+/* Primary button (start, confirm) - CU Gold */
 .btn-primary {
-    background-color: var(--jv-green);
-    color: white;
+    background-color: var(--ucb-gold);
+    color: #1a1a1a;
 }
 
 .btn-primary:hover:not(:disabled) {
-    background-color: var(--jv-green-hover);
+    background-color: var(--ucb-gold-dark);
+}
+
+.btn-primary:active:not(:disabled) {
+    background-color: var(--ucb-gold-darker);
 }
 
 /* Danger button (stop, cancel) */
@@ -293,7 +297,7 @@ input[type="number"] {
 
 .modal-footer {
     display: flex;
-    justify-content: flex-end;
+    justify-content: center;
     gap: 12px;
 }
 
