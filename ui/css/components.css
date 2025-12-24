@@ -164,12 +164,12 @@ input[type="number"] {
 
 /* Danger button (stop, cancel) */
 .btn-danger {
-    background-color: #c62828;
+    background-color: var(--error);
     color: white;
 }
 
 .btn-danger:hover:not(:disabled) {
-    background-color: #b71c1c;
+    background-color: var(--error-hover);
 }
 
 /* Secondary button */
@@ -228,16 +228,16 @@ input[type="number"] {
 }
 
 .status-dot.connected {
-    background: #4caf50;
-    box-shadow: 0 0 6px rgba(76, 175, 80, 0.5);
+    background: var(--success);
+    box-shadow: 0 0 6px var(--success-bg);
 }
 
 .status-dot.disconnected {
-    background: #f44336;
+    background: var(--error);
 }
 
 .status-dot.warning {
-    background: #ff9800;
+    background: var(--warning);
 }
 
 
@@ -371,4 +371,71 @@ input[type="number"] {
 .measurement-uncertainty {
     font-size: 14px;
     color: var(--text-secondary);
+}
+
+
+/* ============================================
+   Quality Badges
+   ============================================ */
+
+.quality-badge {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.quality-excellent {
+    background: var(--quality-excellent);
+    color: white;
+}
+
+.quality-good {
+    background: var(--quality-good);
+    color: white;
+}
+
+.quality-fair {
+    background: var(--quality-fair);
+    color: black;
+}
+
+.quality-check {
+    background: var(--quality-check);
+    color: white;
+}
+
+
+/* ============================================
+   Shutter/State Badges
+   ============================================ */
+
+.shutter-badge {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.shutter-badge.open {
+    background: var(--success-bg);
+    color: var(--success);
+}
+
+.shutter-badge.closed {
+    background: var(--warning-bg);
+    color: var(--text-muted);
+}
+
+
+/* ============================================
+   Utility Classes
+   ============================================ */
+
+.hidden {
+    display: none !important;
+}
+
+.header-label {
+    font-size: 13px;
 }

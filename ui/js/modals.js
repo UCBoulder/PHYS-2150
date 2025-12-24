@@ -1,0 +1,274 @@
+/**
+ * Modal Management
+ *
+ * Shared modal components for lab applications.
+ * Handles cell number input, pixel selection, and generic modal logic.
+ */
+
+// ==================== Generic Modal Helpers ====================
+
+/**
+ * Show a modal by adding the 'active' class.
+ * @param {string} modalId - The modal element ID
+ */
+function showModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.add('active');
+    }
+}
+
+/**
+ * Hide a modal by removing the 'active' class.
+ * @param {string} modalId - The modal element ID
+ */
+function hideModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('active');
+    }
+}
+
+// ==================== Cell Number Modal ====================
+
+let _cellNumberCallback = null;
+
+/**
+ * Show the cell number modal.
+ * @param {Function} onConfirm - Callback with cell number when confirmed
+ */
+function showCellModal(onConfirm) {
+    _cellNumberCallback = onConfirm;
+    showModal('cell-modal');
+    setTimeout(() => {
+        const input = document.getElementById('cell-input');
+        if (input) {
+            input.focus();
+            input.select();
+        }
+    }, 100);
+}
+
+/**
+ * Hide the cell number modal.
+ */
+function closeCellModal() {
+    hideModal('cell-modal');
+    _cellNumberCallback = null;
+}
+
+/**
+ * Validate and confirm the cell number.
+ * Called by the Confirm/Continue button.
+ */
+function confirmCellNumber() {
+    const input = document.getElementById('cell-input');
+    const error = document.getElementById('cell-input-error');
+    const value = input.value.trim();
+
+    if (!/^\d{3}$/.test(value)) {
+        input.classList.add('error');
+        if (error) error.classList.add('visible');
+        input.focus();
+        return;
+    }
+
+    // Clear error state
+    input.classList.remove('error');
+    if (error) error.classList.remove('visible');
+
+    // Call the callback with the cell number
+    if (_cellNumberCallback) {
+        _cellNumberCallback(value);
+    }
+
+    closeCellModal();
+}
+
+/**
+ * Initialize cell modal event listeners.
+ * Call this after DOM is ready.
+ */
+function initCellModal() {
+    const input = document.getElementById('cell-input');
+    const error = document.getElementById('cell-input-error');
+
+    if (input) {
+        // Enter key to confirm
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                confirmCellNumber();
+            }
+        });
+
+        // Clear error on typing
+        input.addEventListener('input', () => {
+            input.classList.remove('error');
+            if (error) error.classList.remove('visible');
+        });
+    }
+}
+
+// ==================== Pixel Selection Modal ====================
+
+let _pixelCallback = null;
+
+/**
+ * Show the pixel selection modal.
+ * @param {Function} onConfirm - Callback with pixel number when confirmed
+ */
+function showPixelModal(onConfirm) {
+    _pixelCallback = onConfirm;
+    showModal('pixel-modal');
+    setTimeout(() => {
+        const input = document.getElementById('pixel-input');
+        if (input) {
+            input.focus();
+            input.select();
+        }
+    }, 100);
+}
+
+/**
+ * Hide the pixel selection modal.
+ */
+function closePixelModal() {
+    hideModal('pixel-modal');
+    _pixelCallback = null;
+}
+
+/**
+ * Validate and confirm the pixel number.
+ * Called by the Start button.
+ */
+function confirmPixel() {
+    const input = document.getElementById('pixel-input');
+    const pixel = parseInt(input.value);
+
+    if (isNaN(pixel) || pixel < 1 || pixel > 9) {
+        alert('Pixel must be between 1 and 9');
+        input.focus();
+        return;
+    }
+
+    // Call the callback with the pixel number
+    if (_pixelCallback) {
+        _pixelCallback(pixel);
+    }
+
+    closePixelModal();
+}
+
+/**
+ * Initialize pixel modal event listeners.
+ * Call this after DOM is ready.
+ */
+function initPixelModal() {
+    const input = document.getElementById('pixel-input');
+
+    if (input) {
+        // Enter key to confirm
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                confirmPixel();
+            }
+        });
+    }
+}
+
+// ==================== HTML Templates ====================
+
+/**
+ * Get the HTML for a cell number modal.
+ * @returns {string} Modal HTML
+ */
+function getCellModalHTML() {
+    return `
+    <div class="modal-overlay" id="cell-modal">
+        <div class="modal">
+            <div class="modal-title">Enter Cell Number</div>
+            <div class="modal-body">
+                <div class="input-group mb-0">
+                    <label for="cell-input">Cell Number (e.g., 195)</label>
+                    <input type="text" id="cell-input" pattern="[0-9]{3}" maxlength="3" placeholder="000">
+                    <span class="input-error" id="cell-input-error">Please enter a 3-digit cell number</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="LabModals.confirmCell()">Continue</button>
+            </div>
+        </div>
+    </div>`;
+}
+
+/**
+ * Get the HTML for a pixel selection modal.
+ * @param {Object} options - Configuration options
+ * @param {number} options.min - Minimum pixel number (default: 1)
+ * @param {number} options.max - Maximum pixel number (default: 9)
+ * @param {boolean} options.showCancel - Show cancel button (default: true)
+ * @returns {string} Modal HTML
+ */
+function getPixelModalHTML(options = {}) {
+    const min = options.min || 1;
+    const max = options.max || 9;
+    const showCancel = options.showCancel !== false;
+
+    return `
+    <div class="modal-overlay" id="pixel-modal">
+        <div class="modal">
+            <div class="modal-title">Select Pixel</div>
+            <div class="modal-body">
+                <div class="input-group mb-0">
+                    <label for="pixel-input">Pixel Number (${min}-${max})</label>
+                    <input type="number" id="pixel-input" min="${min}" max="${max}" value="1">
+                </div>
+            </div>
+            <div class="modal-footer">
+                ${showCancel ? '<button class="btn btn-secondary" onclick="LabModals.closePixel()">Cancel</button>' : ''}
+                <button class="btn btn-primary" onclick="LabModals.confirmPixel()">Start</button>
+            </div>
+        </div>
+    </div>`;
+}
+
+/**
+ * Initialize all modal event listeners.
+ * Call this after DOM is ready.
+ */
+function initModals() {
+    initCellModal();
+    initPixelModal();
+}
+
+// Export for use in other modules
+window.LabModals = {
+    // Generic
+    show: showModal,
+    hide: hideModal,
+    init: initModals,
+
+    // Cell modal
+    showCell: showCellModal,
+    closeCell: closeCellModal,
+    confirmCell: confirmCellNumber,
+    initCell: initCellModal,
+    getCellHTML: getCellModalHTML,
+
+    // Pixel modal
+    showPixel: showPixelModal,
+    closePixel: closePixelModal,
+    confirmPixel: confirmPixel,
+    initPixel: initPixelModal,
+    getPixelHTML: getPixelModalHTML,
+};
+
+// Also expose individual functions globally for onclick handlers
+window.showCellModal = showCellModal;
+window.closeCellModal = closeCellModal;
+window.confirmCellNumber = confirmCellNumber;
+window.showPixelModal = showPixelModal;
+window.closePixelModal = closePixelModal;
+window.confirmPixel = confirmPixel;

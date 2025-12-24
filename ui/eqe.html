@@ -8,6 +8,7 @@
     <!-- Stylesheets -->
     <link rel="stylesheet" href="css/theme.css">
     <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/eqe-layout.css">
 
     <!-- Plotly.js for interactive plots (local copy) -->
     <script src="js/plotly.min.js"></script>
@@ -18,401 +19,24 @@
     <!-- Shared modules -->
     <script src="js/api.js"></script>
     <script src="js/theme.js"></script>
-
-    <style>
-        /* EQE Layout - matching old Qt UI pattern */
-        html, body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-        }
-
-        .app-container {
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            padding: 12px;
-            gap: 12px;
-            box-sizing: border-box;
-            background: var(--bg-primary);
-        }
-
-        /* Header row */
-        .header-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-shrink: 0;
-        }
-
-        .header-row h1 {
-            font-size: 18px;
-            font-weight: 600;
-            margin: 0;
-        }
-
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-
-        /* Top section: Parameters + Progress side by side */
-        .top-section {
-            display: flex;
-            gap: 16px;
-            flex-shrink: 0;
-        }
-
-        .params-panel, .progress-panel {
-            flex: 1;
-            background: var(--bg-secondary);
-            border: 1px solid var(--gray-400);
-            border-radius: 6px;
-            padding: 12px 16px;
-        }
-
-        .panel-title {
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: var(--text-muted);
-            margin-bottom: 10px;
-        }
-
-        /* Parameters grid - compact horizontal layout */
-        .params-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 12px;
-            align-items: end;
-        }
-
-        .param-field label {
-            display: block;
-            font-size: 12px;
-            color: var(--text-secondary);
-            margin-bottom: 4px;
-        }
-
-        .param-field input {
-            width: 100%;
-            padding: 6px 10px;
-            font-size: 14px;
-            background: var(--bg-tertiary);
-            border: 1px solid var(--gray-400);
-            border-radius: 4px;
-            color: var(--text-primary);
-            box-sizing: border-box;
-        }
-
-        .param-field input:focus {
-            outline: none;
-            border-color: var(--ucb-gold);
-        }
-
-        /* Progress panel */
-        .progress-content {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .progress-status {
-            font-size: 14px;
-            font-weight: 500;
-            text-align: center;
-        }
-
-        .progress-bar-container {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .progress-bar {
-            flex: 1;
-            height: 6px;
-            background: var(--bg-tertiary);
-            border-radius: 3px;
-            overflow: hidden;
-        }
-
-        .progress-bar-fill {
-            height: 100%;
-            background: var(--ucb-gold);
-            transition: width 0.3s;
-        }
-
-        .progress-percent {
-            font-size: 12px;
-            min-width: 35px;
-            text-align: right;
-        }
-
-        .live-reading {
-            font-size: 20px;
-            font-weight: 600;
-            font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
-            color: #4caf50;
-            text-align: center;
-        }
-
-        /* Device status row */
-        .device-status-row {
-            display: flex;
-            gap: 24px;
-            padding: 8px 16px;
-            background: var(--bg-secondary);
-            border: 1px solid var(--gray-400);
-            border-radius: 6px;
-            flex-shrink: 0;
-        }
-
-        .device-item {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 12px;
-        }
-
-        .device-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--gray-500);
-        }
-
-        .device-dot.connected { background: #4caf50; }
-        .device-dot.disconnected { background: #f44336; }
-        .device-dot.warning { background: #ff9800; }
-
-        .device-name {
-            color: var(--text-secondary);
-        }
-
-        .device-status {
-            color: var(--text-muted);
-            font-size: 11px;
-        }
-
-        /* Monochromator controls - inline */
-        .mono-controls-inline {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-left: auto;
-            padding-left: 24px;
-            border-left: 1px solid var(--gray-400);
-        }
-
-        .mono-state {
-            font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
-            font-size: 13px;
-        }
-
-        .mono-controls-inline input {
-            width: 70px;
-            padding: 4px 8px;
-            font-size: 12px;
-            background: var(--bg-tertiary);
-            border: 1px solid var(--gray-400);
-            border-radius: 4px;
-            color: var(--text-primary);
-        }
-
-        .mono-controls-inline .btn-small {
-            padding: 4px 10px;
-            font-size: 11px;
-        }
-
-        .shutter-badge {
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: 500;
-        }
-
-        .shutter-badge.open {
-            background: rgba(76, 175, 80, 0.2);
-            color: #4caf50;
-        }
-
-        .shutter-badge.closed {
-            background: rgba(158, 158, 158, 0.2);
-            color: var(--text-muted);
-        }
-
-        /* Three plots row */
-        .plots-row {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
-            flex: 1;
-            min-height: 0;
-        }
-
-        .plot-panel {
-            display: flex;
-            flex-direction: column;
-            background: var(--bg-secondary);
-            border: 1px solid var(--gray-400);
-            border-radius: 6px;
-            overflow: hidden;
-            min-height: 0;
-        }
-
-        .plot-container {
-            flex: 1;
-            min-height: 0;
-        }
-
-        .plot {
-            width: 100%;
-            height: 100%;
-        }
-
-        /* Stats panel (below phase plot) */
-        .stats-row {
-            padding: 8px 12px;
-            border-top: 1px solid var(--gray-400);
-            font-size: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .stats-row.hidden {
-            display: none;
-        }
-
-        .stat-item {
-            color: var(--text-muted);
-        }
-
-        .stat-value {
-            font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
-            color: var(--text-primary);
-        }
-
-        .quality-badge {
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: 600;
-        }
-
-        .quality-excellent { background: #2e7d32; color: white; }
-        .quality-good { background: #689f38; color: white; }
-        .quality-fair { background: #f9a825; color: black; }
-        .quality-check { background: #e65100; color: white; }
-
-        /* Buttons row */
-        .buttons-row {
-            display: flex;
-            gap: 12px;
-            flex-shrink: 0;
-        }
-
-        .buttons-row .btn {
-            flex: 1;
-            padding: 12px 20px;
-            font-size: 14px;
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 8px 16px;
-            font-size: 13px;
-            font-weight: 600;
-            font-family: inherit;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background-color 0.15s, opacity 0.15s;
-        }
-
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .btn-primary {
-            background-color: #2e7d32;
-            color: white;
-        }
-
-        .btn-primary:hover:not(:disabled) {
-            background-color: #1b5e20;
-        }
-
-        .btn-danger {
-            background-color: #c62828;
-            color: white;
-        }
-
-        .btn-danger:hover:not(:disabled) {
-            background-color: #b71c1c;
-        }
-
-        .btn-secondary {
-            background-color: var(--bg-tertiary);
-            color: var(--text-primary);
-            border: 1px solid var(--gray-400);
-        }
-
-        .btn-secondary:hover:not(:disabled) {
-            background-color: var(--bg-secondary);
-        }
-
-        /* Theme toggle in header */
-        .theme-toggle {
-            position: static;
-            background: transparent;
-            border: none;
-            padding: 6px;
-            cursor: pointer;
-            color: var(--text-primary);
-            border-radius: 4px;
-        }
-
-        .theme-toggle:hover {
-            background: var(--bg-tertiary);
-        }
-
-        /* Hide number spinners */
-        input[type="number"]::-webkit-inner-spin-button,
-        input[type="number"]::-webkit-outer-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
-
-        input[type="number"] {
-            -moz-appearance: textfield;
-        }
-    </style>
+    <script src="js/modals.js"></script>
 </head>
-<body class="dark-mode">
-    <div class="app-container">
+<body class="dark-mode eqe-body">
+    <div class="eqe-app">
         <!-- Header Row -->
-        <div class="header-row">
+        <div class="eqe-header">
             <h1>EQE Measurement</h1>
             <div class="header-actions">
-                <span id="pixel-label" class="text-muted" style="font-size: 13px;">Pixel: --</span>
+                <span id="pixel-label" class="text-muted">Pixel: --</span>
                 <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
-                    <svg id="sun-icon" class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px">
+                    <svg id="sun-icon" class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="5"/>
                         <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
                         <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
                         <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
                         <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
                     </svg>
-                    <svg id="moon-icon" class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px">
+                    <svg id="moon-icon" class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
                     </svg>
                 </button>
@@ -453,7 +77,7 @@
                         </div>
                         <span class="progress-percent" id="progress-percent">0%</span>
                     </div>
-                    <div class="live-reading" id="live-reading" style="display: none;">
+                    <div class="live-reading hidden" id="live-reading">
                         <span id="live-value">--</span> nA
                     </div>
                 </div>
@@ -532,15 +156,35 @@
         </div>
     </div>
 
-    <!-- Pixel Selection Modal -->
-    <div class="modal-overlay" id="pixel-modal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;z-index:1000;">
-        <div class="modal" style="background:var(--bg-primary);border-radius:8px;padding:24px;min-width:280px;">
-            <div style="font-size:16px;font-weight:600;margin-bottom:16px;">Select Pixel</div>
-            <div style="margin-bottom:16px;">
-                <label style="display:block;font-size:13px;color:var(--text-secondary);margin-bottom:6px;">Pixel Number (1-8)</label>
-                <input type="number" id="pixel-input" min="1" max="8" value="1" style="width:100%;padding:8px 12px;font-size:14px;background:var(--bg-secondary);border:1px solid var(--gray-400);border-radius:4px;color:var(--text-primary);box-sizing:border-box;">
+    <!-- Cell Number Modal (shown on startup) -->
+    <div class="modal-overlay" id="cell-modal">
+        <div class="modal">
+            <div class="modal-title">Enter Cell Number</div>
+            <div class="modal-body">
+                <div class="input-group mb-0">
+                    <label for="cell-input">Cell Number (e.g., 195)</label>
+                    <input type="text" id="cell-input" pattern="[0-9]{3}" maxlength="3" placeholder="000">
+                    <span class="input-error" id="cell-input-error">Please enter a 3-digit cell number</span>
+                </div>
             </div>
-            <div style="display:flex;gap:12px;justify-content:flex-end;">
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeCellModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="confirmCellNumber()">Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pixel Selection Modal -->
+    <div class="modal-overlay" id="pixel-modal">
+        <div class="modal">
+            <div class="modal-title">Select Pixel</div>
+            <div class="modal-body">
+                <div class="input-group mb-0">
+                    <label for="pixel-input">Pixel Number (1-8)</label>
+                    <input type="number" id="pixel-input" min="1" max="8" value="1">
+                </div>
+            </div>
+            <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closePixelModal()">Cancel</button>
                 <button class="btn btn-primary" onclick="confirmPixel()">Start</button>
             </div>
@@ -590,6 +234,15 @@
                     checkDeviceStatus();
                 }
             }, 500);
+
+            // Initialize shared modal handlers
+            LabModals.init();
+
+            // Show cell number modal on startup
+            LabModals.showCell((cellNumber) => {
+                document.getElementById('cell-number').value = cellNumber;
+                state.cellNumber = cellNumber;
+            });
         });
 
         // ==================== Plots ====================
@@ -601,7 +254,7 @@
                 zeroline: isDark ? '#666666' : '#999999'
             };
             return {
-                title: { text: title, font: { size: 13 } },
+                title: { text: title, font: { size: 14 } },
                 xaxis: {
                     title: { text: xLabel, font: { size: 11 } },
                     color: colors.text,
@@ -617,15 +270,16 @@
                 paper_bgcolor: 'rgba(0,0,0,0)',
                 plot_bgcolor: 'rgba(0,0,0,0)',
                 font: { color: colors.text, size: 10 },
-                margin: { t: 35, r: 15, b: 45, l: 55 }
+                margin: { t: 70, r: 15, b: 55, l: 60 }
             };
         }
 
         const plotConfig = {
             displayModeBar: true,
-            modeBarButtonsToRemove: ['lasso2d', 'select2d'],
             displaylogo: false,
-            responsive: true
+            responsive: true,
+            scrollZoom: true,
+            doubleClick: 'reset'
         };
 
         function initPlots() {
@@ -831,9 +485,12 @@
 
         function startPowerMeasurement() {
             const cell = document.getElementById('cell-number').value;
-            if (!cell || !/^\d{1,3}$/.test(cell)) {
-                alert('Please enter a valid cell number');
-                document.getElementById('cell-number').focus();
+            if (!cell || !/^\d{3}$/.test(cell)) {
+                LabModals.showCell((cellNumber) => {
+                    document.getElementById('cell-number').value = cellNumber;
+                    state.cellNumber = cellNumber;
+                    startPowerMeasurement(); // Retry after cell number entered
+                });
                 return;
             }
 
@@ -862,36 +519,16 @@
 
         function startCurrentMeasurement() {
             const cell = document.getElementById('cell-number').value;
-            if (!cell || !/^\d{1,3}$/.test(cell)) {
-                alert('Please enter a valid cell number');
-                document.getElementById('cell-number').focus();
+            if (!cell || !/^\d{3}$/.test(cell)) {
+                LabModals.showCell((cellNumber) => {
+                    document.getElementById('cell-number').value = cellNumber;
+                    state.cellNumber = cellNumber;
+                    LabModals.showPixel(startCurrentMeasurementWithPixel);
+                });
                 return;
             }
-            showPixelModal();
+            LabModals.showPixel(startCurrentMeasurementWithPixel);
         }
-
-        function showPixelModal() {
-            document.getElementById('pixel-modal').style.display = 'flex';
-            setTimeout(() => document.getElementById('pixel-input').focus(), 100);
-        }
-
-        function closePixelModal() {
-            document.getElementById('pixel-modal').style.display = 'none';
-        }
-
-        function confirmPixel() {
-            const pixel = parseInt(document.getElementById('pixel-input').value);
-            if (pixel < 1 || pixel > 8) {
-                alert('Pixel must be 1-8');
-                return;
-            }
-            closePixelModal();
-            startCurrentMeasurementWithPixel(pixel);
-        }
-
-        document.getElementById('pixel-input').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') confirmPixel();
-        });
 
         function startCurrentMeasurementWithPixel(pixel) {
             state.currentPixel = pixel;
@@ -1078,7 +715,7 @@
             state.measurementState = 'live_monitor';
             document.getElementById('live-btn').textContent = 'Stop Monitor';
             document.getElementById('live-btn').className = 'btn btn-danger';
-            document.getElementById('live-reading').style.display = 'block';
+            document.getElementById('live-reading').classList.remove('hidden');
             document.getElementById('power-btn').disabled = true;
             document.getElementById('current-btn').disabled = true;
             updateProgress(0, 'Live monitoring at 532 nm');
@@ -1097,7 +734,7 @@
             state.measurementState = 'idle';
             document.getElementById('live-btn').textContent = 'Live Monitor';
             document.getElementById('live-btn').className = 'btn btn-secondary';
-            document.getElementById('live-reading').style.display = 'none';
+            document.getElementById('live-reading').classList.add('hidden');
             updateButtonStates();
             updateProgress(0, 'Ready');
 

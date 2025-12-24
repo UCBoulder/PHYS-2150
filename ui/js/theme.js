@@ -89,6 +89,29 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
+/**
+ * Get plot colors from CSS variables.
+ * Call this after DOM is ready.
+ *
+ * @returns {Object} Plot color values
+ */
+function getPlotColors() {
+    const style = getComputedStyle(document.documentElement);
+    return {
+        blue: style.getPropertyValue('--plot-blue').trim() || '#4A90D9',
+        green: style.getPropertyValue('--plot-green').trim() || '#66bb6a',
+        orange: style.getPropertyValue('--plot-orange').trim() || '#ff9800',
+        red: style.getPropertyValue('--plot-red').trim() || '#e57373',
+        // Semantic aliases
+        power: style.getPropertyValue('--plot-blue').trim() || '#4A90D9',
+        current: style.getPropertyValue('--plot-green').trim() || '#66bb6a',
+        phaseMeasured: style.getPropertyValue('--plot-orange').trim() || '#ff9800',
+        phaseFit: style.getPropertyValue('--plot-red').trim() || '#e57373',
+        jvForward: style.getPropertyValue('--plot-blue').trim() || '#4A90D9',
+        jvReverse: style.getPropertyValue('--plot-red').trim() || '#e57373',
+    };
+}
+
 // Export for use in other modules
 window.LabTheme = {
     init: initTheme,
@@ -96,4 +119,5 @@ window.LabTheme = {
     apply: applyTheme,
     isDark: isDarkMode,
     createToggle: createThemeToggle,
+    getPlotColors: getPlotColors,
 };

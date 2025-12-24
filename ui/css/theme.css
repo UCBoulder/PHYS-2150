@@ -36,10 +36,30 @@
     --jv-green-active: #3D8C3D;
 
     /* Status */
-    --success: #2e7d32;
-    --warning: #e65100;
+    --success: #4caf50;
+    --success-dark: #2e7d32;
+    --warning: #ff9800;
+    --warning-dark: #e65100;
     --error: #c62828;
+    --error-hover: #b71c1c;
     --info: #1565c0;
+
+    /* Status with transparency */
+    --success-bg: rgba(76, 175, 80, 0.2);
+    --warning-bg: rgba(255, 152, 0, 0.2);
+    --error-bg: rgba(198, 40, 40, 0.2);
+
+    /* Plot Colors */
+    --plot-blue: #4A90D9;
+    --plot-green: #66bb6a;
+    --plot-orange: #ff9800;
+    --plot-red: #e57373;
+
+    /* Quality Badge Colors */
+    --quality-excellent: #2e7d32;
+    --quality-good: #689f38;
+    --quality-fair: #f9a825;
+    --quality-check: #e65100;
 }
 
 /* Dark Mode */

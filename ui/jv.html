@@ -19,6 +19,7 @@
     <!-- Shared modules -->
     <script src="js/api.js"></script>
     <script src="js/theme.js"></script>
+    <script src="js/modals.js"></script>
 </head>
 <body class="dark-mode">
     <div class="app-container">
@@ -169,6 +170,7 @@
         // Initialize on load
         document.addEventListener('DOMContentLoaded', async () => {
             LabTheme.init();
+            LabModals.init();
             await LabAPI.init();
 
             // Small delay to ensure Plotly is ready
@@ -177,7 +179,9 @@
                 checkDeviceStatus();
 
                 // Prompt for cell number on startup
-                setCellNumber();
+                LabModals.showCell((cellNumber) => {
+                    document.getElementById('cell-number').value = cellNumber;
+                });
             }, 50);
         });
 
@@ -310,94 +314,6 @@
         }
 
         /**
-         * Cell number modal
-         */
-        function setCellNumber() {
-            document.getElementById('cell-modal').classList.add('active');
-            // Delay focus to ensure modal transition is complete
-            setTimeout(() => {
-                const input = document.getElementById('cell-input');
-                input.focus();
-                input.select();
-            }, 100);
-        }
-
-        // Allow Enter key to confirm cell number
-        document.getElementById('cell-input').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                confirmCellNumber();
-            }
-        });
-
-        // Clear error state when typing
-        document.getElementById('cell-input').addEventListener('input', () => {
-            document.getElementById('cell-input').classList.remove('error');
-            document.getElementById('cell-input-error').classList.remove('visible');
-        });
-
-        function closeCellModal() {
-            document.getElementById('cell-modal').classList.remove('active');
-        }
-
-        function confirmCellNumber() {
-            const input = document.getElementById('cell-input');
-            const error = document.getElementById('cell-input-error');
-            const value = input.value.trim();
-
-            if (!/^\d{3}$/.test(value)) {
-                input.classList.add('error');
-                error.classList.add('visible');
-                input.focus();
-                return;
-            }
-
-            // Clear error state
-            input.classList.remove('error');
-            error.classList.remove('visible');
-
-            document.getElementById('cell-number').value = value;
-            closeCellModal();
-        }
-
-        /**
-         * Pixel selection modal
-         */
-        function showPixelModal() {
-            document.getElementById('pixel-modal').classList.add('active');
-            setTimeout(() => {
-                const input = document.getElementById('pixel-input');
-                input.focus();
-                input.select();
-            }, 100);
-        }
-
-        // Allow Enter key to confirm pixel
-        document.getElementById('pixel-input').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                confirmPixel();
-            }
-        });
-
-        function closePixelModal() {
-            document.getElementById('pixel-modal').classList.remove('active');
-        }
-
-        function confirmPixel() {
-            const input = document.getElementById('pixel-input');
-            const pixel = parseInt(input.value);
-
-            if (pixel < 1 || pixel > 9) {
-                alert('Please enter a pixel number between 1 and 9');
-                return;
-            }
-
-            closePixelModal();
-            startMeasurement(pixel);
-        }
-
-        /**
          * Measurement control
          */
         function toggleMeasurement() {
@@ -406,11 +322,14 @@
             } else {
                 // Check cell number first
                 const cellNumber = document.getElementById('cell-number').value;
-                if (!cellNumber) {
-                    setCellNumber();
+                if (!cellNumber || !/^\d{3}$/.test(cellNumber)) {
+                    LabModals.showCell((cell) => {
+                        document.getElementById('cell-number').value = cell;
+                        LabModals.showPixel(startMeasurement);
+                    });
                     return;
                 }
-                showPixelModal();
+                LabModals.showPixel(startMeasurement);
             }
         }
 
