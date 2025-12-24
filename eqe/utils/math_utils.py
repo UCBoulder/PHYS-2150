@@ -2,8 +2,9 @@
 Mathematical and signal processing utilities for the EQE measurement application.
 """
 
+import warnings
 import numpy as np
-from scipy.optimize import curve_fit
+from scipy.optimize import curve_fit, OptimizeWarning
 from typing import Tuple, Optional, Dict, Any
 
 
@@ -34,8 +35,11 @@ class MathUtils:
                 0,  # phase_shift
                 np.mean(signals)  # offset
             ]
-            
-            popt, _ = curve_fit(sine_func, x, signals, p0=p0)
+
+            # Suppress OptimizeWarning when fit fails (e.g., no signal)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", OptimizeWarning)
+                popt, _ = curve_fit(sine_func, x, signals, p0=p0)
             return tuple(popt)
             
         except Exception:

@@ -143,7 +143,8 @@ class EQEApi(QObject):
             )
 
             # Start phase adjustment first (current measurement follows automatically)
-            self._experiment.start_phase_adjustment(params["pixel"])
+            # pixel_number already set above, no need to pass it again
+            self._experiment.start_phase_adjustment()
             return json.dumps({"success": True, "phase": "adjusting"})
 
         except EQEExperimentError as e:
@@ -303,8 +304,8 @@ class EQEApi(QObject):
 
     def _on_experiment_complete(self, success: bool, message: str) -> None:
         """Forward experiment completion to JS."""
-        # Escape message for JS string
-        escaped_message = message.replace("'", "\\'")
+        # Escape message for JS string (single quotes and newlines)
+        escaped_message = message.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n")
         js = f"onMeasurementComplete({str(success).lower()}, '{escaped_message}')"
         self._window.run_js(js)
 
@@ -327,8 +328,8 @@ class EQEWebWindow(QMainWindow):
 
         self.setWindowTitle("EQE Measurement - PHYS 2150")
         # Match existing GUI_CONFIG window size
-        self.resize(1400, 950)
-        self.setMinimumSize(1000, 700)
+        self.resize(1400, 750)
+        self.setMinimumSize(1000, 600)
 
         # Track if page is ready for JS calls
         self._page_ready = False
@@ -425,6 +426,10 @@ class EQEWebApplication:
             # Continue anyway - UI will show disconnected status
 
         self.window.show()
+
+        # Trigger cell modal after window is shown (ensures focus works after PicoScope splash)
+        self.window.run_js("showStartupCellModal()")
+
         return self.app.exec()
 
 

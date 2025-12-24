@@ -439,3 +439,7 @@ input[type="number"] {
 .header-label {
     font-size: 13px;
 }
+
+.text-muted {
+    color: var(--text-muted);
+}

@@ -54,7 +54,7 @@ body.eqe-body {
 }
 
 .eqe-header h1 {
-    font-size: 18px;
+    font-size: 20px;
     font-weight: 600;
     margin: 0;
     text-align: left;
@@ -64,6 +64,11 @@ body.eqe-body {
     display: flex;
     align-items: center;
     gap: 16px;
+}
+
+/* Override absolute positioning when theme toggle is in header */
+.eqe-header .header-actions .theme-toggle {
+    position: static;
 }
 
 
@@ -139,6 +144,7 @@ body.eqe-body {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    min-height: 50px;
 }
 
 .progress-status {
@@ -151,6 +157,10 @@ body.eqe-body {
     display: flex;
     align-items: center;
     gap: 8px;
+}
+
+.progress-panel .progress-bar {
+    flex: 1;
 }
 
 .progress-percent {
@@ -273,6 +283,15 @@ body.eqe-body {
     border-radius: 6px;
     overflow: hidden;
     min-height: 0;
+}
+
+.plot-title {
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
+    padding: 8px 12px 4px;
+    color: var(--text-primary);
+    flex-shrink: 0;
 }
 
 .plot-container {

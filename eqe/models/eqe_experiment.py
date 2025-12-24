@@ -5,11 +5,13 @@ This model coordinates the complete EQE measurement experiment, managing all dev
 and measurement models. It represents the highest level of experiment logic.
 """
 
-import pyvisa as visa
-from typing import Optional, Dict, Any, Callable, Tuple, List
+import time
 import threading
 from contextlib import contextmanager
-from PySide6.QtCore import QObject, Signal, QTimer
+from typing import Optional, Dict, Any, Callable, Tuple, List
+
+import pyvisa as visa
+from PySide6.QtCore import QObject, Signal
 
 from ..controllers.thorlabs_power_meter import ThorlabsPowerMeterController, ThorlabsPowerMeterError
 from ..controllers.monochromator import MonochromatorController, MonochromatorError
@@ -80,7 +82,7 @@ class EQEExperimentModel(QObject):
         self._experiment_running = False
 
         # Live signal monitor
-        self._live_monitor_timer: Optional[QTimer] = None
+        self._live_monitor_thread: Optional[threading.Thread] = None
         self._live_monitor_active = False
 
         # Monochromator state tracking (shutter state not queryable from hardware)
@@ -337,12 +339,24 @@ class EQEExperimentModel(QObject):
             r_squared = results.get('r_squared', 0)
             optimal_phase = results.get('optimal_phase', 0)
             message = f"Phase adjustment: {optimal_phase:.1f}° (R² = {r_squared:.4f})"
+            self.logger.log(message)
+
+            # Automatically start current measurement after successful phase adjustment
+            try:
+                self.start_current_measurement()
+            except EQEExperimentError as e:
+                self.logger.log(f"Failed to start current measurement: {e}", "ERROR")
+                self._notify_experiment_complete(False, f"Failed to start current measurement: {e}")
         else:
             message = "Phase adjustment failed"
-        self.logger.log(message)
-        # Note: Phase adjustment is a sub-step, not full experiment completion
-        # Do NOT call _notify_experiment_complete here - it will reset the pixel number
-        # and prevent the automatic continuation to current measurement
+            self.logger.log(message)
+            # Notify UI that the experiment failed so it doesn't hang
+            self._notify_experiment_complete(False,
+                "Phase adjustment failed. Check that:\n\n"
+                "   • Chopper and light source are on\n"
+                "   • Light is aligned to the correct pixel\n"
+                "   • Banana cables are connected correctly\n"
+                "   • Transimpedance amplifier is powered on")
     
     def is_initialized(self) -> bool:
         """Check if devices are initialized."""
@@ -442,10 +456,11 @@ class EQEExperimentModel(QObject):
 
     def start_live_signal_monitor(self) -> None:
         """
-        Start live signal monitoring at 523 nm (green).
+        Start live signal monitoring at 532 nm (green).
 
-        Sets monochromator to 523 nm, opens shutter, and starts periodic
+        Sets monochromator to 532 nm, opens shutter, and starts periodic
         fast lock-in measurements to help with cell alignment.
+        Measurements run in a background thread to avoid blocking the UI.
         """
         if settings.OFFLINE_MODE:
             raise EQEExperimentError("Cannot perform measurements in OFFLINE mode")
@@ -469,12 +484,13 @@ class EQEExperimentModel(QObject):
             filter_number = self.monochromator._current_filter or 0
             self.monochromator_state_changed.emit(wavelength, self._shutter_open, filter_number)
 
-            # Start periodic measurements
+            # Start measurements in background thread (doesn't block UI)
             self._live_monitor_active = True
-            self._live_monitor_timer = QTimer()
-            self._live_monitor_timer.timeout.connect(self._do_live_measurement)
-            interval_ms = GUI_CONFIG["live_monitor_interval_ms"]
-            self._live_monitor_timer.start(interval_ms)
+            self._live_monitor_thread = threading.Thread(
+                target=self._live_monitor_worker,
+                daemon=True
+            )
+            self._live_monitor_thread.start()
 
         except (MonochromatorError, PicoScopeError) as e:
             self._live_monitor_active = False
@@ -484,9 +500,10 @@ class EQEExperimentModel(QObject):
         """Stop live signal monitoring."""
         self._live_monitor_active = False
 
-        if self._live_monitor_timer:
-            self._live_monitor_timer.stop()
-            self._live_monitor_timer = None
+        # Thread will exit on next iteration when it checks _live_monitor_active
+        if self._live_monitor_thread and self._live_monitor_thread.is_alive():
+            self._live_monitor_thread.join(timeout=1.0)
+        self._live_monitor_thread = None
 
         self.logger.log("Live signal monitor stopped")
 
@@ -584,22 +601,30 @@ class EQEExperimentModel(QObject):
             'filter': self.monochromator._current_filter or 0
         }
 
-    def _do_live_measurement(self) -> None:
-        """Perform a single fast measurement for live monitoring."""
-        if not self._live_monitor_active:
-            return
+    def _live_monitor_worker(self) -> None:
+        """
+        Worker function for live monitoring thread.
 
-        try:
-            # Use fast measurement with fewer cycles
-            current = self.lockin.read_current_fast(num_cycles=20)
+        Runs measurements in a loop until _live_monitor_active is set to False.
+        Emits signals to update UI without blocking the main thread.
+        """
+        interval_s = GUI_CONFIG["live_monitor_interval_ms"] / 1000.0
 
-            if current is not None:
-                # Convert to nanoamps for display
-                current_nA = current * 1e9
-                self.live_signal_update.emit(current_nA)
+        while self._live_monitor_active:
+            try:
+                # Use fast measurement with fewer cycles
+                current = self.lockin.read_current_fast(num_cycles=20)
 
-        except PicoScopeError as e:
-            self.logger.log(f"Live measurement error: {e}", "WARNING")
+                if current is not None:
+                    # Convert to nanoamps for display
+                    current_nA = current * 1e9
+                    self.live_signal_update.emit(current_nA)
+
+            except PicoScopeError as e:
+                self.logger.log(f"Live measurement error: {e}", "WARNING")
+
+            # Sleep to maintain update interval (measurement time + sleep = interval)
+            time.sleep(interval_s)
     
     def start_power_measurement(self) -> bool:
         """

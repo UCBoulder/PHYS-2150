@@ -40,13 +40,14 @@ let _cellNumberCallback = null;
 function showCellModal(onConfirm) {
     _cellNumberCallback = onConfirm;
     showModal('cell-modal');
+    // Wait for modal transition (200ms) to complete before focusing
     setTimeout(() => {
         const input = document.getElementById('cell-input');
         if (input) {
             input.focus();
             input.select();
         }
-    }, 100);
+    }, 250);
 }
 
 /**
@@ -121,13 +122,14 @@ let _pixelCallback = null;
 function showPixelModal(onConfirm) {
     _pixelCallback = onConfirm;
     showModal('pixel-modal');
+    // Wait for modal transition (200ms) to complete before focusing
     setTimeout(() => {
         const input = document.getElementById('pixel-input');
         if (input) {
             input.focus();
             input.select();
         }
-    }, 100);
+    }, 250);
 }
 
 /**
@@ -176,6 +178,82 @@ function initPixelModal() {
             }
         });
     }
+}
+
+// ==================== Save Data Modal ====================
+
+let _saveCallback = null;
+
+/**
+ * Show the save data modal.
+ * @param {Object} options - Available data options
+ * @param {boolean} options.hasPower - Whether power data is available
+ * @param {boolean} options.hasCurrent - Whether current data is available
+ * @param {Function} onSave - Callback with 'power' or 'current' when confirmed
+ */
+function showSaveModal(options, onSave) {
+    _saveCallback = onSave;
+
+    // Update button states based on available data
+    const powerBtn = document.getElementById('save-power-btn');
+    const currentBtn = document.getElementById('save-current-btn');
+
+    if (powerBtn) powerBtn.disabled = !options.hasPower;
+    if (currentBtn) currentBtn.disabled = !options.hasCurrent;
+
+    showModal('save-modal');
+}
+
+/**
+ * Hide the save data modal.
+ */
+function closeSaveModal() {
+    hideModal('save-modal');
+    _saveCallback = null;
+}
+
+/**
+ * Confirm saving power data.
+ */
+function confirmSavePower() {
+    if (_saveCallback) {
+        _saveCallback('power');
+    }
+    closeSaveModal();
+}
+
+/**
+ * Confirm saving current data.
+ */
+function confirmSaveCurrent() {
+    if (_saveCallback) {
+        _saveCallback('current');
+    }
+    closeSaveModal();
+}
+
+// ==================== Error Modal ====================
+
+/**
+ * Show the error modal with a message.
+ * @param {string} title - The error title
+ * @param {string} message - The error message
+ */
+function showErrorModal(title, message) {
+    const titleEl = document.getElementById('error-modal-title');
+    const messageEl = document.getElementById('error-modal-message');
+
+    if (titleEl) titleEl.textContent = title;
+    if (messageEl) messageEl.textContent = message;
+
+    showModal('error-modal');
+}
+
+/**
+ * Hide the error modal.
+ */
+function closeErrorModal() {
+    hideModal('error-modal');
 }
 
 // ==================== HTML Templates ====================
@@ -235,6 +313,52 @@ function getPixelModalHTML(options = {}) {
 }
 
 /**
+ * Get the HTML for a save data modal.
+ * @returns {string} Modal HTML
+ */
+function getSaveModalHTML() {
+    return `
+    <div class="modal-overlay" id="save-modal">
+        <div class="modal">
+            <div class="modal-title">Save Data</div>
+            <div class="modal-body">
+                <p style="margin-bottom: 16px; color: var(--text-secondary);">Which data would you like to save?</p>
+                <div class="save-options">
+                    <button class="btn btn-primary btn-block" id="save-power-btn" onclick="LabModals.confirmSavePower()" style="margin-bottom: 8px;">
+                        Save Power Data
+                    </button>
+                    <button class="btn btn-primary btn-block" id="save-current-btn" onclick="LabModals.confirmSaveCurrent()">
+                        Save Current Data
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="LabModals.closeSave()">Cancel</button>
+            </div>
+        </div>
+    </div>`;
+}
+
+/**
+ * Get the HTML for an error modal.
+ * @returns {string} Modal HTML
+ */
+function getErrorModalHTML() {
+    return `
+    <div class="modal-overlay" id="error-modal">
+        <div class="modal">
+            <div class="modal-title" id="error-modal-title">Error</div>
+            <div class="modal-body">
+                <p id="error-modal-message" style="color: var(--text-secondary);"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="LabModals.closeError()">OK</button>
+            </div>
+        </div>
+    </div>`;
+}
+
+/**
  * Initialize all modal event listeners.
  * Call this after DOM is ready.
  */
@@ -263,6 +387,18 @@ window.LabModals = {
     confirmPixel: confirmPixel,
     initPixel: initPixelModal,
     getPixelHTML: getPixelModalHTML,
+
+    // Save modal
+    showSave: showSaveModal,
+    closeSave: closeSaveModal,
+    confirmSavePower: confirmSavePower,
+    confirmSaveCurrent: confirmSaveCurrent,
+    getSaveHTML: getSaveModalHTML,
+
+    // Error modal
+    showError: showErrorModal,
+    closeError: closeErrorModal,
+    getErrorHTML: getErrorModalHTML,
 };
 
 // Also expose individual functions globally for onclick handlers
@@ -272,3 +408,6 @@ window.confirmCellNumber = confirmCellNumber;
 window.showPixelModal = showPixelModal;
 window.closePixelModal = closePixelModal;
 window.confirmPixel = confirmPixel;
+window.closeSaveModal = closeSaveModal;
+window.confirmSavePower = confirmSavePower;
+window.confirmSaveCurrent = confirmSaveCurrent;
