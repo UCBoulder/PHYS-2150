@@ -246,8 +246,6 @@ body.eqe-body {
     align-items: center;
     gap: 12px;
     margin-left: auto;
-    padding-left: 24px;
-    border-left: 1px solid var(--gray-400);
 }
 
 .mono-state {
