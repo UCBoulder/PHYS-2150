@@ -233,14 +233,13 @@ class JVWebWindow(QMainWindow):
         self._page_ready = False
         self._pending_js: list[str] = []
 
-        # Create web view with dev tools enabled
+        # Create web view with GPU acceleration
         self.web_view = QWebEngineView()
-        self.web_view.page().settings().setAttribute(
-            self.web_view.page().settings().WebAttribute.LocalContentCanAccessRemoteUrls, True
-        )
-        self.web_view.page().settings().setAttribute(
-            self.web_view.page().settings().WebAttribute.LocalContentCanAccessFileUrls, True
-        )
+        settings = self.web_view.page().settings()
+        settings.setAttribute(settings.WebAttribute.LocalContentCanAccessRemoteUrls, True)
+        settings.setAttribute(settings.WebAttribute.LocalContentCanAccessFileUrls, True)
+        settings.setAttribute(settings.WebAttribute.Accelerated2dCanvasEnabled, True)
+        settings.setAttribute(settings.WebAttribute.WebGLEnabled, True)
         self.setCentralWidget(self.web_view)
 
         # Set up web channel

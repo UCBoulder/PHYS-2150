@@ -19,7 +19,8 @@ html, body {
 
 /* Override theme.css body centering */
 body.eqe-body {
-    display: block;
+    display: flex;
+    flex-direction: column;
     padding: 0;
     align-items: stretch;
     justify-content: stretch;
@@ -33,8 +34,9 @@ body.eqe-body {
 .eqe-app {
     display: flex;
     flex-direction: column;
-    height: 100vh;
-    width: 100vw;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
     padding: 4px 16px 16px 16px;
     gap: 12px;
     box-sizing: border-box;
