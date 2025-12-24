@@ -408,6 +408,31 @@ class EQEApi(QObject):
 
         return json.dumps({"success": False, "message": "Cancelled"})
 
+    @Slot(str, result=str)
+    def save_analysis_data(self, csv_content: str) -> str:
+        """Save EQE analysis results to file."""
+        from datetime import datetime
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        default_filename = f"eqe_analysis_{timestamp}.csv"
+
+        file_path, _ = QFileDialog.getSaveFileName(
+            self._window,
+            "Save EQE Analysis",
+            default_filename,
+            "CSV files (*.csv)"
+        )
+
+        if file_path:
+            try:
+                with open(file_path, 'w', newline='') as f:
+                    f.write(csv_content)
+                return json.dumps({"success": True, "path": file_path})
+            except Exception as e:
+                return json.dumps({"success": False, "message": str(e)})
+
+        return json.dumps({"success": False, "message": "Cancelled"})
+
     def _on_stability_progress(self, timestamp: float, value: float) -> None:
         """Forward stability progress to JS (called from background thread)."""
         # Emit signal to marshal to main thread

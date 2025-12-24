@@ -689,6 +689,10 @@ body:not(.dark-mode) .plot-panel .modebar-container {
     flex-direction: column;
 }
 
+.analysis-results-panel > .btn {
+    margin-top: auto;
+}
+
 .analysis-data-grid {
     display: grid;
     grid-template-columns: auto auto auto 1fr;

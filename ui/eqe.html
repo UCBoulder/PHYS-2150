@@ -346,6 +346,7 @@
                             <span class="analysis-metric-value" id="metric-datapoints">--</span>
                         </div>
                     </div>
+                    <button class="btn btn-secondary" id="btn-save-analysis" onclick="saveAnalysisResults()" disabled>Save Results</button>
                 </div>
             </div>
         </div><!-- End Analysis Tab -->
@@ -2078,6 +2079,7 @@
                 updateMetricsDisplay();
 
                 setAnalysisStatus('EQE calculated successfully', 'success');
+                document.getElementById('btn-save-analysis').disabled = false;
 
             } catch (err) {
                 setAnalysisStatus('Calculation error: ' + err.message, 'error');
@@ -2153,6 +2155,44 @@
             const el = document.getElementById('analysis-status');
             el.textContent = message;
             el.className = 'progress-status analysis-status-text' + (type ? ' ' + type : '');
+        }
+
+        function saveAnalysisResults() {
+            const data = state.analysis.eqeData;
+            const m = state.analysis.metrics;
+            if (!data || !m) return;
+
+            // Build CSV content with header summary
+            let csv = '# EQE Analysis Results\n';
+            const now = new Date();
+            const localISO = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+            csv += `# Generated: ${localISO}\n`;
+            csv += '#\n';
+            csv += `# Peak EQE: ${m.peakEQE.toFixed(2)}% at ${m.peakWavelength.toFixed(0)} nm\n`;
+            if (m.bandgapWavelength) {
+                csv += `# Bandgap Edge: ${m.bandgapWavelength.toFixed(0)} nm (${m.bandgapEV.toFixed(2)} eV)\n`;
+            }
+            csv += `# Integrated Jsc: ${m.integratedJsc.toFixed(2)} mA/cm^2 (AM1.5G)\n`;
+            csv += `# Data Points: ${m.dataPoints}\n`;
+            csv += '#\n';
+            csv += 'Wavelength (nm),EQE (%)\n';
+
+            for (let i = 0; i < data.wavelengths.length; i++) {
+                csv += `${data.wavelengths[i]},${data.eqe[i].toFixed(4)}\n`;
+            }
+
+            // Save via Python bridge
+            const api = LabAPI.get();
+            if (api && api.save_analysis_data) {
+                api.save_analysis_data(csv, (result) => {
+                    const r = JSON.parse(result);
+                    if (r.success) {
+                        setAnalysisStatus('Results saved', 'success');
+                    } else if (r.message !== 'Cancelled') {
+                        setAnalysisStatus('Save failed: ' + r.message, 'error');
+                    }
+                });
+            }
         }
 
         // Global callbacks for Python
