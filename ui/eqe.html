@@ -86,6 +86,7 @@
 
         <!-- Device Status Row with Monochromator Controls -->
         <div class="device-status-row">
+            <span class="row-section-title">Device Status</span>
             <div class="device-item">
                 <span class="device-dot disconnected" id="picoscope-dot"></span>
                 <span class="device-name">PicoScope:</span>
@@ -103,6 +104,7 @@
             </div>
 
             <div class="mono-controls-inline">
+                <span class="row-section-title">Monochromator</span>
                 <span class="mono-state"><span id="mono-wavelength">--</span> nm</span>
                 <span class="shutter-badge closed" id="shutter-badge">Closed</span>
                 <input type="number" id="wavelength-input" placeholder="nm" min="200" max="1200">
@@ -318,13 +320,13 @@
                 plot_bgcolor: 'rgba(0,0,0,0)',
                 font: { color: colors.text },
                 legend: { font: { color: colors.text }, bgcolor: colors.legendBg },
-                margin: { t: 20, r: 30, b: 60, l: 60 }
+                margin: { t: 20, r: 30, b: 95, l: 60 }
             };
         }
 
         const plotConfig = {
             displayModeBar: true,
-            modeBarButtonsToRemove: ['lasso2d', 'select2d'],
+            modeBarButtonsToRemove: ['lasso2d', 'select2d', 'toImage'],
             displaylogo: false
         };
 

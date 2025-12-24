@@ -36,40 +36,45 @@
 
             <div class="controls-divider"></div>
 
-            <!-- Voltage Parameters -->
+            <!-- Measurement Parameters -->
             <div class="controls-section">
-                <div class="controls-section-title">Voltage Sweep</div>
+                <div class="controls-section-title">Measurement Parameters</div>
 
                 <div class="input-group">
-                    <label for="start-voltage">Start Voltage (V)</label>
+                    <label for="start-voltage">Start (V)</label>
                     <input type="text" id="start-voltage" value="-0.1" autocomplete="off">
                 </div>
 
                 <div class="input-group">
-                    <label for="stop-voltage">Stop Voltage (V)</label>
+                    <label for="stop-voltage">Stop (V)</label>
                     <input type="text" id="stop-voltage" value="0.7" autocomplete="off">
                 </div>
 
                 <div class="input-group">
-                    <label for="step-voltage">Step Voltage (V)</label>
+                    <label for="step-voltage">Step (V)</label>
                     <input type="text" id="step-voltage" value="0.02" autocomplete="off">
+                </div>
+
+                <div class="input-group">
+                    <label for="cell-number">Cell Number</label>
+                    <input type="text" id="cell-number" placeholder="e.g. 140" maxlength="3">
                 </div>
             </div>
 
             <div class="controls-divider"></div>
 
-            <!-- Cell Info -->
+            <!-- Status -->
             <div class="controls-section">
-                <div class="controls-section-title">Sample</div>
-
-                <div class="input-group">
-                    <label for="cell-number">Cell Number</label>
-                    <input type="text" id="cell-number" readonly placeholder="Not set">
+                <div class="controls-section-title">Status</div>
+                <div class="status-content">
+                    <div class="status-message" id="status-message">Ready</div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar">
+                            <div class="progress-bar-fill" id="progress-fill" style="width: 0%"></div>
+                        </div>
+                        <span class="progress-percent" id="progress-percent">0%</span>
+                    </div>
                 </div>
-
-                <button class="btn btn-secondary btn-block" onclick="setCellNumber()">
-                    Set Cell Number
-                </button>
             </div>
 
             <div class="controls-spacer"></div>
@@ -153,6 +158,18 @@
         </div>
     </div>
 
+    <!-- Error Modal -->
+    <div class="modal-overlay" id="error-modal">
+        <div class="modal">
+            <div class="modal-title" id="error-modal-title">Error</div>
+            <div class="modal-body">
+                <p id="error-modal-message" style="color: var(--text-secondary); white-space: pre-wrap; text-align: left;"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="LabModals.closeError()">OK</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         /**
@@ -234,14 +251,14 @@
                 plot_bgcolor: 'rgba(0,0,0,0)',
                 font: { color: colors.text },
                 legend: { font: { color: colors.text }, bgcolor: colors.legendBg },
-                margin: { t: 20, r: 30, b: 60, l: 60 }
+                margin: { t: 20, r: 30, b: 95, l: 60 }
             };
         }
 
         // Plotly config - always show modebar
         const plotConfig = {
             displayModeBar: true,
-            modeBarButtonsToRemove: ['lasso2d', 'select2d'],
+            modeBarButtonsToRemove: ['lasso2d', 'select2d', 'toImage'],
             displaylogo: false
         };
 
@@ -337,6 +354,7 @@
             currentPixel = pixel;
             isMeasuring = true;
             updateMeasuringState(true);
+            updateProgress(0, 'Starting forward sweep...');
 
             // Clear previous data and disable save
             forwardData = { x: [], y: [] };
@@ -362,7 +380,7 @@
                     api.start_measurement(JSON.stringify(params), (result) => {
                         const response = JSON.parse(result);
                         if (!response.success) {
-                            alert('Measurement failed: ' + response.message);
+                            LabModals.showError('Measurement Failed', response.message);
                             isMeasuring = false;
                             updateMeasuringState(false);
                         }
@@ -373,7 +391,7 @@
                 console.log('Starting mock measurement with params:', params);
                 mockMeasurement(params);
             } else {
-                alert('No device connected. Use --offline flag for testing.');
+                LabModals.showError('No Device', 'No device connected. Use --offline flag for testing.');
                 isMeasuring = false;
                 updateMeasuringState(false);
             }
@@ -382,6 +400,7 @@
         function stopMeasurement() {
             isMeasuring = false;
             updateMeasuringState(false);
+            updateProgress(0, 'Stopped');
 
             const api = LabAPI.get();
             if (api && api.stop_measurement) {
@@ -400,12 +419,15 @@
             } else {
                 btn.textContent = 'Start Measurement';
                 btn.className = 'btn btn-primary btn-block';
-                inputs.forEach(input => {
-                    // Re-enable except cell number (readonly)
-                    if (input.id !== 'cell-number') {
-                        input.disabled = false;
-                    }
-                });
+                inputs.forEach(input => input.disabled = false);
+            }
+        }
+
+        function updateProgress(percent, message) {
+            document.getElementById('progress-fill').style.width = percent + '%';
+            document.getElementById('progress-percent').textContent = Math.round(percent) + '%';
+            if (message) {
+                document.getElementById('status-message').textContent = message;
             }
         }
 
@@ -432,10 +454,13 @@
             updateMeasuringState(false);
 
             if (success) {
+                updateProgress(100, 'Complete');
                 // Enable save button and prompt to save immediately
                 document.getElementById('save-btn').disabled = false;
                 console.log('Measurement complete');
                 saveData();
+            } else {
+                updateProgress(0, 'Failed');
             }
         }
 
@@ -467,7 +492,7 @@
                     if (response.success) {
                         console.log('Data saved to:', response.path);
                     } else if (response.message !== 'Cancelled') {
-                        alert('Save failed: ' + response.message);
+                        LabModals.showError('Save Failed', response.message);
                     }
                 });
             } else {
@@ -502,6 +527,8 @@
             const start = params.start_voltage;
             const stop = params.stop_voltage;
             const step = params.step_voltage;
+            const totalSteps = Math.ceil((stop - start) / step);
+            let stepCount = 0;
 
             let voltage = start;
             const interval = setInterval(() => {
@@ -509,7 +536,8 @@
                     clearInterval(interval);
                     // Reverse sweep
                     if (isMeasuring) {
-                        mockReverseSweep(stop, start, step);
+                        updateProgress(50, 'Reverse sweep...');
+                        mockReverseSweep(stop, start, step, totalSteps);
                     }
                     return;
                 }
@@ -517,11 +545,15 @@
                 // Mock current (simple diode model)
                 const current = 0.01 * (Math.exp(voltage / 0.026) - 1) + (Math.random() - 0.5) * 0.001;
                 onMeasurementPoint('forward', voltage, current * 1000);
+                stepCount++;
+                const progress = (stepCount / totalSteps) * 50; // Forward is 0-50%
+                updateProgress(progress, `Forward: ${voltage.toFixed(2)} V`);
                 voltage += step;
             }, 50);
         }
 
-        function mockReverseSweep(start, stop, step) {
+        function mockReverseSweep(start, stop, step, totalSteps) {
+            let stepCount = 0;
             let voltage = start;
             const interval = setInterval(() => {
                 if (!isMeasuring || voltage < stop) {
@@ -532,13 +564,22 @@
 
                 const current = 0.01 * (Math.exp(voltage / 0.026) - 1) + (Math.random() - 0.5) * 0.001;
                 onMeasurementPoint('reverse', voltage, current * 1000);
+                stepCount++;
+                const progress = 50 + (stepCount / totalSteps) * 50; // Reverse is 50-100%
+                updateProgress(progress, `Reverse: ${voltage.toFixed(2)} V`);
                 voltage -= step;
             }, 50);
+        }
+
+        // Called by Python to update progress during measurement
+        function onMeasurementProgress(percent, message) {
+            updateProgress(percent, message);
         }
 
         // Make functions available to Python
         window.onMeasurementPoint = onMeasurementPoint;
         window.onMeasurementComplete = onMeasurementComplete;
+        window.onMeasurementProgress = onMeasurementProgress;
         window.updateDeviceStatus = updateDeviceStatus;
     </script>
 </body>
