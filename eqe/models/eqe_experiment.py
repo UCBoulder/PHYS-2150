@@ -49,6 +49,7 @@ class EQEExperimentModel(QObject):
     experiment_complete = Signal(bool, str)  # success, message
     live_signal_update = Signal(float)  # current in nanoamps
     monochromator_state_changed = Signal(float, bool, int)  # wavelength, shutter_open, filter
+    phase_adjustment_complete = Signal(dict)  # phase_data, signal_data, fit_phases, fit_signals
     
     def __init__(self, logger: Optional[MeasurementDataLogger] = None):
         """
@@ -340,6 +341,17 @@ class EQEExperimentModel(QObject):
             optimal_phase = results.get('optimal_phase', 0)
             message = f"Phase adjustment: {optimal_phase:.1f}° (R² = {r_squared:.4f})"
             self.logger.log(message)
+
+            # Emit phase adjustment data for plotting (measured data + sine fit)
+            phase_data = {
+                'phase_data': results.get('phase_data', []),
+                'signal_data': results.get('signal_data', []),
+                'fit_phases': results.get('fit_phases', []),
+                'fit_signals': results.get('fit_signals', []),
+                'optimal_phase': optimal_phase,
+                'r_squared': r_squared
+            }
+            self.phase_adjustment_complete.emit(phase_data)
 
             # Automatically start current measurement after successful phase adjustment
             try:

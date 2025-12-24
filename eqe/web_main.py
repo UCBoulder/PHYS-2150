@@ -46,6 +46,7 @@ class EQEApi(QObject):
         self._experiment.experiment_complete.connect(self._on_experiment_complete)
         self._experiment.live_signal_update.connect(self._on_live_signal_update)
         self._experiment.monochromator_state_changed.connect(self._on_monochromator_state_changed)
+        self._experiment.phase_adjustment_complete.connect(self._on_phase_adjustment_complete)
 
     # ==================== Device Status ====================
 
@@ -319,6 +320,12 @@ class EQEApi(QObject):
         js = f"onMonochromatorStateChanged({wavelength}, {str(shutter_open).lower()}, {filter_number})"
         self._window.run_js(js)
 
+    def _on_phase_adjustment_complete(self, phase_data: Dict) -> None:
+        """Forward phase adjustment data (including sine fit) to JS."""
+        phase_json = json.dumps(phase_data)
+        js = f"onPhaseAdjustmentComplete({phase_json})"
+        self._window.run_js(js)
+
 
 class EQEWebWindow(QMainWindow):
     """Main window for EQE measurement with web UI."""
@@ -415,6 +422,25 @@ class EQEWebApplication:
 
         # Connect experiment to window
         self.window.set_experiment(self.experiment)
+
+        # Connect logger stats callback to forward measurement stats to web UI
+        eqe_logger = get_logger("eqe")
+        eqe_logger.set_stats_callback(self._on_measurement_stats)
+
+    def _on_measurement_stats(self, stats) -> None:
+        """Forward measurement statistics to web UI."""
+        # Convert MeasurementStats object to dict for JSON serialization
+        stats_dict = {
+            'mean': stats.mean,
+            'std_dev': stats.std_dev,
+            'n': stats.n_measurements,
+            'total': stats.n_total,
+            'outliers': stats.n_outliers,
+            'cv_percent': stats.cv_percent,
+            'quality': stats.quality
+        }
+        stats_json = json.dumps(stats_dict)
+        self.window.run_js(f"onMeasurementStats({stats_json})")
 
     def run(self) -> int:
         """Run the application."""

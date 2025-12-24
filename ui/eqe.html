@@ -128,18 +128,17 @@
                 <div class="plot-container">
                     <div id="current-plot" class="plot"></div>
                 </div>
+                <div class="stats-row hidden" id="stats-row">
+                    <span class="stat-item">n: <span class="stat-value" id="stats-n">--</span></span>
+                    <span class="stat-item">CV: <span class="stat-value" id="stats-cv">--%</span></span>
+                    <span class="quality-badge" id="stats-quality">--</span>
+                </div>
             </div>
 
             <div class="plot-panel">
                 <div class="plot-title">Phase Response and Sine Fit</div>
                 <div class="plot-container">
                     <div id="phase-plot" class="plot"></div>
-                </div>
-                <div class="stats-row hidden" id="stats-row">
-                    <span class="stat-item">n: <span class="stat-value" id="stats-n">--</span></span>
-                    <span class="stat-item">outliers: <span class="stat-value" id="stats-outliers">0</span></span>
-                    <span class="stat-item">CV: <span class="stat-value" id="stats-cv">--%</span></span>
-                    <span class="quality-badge" id="stats-quality">--</span>
                 </div>
             </div>
         </div>
@@ -254,9 +253,9 @@
             filter: 0,
 
             powerData: { x: [], y: [] },
-            currentData: { x: [], y: [] },
+            currentData: { x: [], y: [], stats: [] },  // stats array stores per-point statistics
             phaseData: { x: [], y: [] },
-            stats: null
+            stats: null  // current measurement stats (for UI display)
         };
 
         // Initialize
@@ -299,7 +298,7 @@
                 text: isDark ? '#eeeeee' : '#1a1a1a',
                 grid: isDark ? '#444444' : '#dddddd',
                 zeroline: isDark ? '#666666' : '#999999',
-                legendBg: isDark ? 'rgba(50,50,50,0.9)' : 'rgba(255,255,255,0.9)'
+                legendBg: isDark ? 'rgba(50,50,50,0.8)' : 'rgba(255,255,255,0.8)'
             };
             return {
                 xaxis: {
@@ -319,7 +318,14 @@
                 paper_bgcolor: 'rgba(0,0,0,0)',
                 plot_bgcolor: 'rgba(0,0,0,0)',
                 font: { color: colors.text },
-                legend: { font: { color: colors.text }, bgcolor: colors.legendBg },
+                legend: {
+                    font: { color: colors.text, size: 11 },
+                    bgcolor: colors.legendBg,
+                    x: 1,
+                    y: 1,
+                    xanchor: 'right',
+                    yanchor: 'top'
+                },
                 margin: { t: 20, r: 30, b: 95, l: 60 }
             };
         }
@@ -592,13 +598,17 @@
             state.currentPixel = pixel;
             state.measurementState = 'phase';
             state.phaseData = { x: [], y: [] };
-            state.currentData = { x: [], y: [] };
+            state.currentData = { x: [], y: [], stats: [] };
             clearPlot('phase');
             clearPlot('current');
             setMeasuringState(true);
             updateProgress(0, 'Phase adjustment...');
             document.getElementById('pixel-label').textContent = 'Pixel: ' + pixel;
             document.getElementById('stats-row').classList.remove('hidden');
+            // Trigger Plotly resize after showing stats row
+            setTimeout(() => {
+                Plotly.Plots.resize('current-plot');
+            }, 50);
 
             if (state.offlineMode) {
                 mockPhaseThenCurrentMeasurement(pixel);
@@ -652,6 +662,12 @@
             if (!measuring) {
                 updateButtonStates();
                 document.getElementById('stats-row').classList.add('hidden');
+                // Trigger Plotly resize after layout change
+                setTimeout(() => {
+                    Plotly.Plots.resize('power-plot');
+                    Plotly.Plots.resize('current-plot');
+                    Plotly.Plots.resize('phase-plot');
+                }, 50);
             }
         }
 
@@ -716,15 +732,17 @@
         }
 
         function onMeasurementComplete(success, message) {
+            // Save measurement type before resetting to idle
+            const completedMeasurement = state.measurementState;
             state.measurementState = 'idle';
             setMeasuringState(false);
 
             if (success) {
                 updateProgress(100, 'Complete');
-                // Enable save button and auto-save
+                // Enable save button and auto-save based on what measurement just completed
                 document.getElementById('save-btn').disabled = false;
-                if (state.powerData.x.length > 0) savePowerData();
-                else if (state.currentData.x.length > 0) saveCurrentData();
+                if (completedMeasurement === 'power') savePowerData();
+                else if (completedMeasurement === 'current') saveCurrentData();
             } else {
                 // Show error message to user
                 updateProgress(0, 'Failed');
@@ -736,12 +754,43 @@
 
         function onMeasurementStats(stats) {
             state.stats = stats;
+            // Store stats for CSV export (one stats object per wavelength point)
+            state.currentData.stats.push({
+                mean: stats.mean,
+                std_dev: stats.std_dev,
+                n: stats.n,
+                cv_percent: stats.cv_percent
+            });
+            // Update UI display
             document.getElementById('stats-n').textContent = `${stats.n}/${stats.total}`;
-            document.getElementById('stats-outliers').textContent = stats.outliers;
             document.getElementById('stats-cv').textContent = stats.cv_percent.toFixed(1) + '%';
             const badge = document.getElementById('stats-quality');
             badge.textContent = stats.quality;
             badge.className = 'quality-badge quality-' + stats.quality.toLowerCase();
+        }
+
+        function onPhaseAdjustmentComplete(data) {
+            // Update phase plot with measured data and sine fit
+            state.phaseData.x = data.phase_data || [];
+            state.phaseData.y = data.signal_data || [];
+
+            const fitX = data.fit_phases || [];
+            const fitY = data.fit_signals || [];
+
+            const isDark = LabTheme.isDark();
+            Plotly.newPlot('phase-plot',
+                [
+                    { x: state.phaseData.x, y: state.phaseData.y, mode: 'markers', type: 'scatter',
+                      name: 'Measured', marker: { color: '#ff9800', size: 8 } },
+                    { x: fitX, y: fitY, mode: 'lines', type: 'scatter', name: 'Sine Fit',
+                      line: { color: '#e57373', width: 2 } }
+                ],
+                getPlotLayout(isDark, 'Phase (degrees)', 'Signal (V)'),
+                plotConfig
+            );
+
+            // Update status to show phase is complete
+            updateProgress(0, `Phase: ${data.optimal_phase?.toFixed(1) || '--'}° (R² = ${data.r_squared?.toFixed(4) || '--'})`);
         }
 
         function clearPlot(type) {
@@ -863,9 +912,16 @@
         }
 
         function saveCurrentData() {
-            let csv = 'Wavelength (nm),Current (nA)\n';
+            // Include measurement statistics in CSV (matches settings.DATA_EXPORT_CONFIG)
+            let csv = 'Wavelength (nm),Current_mean (nA),Current_std (nA),n,CV_percent\n';
             for (let i = 0; i < state.currentData.x.length; i++) {
-                csv += `${state.currentData.x[i].toFixed(1)},${state.currentData.y[i].toFixed(6)}\n`;
+                const wavelength = state.currentData.x[i];
+                const current = state.currentData.y[i];
+                const stats = state.currentData.stats[i] || {};
+                const std_dev = stats.std_dev !== undefined ? (stats.std_dev * 1e9).toFixed(6) : '0';
+                const n = stats.n || 0;
+                const cv = stats.cv_percent !== undefined ? stats.cv_percent.toFixed(2) : '0';
+                csv += `${wavelength.toFixed(1)},${current.toFixed(6)},${std_dev},${n},${cv}\n`;
             }
             const api = LabAPI.get();
             if (api && api.save_current_data) {
@@ -914,26 +970,51 @@
         }
 
         function mockPhaseThenCurrentMeasurement(pixel) {
-            let phase = 0;
-
             // Set to 532nm for phase adjustment, open shutter
             state.wavelength = 532;
             state.shutterOpen = true;
             updateMonochromatorDisplay();
 
-            const phaseInterval = setInterval(() => {
-                if (state.measurementState === 'idle' || phase > 360) {
-                    clearInterval(phaseInterval);
-                    if (state.measurementState !== 'idle') {
-                        state.measurementState = 'current';
-                        mockCurrentMeasurement();
-                    }
-                    return;
-                }
-                const signal = 0.5 + 0.4 * Math.sin((phase - 45) * Math.PI / 180) + 0.02 * Math.random();
+            // Generate phase data with noise
+            const phaseData = [];
+            const signalData = [];
+            const optimalPhase = 45;  // Mock optimal phase
+            const amplitude = 0.4;
+            const offset = 0.5;
+
+            for (let phase = 0; phase <= 360; phase += 15) {
+                const signal = offset + amplitude * Math.sin((phase - optimalPhase) * Math.PI / 180) + 0.02 * (Math.random() - 0.5);
+                phaseData.push(phase);
+                signalData.push(signal);
                 onPhaseProgress(phase, signal);
-                phase += 15;
-            }, 50);
+            }
+
+            // Generate smooth sine fit curve
+            const fitPhases = [];
+            const fitSignals = [];
+            for (let phase = 0; phase <= 360; phase += 5) {
+                fitPhases.push(phase);
+                fitSignals.push(offset + amplitude * Math.sin((phase - optimalPhase) * Math.PI / 180));
+            }
+
+            // Simulate delay before showing fit and starting current measurement
+            setTimeout(() => {
+                if (state.measurementState === 'idle') return;
+
+                // Send complete phase adjustment data with fit
+                onPhaseAdjustmentComplete({
+                    phase_data: phaseData,
+                    signal_data: signalData,
+                    fit_phases: fitPhases,
+                    fit_signals: fitSignals,
+                    optimal_phase: optimalPhase,
+                    r_squared: 0.9876
+                });
+
+                // Start current measurement
+                state.measurementState = 'current';
+                mockCurrentMeasurement();
+            }, 500);
         }
 
         function mockCurrentMeasurement() {
@@ -967,11 +1048,16 @@
                 state.wavelength = wavelength;
                 updateMonochromatorDisplay();
 
+                // Stats use Amps (same as real measurements) - conversion to nA happens in saveCurrentData
+                // Simulate realistic CV variation (0.5-8%) - no outlier rejection (pedagogical choice)
+                const cv = 0.5 + Math.random() * 7.5;  // Random CV between 0.5-8%
+                const std_dev = current * (cv / 100);
+                const quality = cv < 1.0 ? 'Excellent' : cv < 5.0 ? 'Good' : cv < 10.0 ? 'Fair' : 'Check';
                 onMeasurementStats({
-                    mean: current * 1e9,
-                    std_dev: current * 1e9 * 0.02,
+                    mean: current,
+                    std_dev: std_dev,
                     n: 5, total: 5, outliers: 0,
-                    cv_percent: 2.0, quality: 'Excellent'
+                    cv_percent: cv, quality: quality
                 });
 
                 onCurrentProgress(wavelength, current, (count / total) * 100);
@@ -1003,6 +1089,7 @@
         window.onPowerProgress = onPowerProgress;
         window.onCurrentProgress = onCurrentProgress;
         window.onPhaseProgress = onPhaseProgress;
+        window.onPhaseAdjustmentComplete = onPhaseAdjustmentComplete;
         window.onMeasurementComplete = onMeasurementComplete;
         window.onMeasurementStats = onMeasurementStats;
         window.onLiveSignalUpdate = onLiveSignalUpdate;
