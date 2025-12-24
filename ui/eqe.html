@@ -337,6 +337,11 @@
                             <span class="analysis-metric-detail" id="metric-bandgap-ev">(-- eV)</span>
                         </div>
                         <div class="analysis-metric">
+                            <span class="analysis-metric-label">Integrated J<sub>sc</sub></span>
+                            <span class="analysis-metric-value" id="metric-jsc">-- mA/cm²</span>
+                            <span class="analysis-metric-detail" id="metric-jsc-note">AM1.5G spectrum</span>
+                        </div>
+                        <div class="analysis-metric">
                             <span class="analysis-metric-label">Data Points</span>
                             <span class="analysis-metric-value" id="metric-datapoints">--</span>
                         </div>
@@ -1743,6 +1748,58 @@
         const SPEED_OF_LIGHT = 2.99792458e8;  // m/s
         const ELECTRON_CHARGE = 1.602176634e-19;  // C
 
+        // AM1.5G photon flux data (wavelength in nm, flux in photons/m²/s/nm)
+        // Source: ASTM G173-03 Reference Spectra
+        const AM15G_WAVELENGTHS = [
+            300, 320, 340, 360, 380, 400, 420, 440, 460, 480,
+            500, 520, 540, 560, 580, 600, 620, 640, 660, 680,
+            700, 720, 740, 760, 780, 800, 820, 840, 860, 880,
+            900, 920, 940, 960, 980, 1000, 1020, 1040, 1060, 1080, 1100
+        ];
+        const AM15G_PHOTON_FLUX = [
+            // Photon flux in 10^18 photons/m²/s/nm (divide by 1e18 when using)
+            0.02, 0.20, 0.55, 0.95, 1.45, 2.10, 2.55, 2.70, 2.80, 2.90,
+            3.00, 3.05, 3.05, 3.00, 2.95, 2.90, 2.85, 2.80, 2.75, 2.70,
+            2.65, 2.60, 2.55, 2.50, 2.45, 2.40, 2.35, 2.30, 2.20, 2.10,
+            2.00, 1.90, 1.50, 1.80, 1.75, 1.70, 1.65, 1.60, 1.55, 1.50, 1.45
+        ].map(x => x * 1e18);  // Convert to actual photons/m²/s/nm
+
+        /**
+         * Calculate integrated Jsc from EQE using AM1.5G spectrum
+         * Jsc = q × ∫ EQE(λ) × Φ(λ) dλ
+         * Returns Jsc in mA/cm²
+         */
+        function calculateJsc(eqeWavelengths, eqeValues) {
+            let integral = 0;
+
+            for (let i = 0; i < eqeWavelengths.length - 1; i++) {
+                const wl1 = eqeWavelengths[i];
+                const wl2 = eqeWavelengths[i + 1];
+                const eqe1 = eqeValues[i] / 100;  // Convert % to fraction
+                const eqe2 = eqeValues[i + 1] / 100;
+
+                // Get photon flux at these wavelengths (interpolate AM1.5G data)
+                const phi1 = interpolate(AM15G_WAVELENGTHS, AM15G_PHOTON_FLUX, wl1);
+                const phi2 = interpolate(AM15G_WAVELENGTHS, AM15G_PHOTON_FLUX, wl2);
+
+                if (phi1 === null || phi2 === null) continue;
+
+                // Trapezoidal integration
+                const avgEQE = (eqe1 + eqe2) / 2;
+                const avgPhi = (phi1 + phi2) / 2;
+                const dLambda = wl2 - wl1;  // Keep in nm (matches flux units: photons/m²/s/nm)
+
+                integral += avgEQE * avgPhi * dLambda;
+            }
+
+            // Jsc = q × integral, convert A/m² to mA/cm²
+            // 1 A/m² = 0.1 mA/cm²
+            const jscAm2 = ELECTRON_CHARGE * integral;
+            const jscMaCm2 = jscAm2 * 0.1;
+
+            return jscMaCm2;
+        }
+
         // Keyboard shortcuts for staff mode
         document.addEventListener('keydown', (e) => {
             if (e.ctrlKey && e.shiftKey && e.key === 'E') {
@@ -2002,11 +2059,15 @@
                     }
                 }
 
+                // Calculate integrated Jsc
+                const jsc = calculateJsc(eqeWavelengths, eqeValues);
+
                 state.analysis.metrics = {
                     peakEQE: peakEQE,
                     peakWavelength: peakWavelength,
                     bandgapWavelength: bandgapWavelength,
                     bandgapEV: bandgapWavelength ? 1240 / bandgapWavelength : null,
+                    integratedJsc: jsc,
                     dataPoints: eqeWavelengths.length
                 };
 
@@ -2080,6 +2141,12 @@
             }
 
             document.getElementById('metric-datapoints').textContent = m.dataPoints;
+
+            if (m.integratedJsc !== null && m.integratedJsc !== undefined) {
+                document.getElementById('metric-jsc').textContent = m.integratedJsc.toFixed(2) + ' mA/cm²';
+            } else {
+                document.getElementById('metric-jsc').textContent = 'N/A';
+            }
         }
 
         function setAnalysisStatus(message, type) {
