@@ -239,6 +239,12 @@ class JVApi(QObject):
         new_mode = not current
         TieredLogger.set_staff_debug_mode(new_mode)
 
+        # Also update the web console handler level
+        if hasattr(self._window, '_web_console_handler'):
+            self._window._web_console_handler.setLevel(
+                logging.DEBUG if new_mode else logging.INFO
+            )
+
         if new_mode:
             _logger.info("Staff debug mode ENABLED (Ctrl+Shift+D) - technical output visible in console")
         else:
@@ -445,7 +451,10 @@ class JVWebApplication:
         # Create and configure handler
         handler = WebConsoleHandler(self.window)
         handler.setFormatter(logging.Formatter('%(message)s'))
-        handler.setLevel(logging.DEBUG)  # Capture all levels
+        handler.setLevel(logging.INFO)  # Default to INFO, debug mode enables DEBUG
+
+        # Store reference so we can update level when debug mode toggles
+        self.window._web_console_handler = handler
 
         # Add to logger
         jv_logger.addHandler(handler)
