@@ -12,6 +12,7 @@ from .error_messages import (
     get_error,
     format_error_message,
 )
+from .web_console import WebConsoleHandler
 
 __all__ = [
     'DataExporter',
@@ -25,4 +26,5 @@ __all__ = [
     'JV_ERRORS',
     'get_error',
     'format_error_message',
+    'WebConsoleHandler',
 ]

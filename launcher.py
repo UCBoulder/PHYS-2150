@@ -10,11 +10,10 @@ import os
 import json
 import subprocess
 
-from PySide6.QtCore import QObject, Slot, QUrl
-from PySide6.QtWidgets import QApplication, QMainWindow
-from PySide6.QtGui import QIcon
-from PySide6.QtWebEngineWidgets import QWebEngineView
-from PySide6.QtWebChannel import QWebChannel
+from PySide6.QtCore import QObject, Slot
+from PySide6.QtWidgets import QApplication
+
+from common.ui import BaseWebWindow
 
 
 class LauncherApi(QObject):
@@ -90,39 +89,26 @@ class LauncherApi(QObject):
             return json.dumps({"success": False, "message": str(e)})
 
 
-class LauncherWindow(QMainWindow):
+class LauncherWindow(BaseWebWindow):
     """Main launcher window with web UI."""
 
     def __init__(self):
-        super().__init__()
+        super().__init__(
+            title="PHYS 2150 Measurement Suite",
+            html_filename="launcher.html",
+            size=(500, 350),
+            allow_local_file_access=False  # Launcher doesn't need file access
+        )
 
-        self.setWindowTitle("PHYS 2150 Measurement Suite")
+        # Launcher uses fixed size (not resizable)
         self.setFixedSize(500, 350)
-
-        # Set window icon
-        icon_path = os.path.join(os.path.dirname(__file__), "assets", "icon.ico")
-        if os.path.exists(icon_path):
-            self.setWindowIcon(QIcon(icon_path))
 
         # Center window on screen
         self._center_window()
 
-        # Create web view with GPU acceleration
-        self.web_view = QWebEngineView()
-        settings = self.web_view.page().settings()
-        settings.setAttribute(settings.WebAttribute.Accelerated2dCanvasEnabled, True)
-        settings.setAttribute(settings.WebAttribute.WebGLEnabled, True)
-        self.setCentralWidget(self.web_view)
-
-        # Set up web channel for Python-JS communication
-        self.channel = QWebChannel()
+        # Set up app-specific API
         self.api = LauncherApi(self)
         self.channel.registerObject("api", self.api)
-        self.web_view.page().setWebChannel(self.channel)
-
-        # Load the launcher HTML
-        html_path = self._get_html_path()
-        self.web_view.setUrl(QUrl.fromLocalFile(html_path))
 
     def _center_window(self):
         """Center the window on the screen."""
@@ -132,15 +118,6 @@ class LauncherWindow(QMainWindow):
         center_point = screen_geometry.center()
         window_geometry.moveCenter(center_point)
         self.move(window_geometry.topLeft())
-
-    def _get_html_path(self) -> str:
-        """Get path to launcher HTML file."""
-        if getattr(sys, 'frozen', False):
-            base_path = sys._MEIPASS
-        else:
-            base_path = os.path.dirname(os.path.abspath(__file__))
-
-        return os.path.join(base_path, 'ui', 'launcher.html')
 
 
 def main():

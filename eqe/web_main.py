@@ -13,49 +13,17 @@ import logging
 from typing import Optional, Dict, Any
 
 from PySide6.QtCore import Qt, QObject, Slot, QUrl, QThread, Signal, Slot as QtSlot
-from PySide6.QtWidgets import QApplication, QMainWindow, QFileDialog
-from PySide6.QtGui import QIcon
-from PySide6.QtWebEngineWidgets import QWebEngineView
+from PySide6.QtWidgets import QApplication, QFileDialog
 from PySide6.QtWebChannel import QWebChannel
 
 from .models.eqe_experiment import EQEExperimentModel, EQEExperimentError
 from .models.stability_test import StabilityTestModel
 from .config.settings import GUI_CONFIG, DEFAULT_MEASUREMENT_PARAMS
 from .config import settings
-from common.utils import get_logger, TieredLogger
+from common.utils import get_logger, TieredLogger, WebConsoleHandler
+from common.ui import BaseWebWindow
 
 _logger = get_logger("eqe")
-
-
-class WebConsoleHandler(logging.Handler):
-    """
-    Custom logging handler that forwards log messages to the web UI console.
-
-    Uses Qt signals to safely forward messages from background threads
-    to the main thread for JavaScript execution.
-    """
-
-    def __init__(self, window: 'EQEWebWindow'):
-        super().__init__()
-        self._window = window
-        # Map Python log levels to console levels
-        self._level_map = {
-            logging.DEBUG: 'debug',
-            logging.INFO: 'info',
-            logging.WARNING: 'warn',
-            logging.ERROR: 'error',
-            logging.CRITICAL: 'error',
-        }
-
-    def emit(self, record: logging.LogRecord) -> None:
-        """Forward log record to web console."""
-        try:
-            level = self._level_map.get(record.levelno, 'info')
-            message = self.format(record)
-            # Use signal to marshal to main thread
-            self._window._log_signal.emit(level, message)
-        except Exception:
-            self.handleError(record)
 
 
 class EQEApi(QObject):
@@ -607,110 +575,28 @@ class EQEApi(QObject):
                 self._stability_complete_signal.emit(False, f"Failed to start: {str(e)}")
 
 
-class EQEWebWindow(QMainWindow):
+class EQEWebWindow(BaseWebWindow):
     """Main window for EQE measurement with web UI."""
 
-    # Signal for thread-safe log forwarding
-    _log_signal = Signal(str, str)  # level, message
-
     def __init__(self):
-        super().__init__()
+        super().__init__(
+            title="EQE Measurement - PHYS 2150",
+            html_filename="eqe.html",
+            size=(1400, 750),
+            min_size=(1000, 600)
+        )
 
-        # Connect log signal to handler
-        self._log_signal.connect(self._on_log_message)
-
-        self.setWindowTitle("EQE Measurement - PHYS 2150")
-
-        # Set window icon
-        icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "icon.ico")
-        if os.path.exists(icon_path):
-            self.setWindowIcon(QIcon(icon_path))
-
-        # Match existing GUI_CONFIG window size
-        self.resize(1400, 750)
-        self.setMinimumSize(1000, 600)
-
-        # Track if page is ready for JS calls
-        self._page_ready = False
-        self._pending_js: list[str] = []
-
-        # Create web view with GPU acceleration
-        self.web_view = QWebEngineView()
-        settings = self.web_view.page().settings()
-        settings.setAttribute(settings.WebAttribute.LocalContentCanAccessRemoteUrls, True)
-        settings.setAttribute(settings.WebAttribute.LocalContentCanAccessFileUrls, True)
-        settings.setAttribute(settings.WebAttribute.Accelerated2dCanvasEnabled, True)
-        settings.setAttribute(settings.WebAttribute.WebGLEnabled, True)
-        self.setCentralWidget(self.web_view)
-
-        # Set up web channel
-        self.channel = QWebChannel()
+        # Set up app-specific API
         self.api = EQEApi(self)
         self.channel.registerObject("api", self.api)
-        self.web_view.page().setWebChannel(self.channel)
-
-        # Connect load finished signal
-        self.web_view.loadFinished.connect(self._on_page_loaded)
-
-        # Load HTML
-        html_path = self._get_html_path()
-        self.web_view.setUrl(QUrl.fromLocalFile(html_path))
 
         # Experiment model (initialized later)
         self._experiment: Optional[EQEExperimentModel] = None
-
-    def _on_page_loaded(self, success: bool) -> None:
-        """Handle page load completion."""
-        if success:
-            self._page_ready = True
-            # Execute any pending JS calls
-            for js in self._pending_js:
-                self.web_view.page().runJavaScript(js)
-            self._pending_js.clear()
-
-    def _get_html_path(self) -> str:
-        """Get path to EQE HTML file."""
-        if getattr(sys, 'frozen', False):
-            base_path = sys._MEIPASS
-        else:
-            # Go up from eqe/ to project root, then into ui/
-            base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-        return os.path.join(base_path, 'ui', 'eqe.html')
-
-    def run_js(self, script: str) -> None:
-        """Execute JavaScript in the web view (queues if page not ready)."""
-        if self._page_ready:
-            self.web_view.page().runJavaScript(script)
-        else:
-            self._pending_js.append(script)
 
     def set_experiment(self, experiment: EQEExperimentModel) -> None:
         """Set the experiment model."""
         self._experiment = experiment
         self.api.set_experiment(experiment)
-
-    def set_initial_theme(self, theme: str) -> None:
-        """Set the initial theme via JavaScript after page loads."""
-        # Set localStorage then reload so page initializes with correct theme
-        js = f"""
-            if (localStorage.getItem('theme') !== '{theme}') {{
-                localStorage.setItem('theme', '{theme}');
-                location.reload();
-            }}
-        """
-        self.run_js(js)
-
-    def send_log(self, level: str, message: str) -> None:
-        """Send a log message to the JS console panel."""
-        # Escape quotes in message for JS
-        escaped = message.replace('\\', '\\\\').replace("'", "\\'").replace('\n', '\\n')
-        js = f"onLogMessage('{level}', '{escaped}')"
-        self.run_js(js)
-
-    def _on_log_message(self, level: str, message: str) -> None:
-        """Handle log message signal (runs on main thread)."""
-        self.send_log(level, message)
 
     def closeEvent(self, event) -> None:
         """Handle window close."""
@@ -753,8 +639,8 @@ class EQEWebApplication:
         # TieredLogger uses "phys2150.{name}" for the actual Python logger
         eqe_logger = logging.getLogger("phys2150.eqe")
 
-        # Create and configure handler
-        handler = WebConsoleHandler(self.window)
+        # Create and configure handler (pass signal for thread-safe forwarding)
+        handler = WebConsoleHandler(self.window._log_signal)
         handler.setFormatter(logging.Formatter('%(message)s'))
         handler.setLevel(logging.INFO)  # Default to INFO, debug mode enables DEBUG
 
