@@ -41,59 +41,66 @@ iscc build/installer.iss
 
 ## Architecture
 
-The codebase follows **strict MVC (Model-View-Controller)** separation:
+The codebase follows **MVC (Model-View-Controller)** separation with a web-based UI:
 
 ```
-View (PySide6 GUI) → Model (experiment logic) → Controller (hardware drivers)
+View (Web UI via Qt WebEngine) → Model (experiment logic) → Controller (hardware drivers)
 ```
 
 ### Layer Responsibilities
 
 - **Controllers** (`*/controllers/`): ONLY hardware communication (SCPI commands, SDK calls). No experiment logic.
 - **Models** (`*/models/`): Experiment workflows, parameter validation, orchestration. Uses controllers but never touches GUI.
-- **Views** (`*/views/`): PySide6 GUI components. Never access hardware directly - always go through models.
+- **Views** (`ui/`): Web-based UI (HTML/CSS/JS) served via Qt WebEngine. Communicates with Python via QWebChannel.
 
 ### Key Patterns
 
 - **Thread Safety**: Long-running measurements use QThread workers with Qt signals for GUI updates
 - **Offline Mode**: Controllers return mock data when `settings.OFFLINE_MODE = True`
 - **Configuration**: All measurement parameters centralized in `*/config/settings.py`
+- **Web Bridge**: `web_main.py` exposes Python API to JavaScript via QWebChannel
 
 ### Data Flow Example
 
 ```
-User clicks "Start" → View gets params → Model validates & orchestrates
+User clicks "Start" → JS calls Python API via QWebChannel → Model validates & orchestrates
 → Model calls Controller methods → Controller sends SCPI/SDK commands
-→ Hardware responds → Data flows back up via Qt signals
+→ Hardware responds → Data flows back via Qt signals → JS callbacks update UI
 ```
 
 ## Project Structure
 
 ```
+ui/                      # Web UI (shared by all apps)
+├── eqe.html             # EQE measurement interface
+├── jv.html              # J-V measurement interface
+├── launcher.html        # Application launcher
+├── css/                 # Stylesheets (theme.css, components.css)
+└── js/                  # JavaScript modules
+
 jv/                      # J-V Application
 ├── controllers/         # Keithley 2450 SCPI communication
 ├── models/              # JVExperimentModel, JVMeasurementModel
-├── views/               # PySide6 main window, controls, plots
+├── web_main.py          # Qt WebEngine app, Python-JS bridge
 └── config/settings.py   # J-V measurement parameters
 
 eqe/                     # EQE Application
 ├── controllers/         # PicoScope lock-in, monochromator
 ├── models/              # EQEExperimentModel, measurement models
-├── views/               # Multi-tab GUI with measurement & stability
 ├── drivers/             # Low-level PicoScope SDK wrapper
+├── web_main.py          # Qt WebEngine app, Python-JS bridge
 └── config/settings.py   # EQE measurement parameters
 
 common/                  # Shared code
 ├── drivers/             # Thorlabs power meter (TLPMX.py)
-├── ui/                  # Base plot widget
-└── utils/               # Logging, data export
+└── utils/               # Logging, data export, error messages
 ```
 
 ## Key Files
 
-- `launcher.py`: Entry point - GUI selector for EQE or J-V
-- `jv/main.py`: JVApplication class, lifecycle management
-- `eqe/main.py`: EQEApplication class, async device initialization
+- `launcher.py`: Entry point - Qt WebEngine launcher for EQE or J-V
+- `jv/web_main.py`: JVWebApplication class, QWebChannel API
+- `eqe/web_main.py`: EQEWebApplication class, QWebChannel API
 - `*/config/settings.py`: Measurement defaults and device configs
 
 ## Hardware Dependencies
@@ -111,12 +118,12 @@ Each layer has custom exceptions:
 ## Adding New Measurements
 
 1. Create model in `*/models/new_measurement.py`
-2. Add view/tab in `*/views/`
-3. Connect in main application class
+2. Add UI elements in `ui/*.html` and corresponding CSS/JS
+3. Expose API methods in `*/web_main.py` via `@Slot` decorators
 4. Reuse existing controllers - don't duplicate hardware logic
 
 ## Swapping Hardware
 
 1. Create new controller with same interface (method signatures)
 2. Update experiment model to use new controller
-3. Views remain unchanged
+3. UI remains unchanged
