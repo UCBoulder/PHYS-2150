@@ -127,3 +127,31 @@ Each layer has custom exceptions:
 1. Create new controller with same interface (method signatures)
 2. Update experiment model to use new controller
 3. UI remains unchanged
+
+## Versioning
+
+This project follows [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html):
+
+- **MAJOR** (X.0.0): Incompatible API changes or breaking architectural changes
+  - Examples: UI framework changes (tkinter to PySide6, PySide6 to WebEngine), hardware removal
+- **MINOR** (x.Y.0): Backward-compatible new functionality
+  - Examples: New measurement modes, new hardware support, new UI features
+- **PATCH** (x.y.Z): Backward-compatible bug fixes
+  - Examples: Bug fixes, documentation updates, minor UI tweaks
+
+### Changelog Guidelines
+
+Follow [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/):
+
+- Categories: Added, Changed, Deprecated, Removed, Fixed, Security
+- Use ISO 8601 dates (YYYY-MM-DD)
+- Mark breaking changes with **BREAKING** prefix
+- Keep [Unreleased] section at top for in-progress work
+- Add comparison links at bottom of CHANGELOG.md
+
+### Creating Releases
+
+1. Move [Unreleased] changes to new version section with date
+2. Create git tag: `git tag -a vX.Y.Z -m "Version X.Y.Z"`
+3. Push tag: `git push origin vX.Y.Z`
+4. Update comparison links at bottom of CHANGELOG.md
