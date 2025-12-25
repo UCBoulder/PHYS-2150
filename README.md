@@ -75,25 +75,28 @@ PHYS 2150/
 ├── launcher.py              # Unified launcher - select EQE or J-V
 ├── pyproject.toml           # Project dependencies (uv sync)
 │
+├── ui/                      # Web UI (shared by all apps)
+│   ├── eqe.html            # EQE measurement interface
+│   ├── jv.html             # J-V measurement interface
+│   ├── launcher.html       # Application launcher
+│   └── css/                # Stylesheets
+│
 ├── jv/                      # J-V Measurement Application
-│   ├── main.py             # Entry point
+│   ├── web_main.py         # Qt WebEngine app, Python-JS bridge
 │   ├── controllers/        # Keithley 2450 communication
 │   ├── models/             # Sweep logic, experiment orchestration
-│   ├── views/              # PySide6 GUI
 │   └── config/             # Measurement parameters
 │
 ├── eqe/                     # EQE Measurement Application
-│   ├── main.py             # Entry point
+│   ├── web_main.py         # Qt WebEngine app, Python-JS bridge
 │   ├── controllers/        # Device controllers
 │   ├── models/             # Measurement logic
-│   ├── views/              # PySide6 GUI
 │   ├── drivers/            # PicoScope software lock-in
 │   └── config/             # Settings
 │
 ├── common/                  # Shared Infrastructure
 │   ├── drivers/            # Thorlabs power meter driver
-│   ├── ui/                 # Shared GUI components
-│   └── utils/              # Data export, logging
+│   └── utils/              # Data export, logging, error messages
 │
 ├── build/                   # Build Configuration
 │   ├── phys2150.spec       # PyInstaller spec
@@ -156,17 +159,18 @@ External Quantum Efficiency measures the spectral response - the fraction of inc
 
 ## Architecture
 
-The application follows the Model-View-Controller (MVC) pattern:
+The application follows the Model-View-Controller (MVC) pattern with a web-based UI:
 
 - **Controller:** Hardware communication (what devices physically do)
 - **Model:** Experiment logic, measurement workflows
-- **View:** GUI components (never access hardware directly)
+- **View:** Web UI (HTML/CSS/JS) served via Qt WebEngine, communicates with Python via QWebChannel
 
 This separation enables:
 
 - Easy hardware swapping (different SMU models, etc.)
 - GUI testing without hardware (`--offline` mode)
 - Clear code organization for maintenance
+- Modern web-based interface with Plotly.js visualizations
 
 ## Building for Distribution
 

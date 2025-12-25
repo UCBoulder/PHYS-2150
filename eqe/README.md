@@ -21,11 +21,11 @@ Experiment logic and measurement workflows:
 - **PhaseAdjustmentModel**: Automatic lock-in phase optimization
 - **EQEExperimentModel**: Complete experiment orchestration
 
-### Views (`views/`)
-User interface components with no direct device access:
-- **PlotWidgets**: Real-time data visualization (power, current, phase)
-- **ControlWidgets**: Parameter input and measurement controls
-- **MainView**: Application window coordination
+### Views (`ui/` + `web_main.py`)
+Web-based user interface served via Qt WebEngine:
+- **ui/eqe.html**: Main EQE interface with Plotly.js plots
+- **ui/css/**: Stylesheets for theming and components
+- **web_main.py**: Python-JavaScript bridge via QWebChannel
 
 ## Installation
 
@@ -51,26 +51,15 @@ User interface components with no direct device access:
 
 **Normal Mode (with hardware):**
 ```powershell
-python main.py
-```
-
-or as a module:
-```powershell
-python -m eqe.main
+python -m eqe
 ```
 
 **Offline Mode (for GUI testing without hardware):**
 ```powershell
-python main.py --offline
+python -m eqe --offline
 ```
 
-Perfect for testing the GUI when you're away from the lab! The application will start with simulated devices, allowing you to test UI changes, parameter validation, and file operations without requiring hardware connections. See [OFFLINE_MODE.md](OFFLINE_MODE.md) for complete details.
-
-Note: Recent fixes in `main.py` make the entrypoint resilient when running
-`python main.py` directly (it adjusts sys.path to allow package-qualified
-imports). The preferred way when developing or installing is to run the
-module with `python -m eqe.main`, but running `python main.py` will
-also work for quick testing.
+Perfect for testing the GUI when you're away from the lab! The application will start with simulated devices, allowing you to test UI changes, parameter validation, and file operations without requiring hardware connections.
 
 ### Quick Start
 1. Launch the application
@@ -116,11 +105,16 @@ DEVICE_CONFIGS = {
 ## File Structure
 
 ```
+ui/                      # Web UI (shared)
+├── eqe.html            # EQE measurement interface
+├── css/                # Stylesheets
+└── js/                 # JavaScript modules
+
 eqe/
-├── __init__.py           # Package initialization
-├── main.py              # Application entry point
-├── requirements.txt     # Dependencies
-├── controllers/         # Device drivers
+├── __init__.py         # Package initialization
+├── __main__.py         # Module entry point
+├── web_main.py         # Qt WebEngine app, Python-JS bridge
+├── controllers/        # Device drivers
 │   ├── __init__.py
 │   ├── thorlabs_power_meter.py
 │   ├── monochromator.py
@@ -135,11 +129,6 @@ eqe/
 │   ├── current_measurement.py
 │   ├── phase_adjustment.py
 │   └── eqe_experiment.py
-├── views/              # User interface
-│   ├── __init__.py
-│   ├── plot_widgets.py
-│   ├── control_widgets.py
-│   └── main_view.py
 ├── config/             # Configuration
 │   ├── __init__.py
 │   └── settings.py
@@ -149,7 +138,7 @@ eqe/
     └── math_utils.py
 ```
 
-Note: The TLPMX driver is now located in `common/drivers/` as shared infrastructure.
+Note: The TLPMX driver is located in `common/drivers/` as shared infrastructure.
 
 ## Development
 
@@ -157,7 +146,7 @@ To extend the application:
 
 1. **Add New Device**: Create controller in `controllers/`, follow existing patterns
 2. **Add Measurement Type**: Implement model in `models/` with threading support
-3. **Modify GUI**: Update views in `views/`, connect to models via signals
+3. **Modify GUI**: Update `ui/eqe.html` and expose API in `web_main.py` via `@Slot`
 4. **Configuration**: Add settings to `config/settings.py`
 
 ## Troubleshooting

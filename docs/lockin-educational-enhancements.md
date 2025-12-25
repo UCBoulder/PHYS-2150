@@ -102,7 +102,7 @@ Right panel:  Product of signal × reference (shows mixing)
 - Data already captured in `software_lockin()` result dict (`signal_data`, `reference_data`)
 - Add new "Diagnostics" or "Waveforms" tab to display
 
-**Code location:** Add to `eqe/views/`
+**Code location:** Add to `ui/eqe.html` with JavaScript visualization
 
 **Effort:** Medium
 
@@ -127,7 +127,7 @@ Right panel:  Product of signal × reference (shows mixing)
 - Show R as vector magnitude
 - Update in real-time during phase adjustment
 
-**Code location:** Enhance `eqe/views/plot_widgets.py` or phase adjustment view
+**Code location:** Enhance phase visualization in `ui/eqe.html` JavaScript
 
 **Effort:** Low
 
@@ -363,7 +363,7 @@ Add optional "educational mode" with reduced integration time:
 |------|----------------|
 | `eqe/controllers/picoscope_lockin.py` | Return stats dict from `read_current()` |
 | `eqe/models/current_measurement.py` | Propagate individual values |
-| `eqe/views/plot_widgets.py` | Add statistics display |
+| `ui/eqe.html` + JavaScript | Add statistics display |
 | `eqe/utils/data_handling.py` | Enhanced CSV export |
 | `eqe/config/settings.py` | Add educational mode flag |
 

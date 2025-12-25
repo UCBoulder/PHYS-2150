@@ -396,7 +396,13 @@ This format teaches students that **uncertainty is part of every measurement**, 
 ## Code Structure
 
 ```
+ui/
+├── eqe.html                   # EQE web interface
+├── css/                       # Stylesheets
+└── js/                        # JavaScript modules
+
 eqe/
+├── web_main.py                # Qt WebEngine app, Python-JS bridge
 ├── controllers/
 │   ├── picoscope_lockin.py    # Lock-in controller
 │   ├── monochromator.py       # Newport Cornerstone
@@ -406,9 +412,6 @@ eqe/
 │   ├── current_measurement.py # Lock-in measurements
 │   ├── power_measurement.py   # Power calibration
 │   └── phase_adjustment.py    # Phase optimization
-├── views/
-│   ├── main_view.py           # Main GUI
-│   └── plot_widgets.py        # Real-time plots
 ├── drivers/
 │   └── picoscope_driver.py    # Low-level PicoScope SDK
 └── config/

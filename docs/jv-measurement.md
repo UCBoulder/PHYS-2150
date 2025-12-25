@@ -321,16 +321,18 @@ Keithley 2450 device not found.
 ## Code Structure
 
 ```
+ui/
+├── jv.html                 # J-V web interface
+├── css/                    # Stylesheets
+└── js/                     # JavaScript modules
+
 jv/
+├── web_main.py             # Qt WebEngine app, Python-JS bridge
 ├── controllers/
 │   └── keithley_2450.py    # SCPI communication
 ├── models/
 │   ├── jv_experiment.py    # Experiment orchestration
 │   └── jv_measurement.py   # Sweep logic
-├── views/
-│   ├── main_window.py      # Main GUI
-│   ├── plot_widget.py      # J-V curve display
-│   └── controls_panel.py   # Parameter input
 ├── config/
 │   └── settings.py         # All parameters
 └── utils/

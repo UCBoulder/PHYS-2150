@@ -21,7 +21,7 @@ The MVC pattern separates these concerns, making code:
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                         VIEW                                │
-│    PySide6 GUI - buttons, plots, status displays            │
+│    Web UI (HTML/CSS/JS) served via Qt WebEngine             │
 │    (Never talks to hardware directly)                       │
 └─────────────────────────────────────────────────────────────┘
                               │
@@ -118,44 +118,63 @@ The sweep logic lives in the Model, using the Controller for individual operatio
 
 **Purpose:** User interface - display data, accept input.
 
-Views handle:
+The UI is implemented as web pages (HTML/CSS/JS) served via Qt WebEngine. Views handle:
 
-- GUI layout and styling
-- User input validation (basic)
-- Real-time data visualization
+- GUI layout and styling (HTML/CSS)
+- User input validation (JavaScript)
+- Real-time data visualization (Plotly.js)
 - Status updates and progress indication
 
-**Key principle:** Views NEVER access Controllers directly. All hardware interaction goes through Models.
+**Key principle:** Views NEVER access Controllers directly. All hardware interaction goes through Models via QWebChannel.
 
-**Examples:**
+**Architecture:**
 
-```python
-# jv/views/main_window.py
-class JVMainWindow(QMainWindow):
-    def __init__(self):
-        # Set up GUI components
-        self.start_button.clicked.connect(self._on_start_clicked)
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Web UI (ui/*.html)                                         │
+│  - HTML/CSS for layout and styling                          │
+│  - JavaScript for interactivity                             │
+│  - Plotly.js for real-time plotting                         │
+└─────────────────────────────────────────────────────────────┘
+                              │ QWebChannel
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Python Bridge (*/web_main.py)                              │
+│  - @Slot decorators expose Python methods to JavaScript     │
+│  - Qt signals notify JavaScript of events                   │
+│  - Handles threading for non-blocking measurements          │
+└─────────────────────────────────────────────────────────────┘
+```
 
-    def _on_start_clicked(self):
-        # Get parameters from GUI
-        params = self.controls_panel.get_parameters()
+**Example JavaScript → Python call:**
 
-        # Call Model (not Controller!)
-        self.experiment_model.start_measurement(params)
+```javascript
+// ui/jv.html
+function startMeasurement() {
+    const params = getParametersFromUI();
+    window.api.startMeasurement(params.startV, params.stopV, params.stepV);
+}
 
-    def _on_measurement_complete(self, result):
-        # Update GUI with results
-        self.plot_widget.update_plot(result)
+// Receive results via callback
+window.api.measurementComplete.connect(function(result) {
+    updatePlot(result);
+});
 ```
 
 ## Project Structure
 
 ```
 PHYS-2150/
+├── ui/                          # Web UI (shared by all apps)
+│   ├── eqe.html                # EQE measurement interface
+│   ├── jv.html                 # J-V measurement interface
+│   ├── launcher.html           # Application launcher
+│   ├── css/                    # Stylesheets (theme.css, components.css)
+│   └── js/                     # JavaScript modules
+│
 ├── common/                      # Shared across applications
 │   ├── drivers/                # Hardware drivers (e.g., TLPMX.py)
-│   ├── ui/                     # Shared GUI components
-│   └── utils/                  # Logging, data export
+│   └── utils/                  # Logging, data export, error messages
 │
 ├── jv/                          # J-V Measurement Application
 │   ├── controllers/
@@ -163,10 +182,7 @@ PHYS-2150/
 │   ├── models/
 │   │   ├── jv_experiment.py   # Experiment orchestration
 │   │   └── jv_measurement.py  # Sweep logic
-│   ├── views/
-│   │   ├── main_window.py     # Main GUI
-│   │   ├── plot_widget.py     # J-V curve display
-│   │   └── controls_panel.py  # Parameter input
+│   ├── web_main.py            # Qt WebEngine app, Python-JS bridge
 │   └── config/
 │       └── settings.py        # Measurement parameters
 │
@@ -179,15 +195,13 @@ PHYS-2150/
 │   │   ├── eqe_experiment.py      # Experiment orchestration
 │   │   ├── current_measurement.py # Lock-in measurement
 │   │   └── power_measurement.py   # Reference calibration
-│   ├── views/
-│   │   ├── main_view.py           # Main GUI
-│   │   └── plot_widgets.py        # EQE plots
 │   ├── drivers/
 │   │   └── picoscope_driver.py    # Low-level SDK interface
+│   ├── web_main.py                # Qt WebEngine app, Python-JS bridge
 │   └── config/
 │       └── settings.py
 │
-└── launcher.py                  # Application selector
+└── launcher.py                  # Qt WebEngine application selector
 ```
 
 ## Data Flow Example: J-V Measurement
@@ -197,9 +211,17 @@ User clicks "Start Measurement"
          │
          ▼
 ┌─────────────────────────────────────┐
-│ VIEW: main_window.py                │
+│ VIEW: ui/jv.html (JavaScript)       │
 │ - Validates GUI inputs              │
-│ - Calls experiment_model.start()    │
+│ - Calls api.startMeasurement()      │
+└─────────────────────────────────────┘
+         │ QWebChannel
+         ▼
+┌─────────────────────────────────────┐
+│ BRIDGE: jv/web_main.py              │
+│ - @Slot receives JS call            │
+│ - Starts measurement in thread      │
+│ - Emits signals back to JS          │
 └─────────────────────────────────────┘
          │
          ▼
@@ -260,9 +282,10 @@ python -m jv --offline  # Test GUI without Keithley connected
 
 To add a new measurement type (e.g., stability test):
 
-1. Create new Model class with measurement logic
-2. Connect to existing View or create new tab
-3. Reuse existing Controllers
+1. Create new Model class with measurement logic in `*/models/`
+2. Add UI elements to `ui/*.html` with corresponding JavaScript
+3. Expose API methods in `*/web_main.py` via `@Slot` decorators
+4. Reuse existing Controllers
 
 ## Configuration Layer
 

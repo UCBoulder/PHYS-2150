@@ -45,25 +45,29 @@ PHYS-2150/
 ├── launcher.py              # Main entry point - measurement selector
 ├── pyproject.toml           # Project configuration and dependencies
 │
+├── ui/                      # Web UI (shared by all apps)
+│   ├── eqe.html            # EQE measurement interface
+│   ├── jv.html             # J-V measurement interface
+│   ├── launcher.html       # Application launcher
+│   ├── css/                # Stylesheets (theme.css, components.css)
+│   └── js/                 # JavaScript modules
+│
 ├── common/                  # Shared infrastructure
 │   ├── drivers/            # Hardware drivers (TLPMX.py)
-│   ├── ui/                 # Shared GUI components
-│   └── utils/              # Shared utilities
+│   └── utils/              # Logging, data export, error messages
 │
 ├── eqe/                    # EQE measurement application
-│   ├── main.py            # EQE entry point
+│   ├── web_main.py        # Qt WebEngine app, Python-JS bridge
 │   ├── controllers/       # Device controllers
 │   ├── models/            # Experiment logic
-│   ├── views/             # GUI components
 │   ├── drivers/           # EQE-specific drivers (PicoScope)
 │   ├── config/            # Settings
 │   └── utils/             # EQE utilities
 │
 ├── jv/                     # J-V measurement application
-│   ├── main.py            # JV entry point
+│   ├── web_main.py        # Qt WebEngine app, Python-JS bridge
 │   ├── controllers/       # Keithley 2450 controller
 │   ├── models/            # J-V experiment logic
-│   ├── views/             # GUI components
 │   ├── config/            # Settings
 │   └── utils/             # JV utilities
 │
@@ -196,7 +200,7 @@ git push origin v2.2.0
 
 ## MVC Architecture
 
-The application follows the Model-View-Controller pattern:
+The application follows the Model-View-Controller pattern with a web-based UI:
 
 ### Controller (Hardware Layer)
 - **What**: Device drivers that communicate with hardware
@@ -209,23 +213,23 @@ The application follows the Model-View-Controller pattern:
 - **Example**: `jv_experiment.py` - J-V sweep orchestration
 
 ### View (User Interface)
-- **What**: GUI components, visualization, user input
-- **Where**: `*/views/`
-- **Important**: Views never access controllers directly; they go through models
+- **What**: Web-based UI (HTML/CSS/JS) served via Qt WebEngine
+- **Where**: `ui/` for HTML/CSS/JS, `*/web_main.py` for Python-JS bridge
+- **Important**: Views never access controllers directly; they go through models via QWebChannel
 
 ## Common Development Tasks
 
 ### Adding a New Measurement Type
 
 1. Create a new package directory (e.g., `new_measurement/`)
-2. Create the MVC structure:
+2. Create the structure:
    - `controllers/` - Hardware communication
    - `models/` - Experiment logic
-   - `views/` - GUI components
+   - `web_main.py` - Qt WebEngine app with QWebChannel API
    - `config/` - Settings
-3. Add entry point in `main.py`
+3. Add UI page in `ui/new_measurement.html` with CSS/JS
 4. Add `__main__.py` for module execution
-5. Add button to `launcher.py`
+5. Add button to `ui/launcher.html`
 6. Update `pyproject.toml` entry points
 
 ### Adding a New Hardware Device

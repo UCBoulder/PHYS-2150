@@ -577,14 +577,14 @@ These are modular additions that don't require architectural changes:
 
 ## Code Locations for Key Enhancements
 
-| Enhancement | File | Line(s) |
-|-------------|------|---------|
-| EQE 5-measurement averaging | `eqe/models/current_measurement.py` | 126-132 |
-| EQE CSV export | `eqe/utils/data_handling.py` | 94-123 |
-| EQE phase plot | `eqe/views/plot_widgets.py` | 297-326 |
-| EQE R² threshold | `eqe/config/settings.py` | 52 |
-| J-V measurement loop | `jv/2450gui_reverse_bias_pyside.py` | 109-169 |
-| J-V CSV export | `jv/2450gui_reverse_bias_pyside.py` | 172-201 |
+| Enhancement | File | Notes |
+|-------------|------|-------|
+| EQE 5-measurement averaging | `eqe/models/current_measurement.py` | Core measurement logic |
+| EQE CSV export | `eqe/utils/data_handling.py` | Data export handling |
+| EQE phase plot | `ui/eqe.html` + JavaScript | Plotly.js visualization |
+| EQE R² threshold | `eqe/config/settings.py` | Configuration |
+| J-V measurement loop | `jv/models/jv_measurement.py` | Sweep logic |
+| J-V CSV export | `jv/utils/data_export.py` | Data export handling |
 
 ---
 
