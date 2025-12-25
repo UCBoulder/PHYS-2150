@@ -178,28 +178,34 @@ Follow [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/):
 
 When ready to release a new version:
 
-```bash
-# 1. Ensure develop is up to date and tested
-git checkout develop
-git pull
+1. **Ensure develop is up to date and tested**
+   ```bash
+   git checkout develop
+   git pull
+   ```
 
-# 2. Merge develop into main
-git checkout main
-git merge develop
+2. **Merge develop into main**
+   ```bash
+   git checkout main
+   git merge develop
+   ```
 
-# 3. Update CHANGELOG.md
-#    - Move [Unreleased] content to new version section
-#    - Add release date
-#    - Update comparison links at bottom
+3. **Update CHANGELOG.md**
+   - Move [Unreleased] content to new version section
+   - Add release date
+   - Update comparison links at bottom
 
-# 4. Commit changelog, tag, and push
-git add CHANGELOG.md
-git commit -m "Release vX.Y.Z"
-git tag -a vX.Y.Z -m "Version X.Y.Z - brief description"
-git push origin main --tags
+4. **Commit changelog, tag, and push**
+   ```bash
+   git add CHANGELOG.md
+   git commit -m "Release vX.Y.Z"
+   git tag -a vX.Y.Z -m "Version X.Y.Z - brief description"
+   git push origin main --tags
+   ```
 
-# 5. Merge release commit back to develop
-git checkout develop
-git merge main
-git push origin develop
-```
+5. **Merge release commit back to develop**
+   ```bash
+   git checkout develop
+   git merge main
+   git push origin develop
+   ```
