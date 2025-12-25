@@ -293,6 +293,17 @@ h1 {
     padding: 16px 32px;
     font-size: 16px;
     font-weight: 600;
+    transition: opacity 0.2s;
+}
+
+.btn-launcher.loading {
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.btn-launcher.loading::after {
+    content: ' ...';
+    animation: dots 1.2s infinite;
 }
 
 .offline-toggle {

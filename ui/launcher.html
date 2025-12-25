@@ -107,12 +107,14 @@
             }
             const btn = document.getElementById('btn-eqe');
             btn.classList.add('loading');
+            btn.textContent = 'Launching';
 
             api.launch_eqe(isOfflineMode(), getTheme(), function(result) {
                 const response = JSON.parse(result);
                 if (!response.success) {
                     LabModals.showError('Launch Failed', 'Failed to launch EQE: ' + response.message);
                     btn.classList.remove('loading');
+                    btn.textContent = 'EQE Measurement';
                 }
             });
         }
@@ -125,12 +127,14 @@
             }
             const btn = document.getElementById('btn-jv');
             btn.classList.add('loading');
+            btn.textContent = 'Launching';
 
             api.launch_jv(isOfflineMode(), getTheme(), function(result) {
                 const response = JSON.parse(result);
                 if (!response.success) {
                     LabModals.showError('Launch Failed', 'Failed to launch I-V: ' + response.message);
                     btn.classList.remove('loading');
+                    btn.textContent = 'I-V Measurement';
                 }
             });
         }

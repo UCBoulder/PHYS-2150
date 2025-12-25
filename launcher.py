@@ -10,7 +10,7 @@ import os
 import json
 import subprocess
 
-from PySide6.QtCore import QObject, Slot
+from PySide6.QtCore import QObject, Slot, QTimer
 from PySide6.QtWidgets import QApplication
 
 from common.ui import BaseWebWindow
@@ -81,8 +81,8 @@ class LauncherApi(QObject):
                     start_new_session=True,
                 )
 
-            # Close the launcher after successful launch
-            QApplication.quit()
+            # Close the launcher after a brief delay so user sees "Launching..." feedback
+            QTimer.singleShot(800, QApplication.quit)
             return json.dumps({"success": True})
 
         except Exception as e:
