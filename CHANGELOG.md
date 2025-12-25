@@ -30,6 +30,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **BREAKING**: Python-JS communication now uses QWebChannel instead of Qt signals/slots
 - Interactive plots now use Plotly.js instead of Matplotlib (zoom, pan, hover tooltips)
 - Modern CSS theming with consistent component styling across all applications
+- Consolidated CSS into shared components.css for DRY principle
+- Extracted inline JavaScript to ES6 modules for maintainability
+- Added PlotlyUtils shared module for consistent plot configuration
+- Dynamic modal injection replaces hardcoded HTML
 - PicoScope ps2000 SDK stability improvements (settling time between acquisitions, proper stop calls)
 
 ### Removed
