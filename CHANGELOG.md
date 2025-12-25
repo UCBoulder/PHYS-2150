@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Visual feedback when launching apps from launcher
+- Remote config support for semester-specific defaults
+- Config bridge to centralize UI defaults in Python config files
+- Amplitude check to chopper reference signal validation
+
+### Changed
+- Stability test current measurement now matches regular measurement method
+
+### Fixed
+- J-V pixel input now correctly allows 1-8 instead of 1-9
+- Monochromator WaitForIdle infinite loop causing power test hang
+
 ## [3.0.0] - 2025-12-24
 
 ### Added
