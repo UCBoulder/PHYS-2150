@@ -107,8 +107,11 @@ class LauncherWindow(QMainWindow):
         # Center window on screen
         self._center_window()
 
-        # Create web view
+        # Create web view with GPU acceleration
         self.web_view = QWebEngineView()
+        settings = self.web_view.page().settings()
+        settings.setAttribute(settings.WebAttribute.Accelerated2dCanvasEnabled, True)
+        settings.setAttribute(settings.WebAttribute.WebGLEnabled, True)
         self.setCentralWidget(self.web_view)
 
         # Set up web channel for Python-JS communication
