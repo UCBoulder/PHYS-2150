@@ -24,6 +24,7 @@ from .config.settings import (
 )
 from .config import settings
 from common.utils import get_logger, TieredLogger, WebConsoleHandler
+from common.utils.remote_config import get_remote_config, deep_merge
 from common.ui import BaseWebWindow, BaseWebApi
 
 _logger = get_logger("eqe")
@@ -117,24 +118,33 @@ class EQEApi(BaseWebApi):
     @Slot(result=str)
     def get_ui_config(self) -> str:
         """
-        Get UI configuration values from Python settings.
+        Get UI configuration values, merging remote overrides.
 
         Returns config needed by JavaScript for form defaults and validation.
+        Remote config from GitHub is merged over built-in defaults.
         """
         # Convert DeviceType enum keys to strings for JSON serialization
         devices_config = {
-            "monochromator": DEVICE_CONFIGS[DeviceType.MONOCHROMATOR],
-            "picoscope": DEVICE_CONFIGS[DeviceType.PICOSCOPE_LOCKIN],
-            "power_meter": DEVICE_CONFIGS[DeviceType.THORLABS_POWER_METER],
+            "monochromator": dict(DEVICE_CONFIGS[DeviceType.MONOCHROMATOR]),
+            "picoscope": dict(DEVICE_CONFIGS[DeviceType.PICOSCOPE_LOCKIN]),
+            "power_meter": dict(DEVICE_CONFIGS[DeviceType.THORLABS_POWER_METER]),
         }
 
-        return json.dumps({
-            "defaults": DEFAULT_MEASUREMENT_PARAMS,
-            "validation": VALIDATION_PATTERNS,
+        # Built-in defaults
+        config = {
+            "defaults": dict(DEFAULT_MEASUREMENT_PARAMS),
+            "validation": dict(VALIDATION_PATTERNS),
             "devices": devices_config,
-            "stability": STABILITY_TEST_CONFIG,
-            "phase": PHASE_ADJUSTMENT_CONFIG,
-        })
+            "stability": dict(STABILITY_TEST_CONFIG),
+            "phase": dict(PHASE_ADJUSTMENT_CONFIG),
+        }
+
+        # Merge remote config (overrides built-in)
+        remote = get_remote_config('eqe')
+        if remote:
+            config = deep_merge(config, remote)
+
+        return json.dumps(config)
 
     # ==================== Measurements ====================
 

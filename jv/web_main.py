@@ -24,6 +24,7 @@ from .config.settings import (
     JV_MEASUREMENT_CONFIG
 )
 from common.utils import get_logger, TieredLogger, WebConsoleHandler
+from common.utils.remote_config import get_remote_config, deep_merge
 from common.ui import BaseWebWindow, BaseWebApi
 
 _logger = get_logger("jv")
@@ -84,15 +85,24 @@ class JVApi(BaseWebApi):
     @Slot(result=str)
     def get_ui_config(self) -> str:
         """
-        Get UI configuration values from Python settings.
+        Get UI configuration values, merging remote overrides.
 
         Returns config needed by JavaScript for form defaults and validation.
+        Remote config from GitHub is merged over built-in defaults.
         """
-        return json.dumps({
-            "defaults": DEFAULT_MEASUREMENT_PARAMS,
-            "validation": VALIDATION_PATTERNS,
-            "measurement": JV_MEASUREMENT_CONFIG,
-        })
+        # Built-in defaults
+        config = {
+            "defaults": dict(DEFAULT_MEASUREMENT_PARAMS),
+            "validation": dict(VALIDATION_PATTERNS),
+            "measurement": dict(JV_MEASUREMENT_CONFIG),
+        }
+
+        # Merge remote config (overrides built-in)
+        remote = get_remote_config('jv')
+        if remote:
+            config = deep_merge(config, remote)
+
+        return json.dumps(config)
 
     @Slot(str, result=str)
     def start_measurement(self, params_json: str) -> str:

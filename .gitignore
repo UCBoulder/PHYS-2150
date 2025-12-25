@@ -52,6 +52,9 @@ htmlcov/
 *.swp
 *.tmp
 
+# Remote config cache
+.config-cache/
+
 # Measurement data (keep out of repo)
 # Uncomment if you want to ignore CSV data files:
 # *.csv
