@@ -1,6 +1,6 @@
 [project]
 name = "phys2150"
-version = "2.0.0"
+version = "3.0.0"
 description = "PHYS 2150 Measurement Suite - EQE and J-V characterization for solar cells"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -29,9 +29,9 @@ dev = [
 ]
 
 [project.scripts]
-phys2150 = "qtwebengine_launcher:main"
-phys2150-eqe = "eqe.main:main"
-phys2150-jv = "jv.main:main"
+phys2150 = "launcher:main"
+phys2150-eqe = "eqe.web_main:main"
+phys2150-jv = "jv.web_main:main"
 
 [project.gui-scripts]
 phys2150-gui = "launcher:main"

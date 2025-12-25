@@ -9,11 +9,28 @@ import sys
 import os
 import json
 import subprocess
+from importlib.metadata import version, PackageNotFoundError
 
 from PySide6.QtCore import QObject, Slot, QTimer
 from PySide6.QtWidgets import QApplication
 
 from common.ui import BaseWebWindow
+
+
+def get_app_version() -> str:
+    """Get the application version from pyproject.toml via importlib.metadata."""
+    try:
+        return version("phys2150")
+    except PackageNotFoundError:
+        # Fallback: read from pyproject.toml directly (for development)
+        try:
+            import tomllib
+            pyproject_path = os.path.join(os.path.dirname(__file__), "pyproject.toml")
+            with open(pyproject_path, "rb") as f:
+                data = tomllib.load(f)
+                return data.get("project", {}).get("version", "dev")
+        except Exception:
+            return "dev"
 
 
 class LauncherApi(QObject):
@@ -23,6 +40,11 @@ class LauncherApi(QObject):
         super().__init__()
         self._window = window
         self._show_terminal = False
+
+    @Slot(result=str)
+    def get_version(self) -> str:
+        """Get the application version."""
+        return json.dumps({"version": get_app_version()})
 
     @Slot(result=str)
     def toggle_terminal(self) -> str:

@@ -15,6 +15,7 @@
 ; - PicoScope SDK (for EQE measurements)
 ; - Thorlabs OPM driver (for power meter)
 
+; NOTE: Keep MyAppVersion in sync with pyproject.toml [project].version
 #define MyAppName "PHYS 2150 Measurement Suite"
 #define MyAppVersion "3.0.0"
 #define MyAppPublisher "CU Boulder Physics Lab"

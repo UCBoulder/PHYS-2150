@@ -51,11 +51,11 @@
         </label>
     </div>
 
-    <p class="footer">
-        CU Boulder Physics Undergraduate Labs<br>
-        <span class="version">v1.0.0</span>
-    </p>
     <p class="shortcuts-hint">Press E for EQE, I for I-V</p>
+    <p class="footer">
+        <span class="version" id="app-version"></span><br>
+        CU Boulder Physics Undergraduate Labs
+    </p>
 
     <!-- Info Modal -->
     <div class="modal-overlay" id="info-modal">
@@ -169,11 +169,25 @@
             }
         });
 
+        // Load version from backend
+        function loadVersion() {
+            const api = LabAPI.get();
+            if (api && api.get_version) {
+                api.get_version(function(result) {
+                    const response = JSON.parse(result);
+                    document.getElementById('app-version').textContent = 'v' + response.version;
+                });
+            }
+        }
+
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
             // Initialize shared modules
             LabTheme.init();
             LabAPI.init();
+
+            // Load version after API is ready
+            setTimeout(loadVersion, 100);
         });
     </script>
 </body>
