@@ -135,7 +135,7 @@ h1 {
 .button-container {
     display: flex;
     gap: 24px;
-    margin-bottom: 40px;
+    margin-bottom: 16px;
 }
 
 /* Measurement Buttons */
@@ -309,8 +309,8 @@ h1 {
 .offline-toggle {
     display: flex;
     justify-content: center;
-    margin-top: 8px;
-    margin-bottom: 20px;
+    margin-top: 0;
+    margin-bottom: 0;
 }
 
 .checkbox-label {
@@ -343,13 +343,24 @@ h1 {
     color: var(--text-muted);
 }
 
+.footer {
+    margin-top: auto;
+    padding-top: 24px;
+    text-align: center;
+}
+
 .shortcuts-hint {
     font-size: 11px;
     color: var(--text-muted);
-    text-align: center;
-    margin: 16px 0 8px 0;
+    margin: 0 0 8px 0;
 }
 
-.footer {
-    margin-top: 0;
+.footer .version {
+    margin: 0 0 4px 0;
+}
+
+.footer .institution {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: 0;
 }
