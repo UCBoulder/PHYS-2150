@@ -139,6 +139,31 @@ This project follows [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.
 - **PATCH** (x.y.Z): Backward-compatible bug fixes
   - Examples: Bug fixes, documentation updates, minor UI tweaks
 
+### Branching Strategy
+
+This project uses a simplified Git Flow model:
+
+```
+main    → Released versions only (what's installed in the lab)
+develop → Integration branch for ongoing work
+```
+
+**Day-to-day development:**
+```bash
+git checkout develop
+# make changes, commit, push to develop
+```
+
+**Feature branches (optional, for larger changes):**
+```bash
+git checkout develop
+git checkout -b feature/my-feature
+# work on feature
+git checkout develop
+git merge feature/my-feature
+git branch -d feature/my-feature
+```
+
 ### Changelog Guidelines
 
 Follow [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/):
@@ -151,7 +176,30 @@ Follow [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/):
 
 ### Creating Releases
 
-1. Move [Unreleased] changes to new version section with date
-2. Create git tag: `git tag -a vX.Y.Z -m "Version X.Y.Z"`
-3. Push tag: `git push origin vX.Y.Z`
-4. Update comparison links at bottom of CHANGELOG.md
+When ready to release a new version:
+
+```bash
+# 1. Ensure develop is up to date and tested
+git checkout develop
+git pull
+
+# 2. Merge develop into main
+git checkout main
+git merge develop
+
+# 3. Update CHANGELOG.md
+#    - Move [Unreleased] content to new version section
+#    - Add release date
+#    - Update comparison links at bottom
+
+# 4. Commit changelog, tag, and push
+git add CHANGELOG.md
+git commit -m "Release vX.Y.Z"
+git tag -a vX.Y.Z -m "Version X.Y.Z - brief description"
+git push origin main --tags
+
+# 5. Merge release commit back to develop
+git checkout develop
+git merge main
+git push origin develop
+```
