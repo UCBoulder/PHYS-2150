@@ -52,6 +52,22 @@ EQE_ERRORS: Dict[str, ErrorTemplate] = {
         ]
     ),
 
+    "chopper_not_running": ErrorTemplate(
+        title="Chopper Not Running",
+        message="The measured frequency doesn't match the expected chopper frequency.",
+        causes=[
+            "Chopper wheel is not spinning (you should hear it humming)",
+            "Chopper power switch is off",
+            "Chopper reference cable is disconnected",
+        ],
+        actions=[
+            "Turn on the chopper and wait for it to reach stable speed",
+            "Check that the chopper power switch is ON",
+            "Verify the reference cable is connected to the PicoScope",
+            "You should hear a steady hum when the chopper is running",
+        ]
+    ),
+
     "signal_saturation": ErrorTemplate(
         title="Signal Too Strong",
         message="The detected signal is near the measurement limit.",

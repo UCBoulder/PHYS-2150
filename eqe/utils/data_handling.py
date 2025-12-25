@@ -5,6 +5,7 @@ Data handling utilities for the EQE measurement application.
 import csv
 import os
 import datetime
+import logging
 import pandas as pd
 from typing import List, Tuple, Dict, Any, Optional
 from pathlib import Path
@@ -276,17 +277,19 @@ class DataHandler:
 
 class MeasurementDataLogger:
     """Handles logging of measurement progress and status."""
-    
+
     def __init__(self, log_file: Optional[str] = None):
         """
         Initialize the logger.
-        
+
         Args:
             log_file: Optional log file path
         """
         self.log_file = log_file
         self.log_entries = []
-    
+        # Get Python logger for forwarding to web console
+        self._python_logger = logging.getLogger("phys2150.eqe")
+
     def log(self, message: str, level: str = "INFO") -> None:
         """
         Log a message with timestamp.
@@ -306,11 +309,12 @@ class MeasurementDataLogger:
             except Exception:
                 pass  # Silently ignore log file errors
 
-        print(entry)
+        # Forward to Python logging system (for web console)
+        log_level = getattr(logging, level.upper(), logging.INFO)
+        self._python_logger.log(log_level, message)
 
     def debug(self, message: str) -> None:
-        """Debug-level log (silent by default for backward compatibility)."""
-        # Only log to file, not console
+        """Debug-level log (file and Python logger for web console)."""
         if self.log_file:
             timestamp = datetime.datetime.now().isoformat()
             entry = f"{timestamp} [DEBUG] {message}"
@@ -319,6 +323,8 @@ class MeasurementDataLogger:
                     f.write(entry + '\n')
             except Exception:
                 pass
+        # Forward to Python logging system (for web console in debug mode)
+        self._python_logger.debug(message)
     
     def get_log_entries(self) -> List[str]:
         """Get all log entries."""

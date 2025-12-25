@@ -12,9 +12,13 @@ import threading
 
 from ..controllers.picoscope_lockin import PicoScopeController, PicoScopeError
 from ..controllers.monochromator import MonochromatorController, MonochromatorError
-from ..config.settings import PHASE_ADJUSTMENT_CONFIG
+from ..config.settings import PHASE_ADJUSTMENT_CONFIG, DEVICE_CONFIGS, DeviceType
 from ..utils.data_handling import MeasurementDataLogger
 from ..utils.math_utils import MathUtils
+from common.utils import get_logger, get_error
+
+# Module-level logger for phase adjustment
+_logger = get_logger("eqe")
 
 
 class PhaseAdjustmentError(Exception):
@@ -142,7 +146,22 @@ class PhaseAdjustmentModel:
             self.logger.log(f"  R (magnitude):   {R:+.6f} V")
             self.logger.log(f"  Phase:           {theta_deg:+.1f}°")
             self.logger.log(f"  Measured freq:   {measured_freq:.2f} Hz")
-            
+
+            # Validate chopper frequency - abort if chopper appears to be off
+            config = DEVICE_CONFIGS[DeviceType.PICOSCOPE_LOCKIN]
+            expected_freq = config["default_chopper_freq"]
+            tolerance = config["chopper_freq_tolerance"]
+            freq_error = abs(measured_freq - expected_freq) / expected_freq
+
+            if freq_error > tolerance:
+                error = get_error("chopper_not_running", "eqe")
+                if error:
+                    _logger.student_error(error.title, error.message, error.causes, error.actions)
+                raise PhaseAdjustmentError(
+                    f"Chopper frequency mismatch: measured {measured_freq:.1f} Hz, "
+                    f"expected {expected_freq} Hz. Is the chopper running?"
+                )
+
             # Create visualization of projected signal vs phase
             # This shows how signal varies with assumed phase
             num_points = PHASE_ADJUSTMENT_CONFIG["num_visualization_points"]
