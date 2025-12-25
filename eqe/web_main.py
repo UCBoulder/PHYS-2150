@@ -21,12 +21,12 @@ from .models.stability_test import StabilityTestModel
 from .config.settings import GUI_CONFIG, DEFAULT_MEASUREMENT_PARAMS
 from .config import settings
 from common.utils import get_logger, TieredLogger, WebConsoleHandler
-from common.ui import BaseWebWindow
+from common.ui import BaseWebWindow, BaseWebApi
 
 _logger = get_logger("eqe")
 
 
-class EQEApi(QObject):
+class EQEApi(BaseWebApi):
     """
     Python API exposed to JavaScript via QWebChannel.
 
@@ -39,8 +39,7 @@ class EQEApi(QObject):
     _stability_mono_signal = Signal(float, bool)  # wavelength, shutter_open
 
     def __init__(self, window: 'EQEWebWindow'):
-        super().__init__()
-        self._window = window
+        super().__init__(window)
         self._experiment: Optional[EQEExperimentModel] = None
         self._stability_model: Optional[StabilityTestModel] = None
 
@@ -309,28 +308,6 @@ class EQEApi(QObject):
                 return json.dumps({"success": False, "message": str(e)})
 
         return json.dumps({"success": False, "message": "Cancelled"})
-
-    # ==================== Debug Mode ====================
-
-    @Slot(result=str)
-    def toggle_debug_mode(self) -> str:
-        """Toggle staff debug mode for verbose console output."""
-        current = TieredLogger._staff_debug_mode
-        new_mode = not current
-        TieredLogger.set_staff_debug_mode(new_mode)
-
-        # Also update the web console handler level
-        if hasattr(self._window, '_web_console_handler'):
-            self._window._web_console_handler.setLevel(
-                logging.DEBUG if new_mode else logging.INFO
-            )
-
-        if new_mode:
-            _logger.info("Staff debug mode ENABLED (Ctrl+Shift+D) - technical output visible in console")
-        else:
-            _logger.info("Staff debug mode DISABLED")
-
-        return json.dumps({"enabled": new_mode})
 
     # ==================== Stability Tests ====================
 

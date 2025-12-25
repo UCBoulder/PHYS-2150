@@ -6,7 +6,9 @@ code duplication across EQE, JV, and launcher applications.
 """
 
 from .web_window import BaseWebWindow
+from .web_api import BaseWebApi
 
 __all__ = [
     'BaseWebWindow',
+    'BaseWebApi',
 ]
