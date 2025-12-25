@@ -8,6 +8,8 @@
     <link rel="stylesheet" href="css/components.css">
     <!-- Qt WebChannel JS library -->
     <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+    <script src="js/theme.js"></script>
+    <script src="js/api.js"></script>
     <script src="js/modals.js"></script>
 </head>
 <body class="dark-mode">
@@ -84,36 +86,9 @@
     <script>
         /**
          * PHYS 2150 Launcher - Qt WebChannel Version
+         *
+         * Uses shared modules: theme.js, api.js, modals.js
          */
-
-        // Python API reference (set when QWebChannel connects)
-        let api = null;
-
-        // Theme management - just light and dark
-        let isDarkMode = true;
-
-        function toggleTheme() {
-            isDarkMode = !isDarkMode;
-            applyTheme(isDarkMode);
-        }
-
-        function applyTheme(dark) {
-            const body = document.body;
-            if (dark) {
-                body.classList.add('dark-mode');
-                body.classList.remove('light-mode');
-            } else {
-                body.classList.add('light-mode');
-                body.classList.remove('dark-mode');
-            }
-            localStorage.setItem('theme', dark ? 'dark' : 'light');
-        }
-
-        function loadSavedTheme() {
-            const savedTheme = localStorage.getItem('theme');
-            isDarkMode = savedTheme !== 'light';
-            applyTheme(isDarkMode);
-        }
 
         // Application launching
         function isOfflineMode() {
@@ -121,10 +96,11 @@
         }
 
         function getTheme() {
-            return isDarkMode ? 'dark' : 'light';
+            return LabTheme.isDark() ? 'dark' : 'light';
         }
 
         function launchEQE() {
+            const api = LabAPI.get();
             if (!api) {
                 LabModals.showError('Connection Error', 'Not connected to backend');
                 return;
@@ -142,6 +118,7 @@
         }
 
         function launchJV() {
+            const api = LabAPI.get();
             if (!api) {
                 LabModals.showError('Connection Error', 'Not connected to backend');
                 return;
@@ -158,16 +135,12 @@
             });
         }
 
-        // Keyboard shortcuts
+        // Keyboard shortcuts (Ctrl+Shift+C is handled by theme.js)
         document.addEventListener('keydown', function(e) {
-            // Ctrl+Shift+C - Toggle theme
-            if (e.ctrlKey && e.shiftKey && e.key === 'C') {
-                e.preventDefault();
-                toggleTheme();
-            }
             // Ctrl+Shift+T - Toggle terminal window
             if (e.ctrlKey && e.shiftKey && e.key === 'T') {
                 e.preventDefault();
+                const api = LabAPI.get();
                 if (api && api.toggle_terminal) {
                     api.toggle_terminal(function(result) {
                         const r = JSON.parse(result);
@@ -192,19 +165,11 @@
             }
         });
 
-        // Initialize QWebChannel connection
+        // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
-            loadSavedTheme();
-
-            // Connect to Qt WebChannel
-            if (typeof QWebChannel !== 'undefined') {
-                new QWebChannel(qt.webChannelTransport, function(channel) {
-                    api = channel.objects.api;
-                    console.log('Connected to Qt WebChannel');
-                });
-            } else {
-                console.warn('QWebChannel not available - running in standalone browser mode');
-            }
+            // Initialize shared modules
+            LabTheme.init();
+            LabAPI.init();
         });
     </script>
 </body>
