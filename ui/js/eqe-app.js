@@ -1904,8 +1904,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }, 500);
 
-    // Initialize shared modal handlers
-    LabModals.init();
+    // Inject and initialize modals
+    LabModals.injectEQE();
 
     // Setup event listeners
     setupEventListeners();

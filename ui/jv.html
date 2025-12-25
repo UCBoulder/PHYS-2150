@@ -242,66 +242,7 @@
     <input type="file" id="csv-file-input" accept=".csv" style="display: none"
            onchange="onCSVFileSelected(event)">
 
-    <!-- Cell Number Modal -->
-    <div class="modal-overlay" id="cell-modal">
-        <div class="modal">
-            <div class="modal-title">Enter Cell Number</div>
-            <div class="modal-body">
-                <div class="input-group mb-0">
-                    <label for="cell-input">Cell Number (e.g., 195)</label>
-                    <input type="text" id="cell-input" pattern="[0-9]{3}" maxlength="3" placeholder="000">
-                    <span class="input-error" id="cell-input-error">Please enter a 3-digit cell number</span>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeCellModal()">Cancel</button>
-                <button class="btn btn-primary" onclick="confirmCellNumber()">Confirm</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Pixel Selection Modal -->
-    <div class="modal-overlay" id="pixel-modal">
-        <div class="modal">
-            <div class="modal-title">Select Pixel</div>
-            <div class="modal-body">
-                <div class="input-group mb-0">
-                    <label for="pixel-input">Pixel Number (1-9)</label>
-                    <input type="number" id="pixel-input" min="1" max="9" value="1">
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closePixelModal()">Cancel</button>
-                <button class="btn btn-primary" onclick="confirmPixel()">Start</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Error Modal -->
-    <div class="modal-overlay" id="error-modal">
-        <div class="modal">
-            <div class="modal-title" id="error-modal-title">Error</div>
-            <div class="modal-body">
-                <p id="error-modal-message" style="color: var(--text-secondary); white-space: pre-wrap; text-align: left;"></p>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-primary" onclick="LabModals.closeError()">OK</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Info Modal -->
-    <div class="modal-overlay" id="info-modal">
-        <div class="modal">
-            <div class="modal-title" id="info-modal-title">Info</div>
-            <div class="modal-body">
-                <p id="info-modal-message" style="color: var(--text-secondary); white-space: pre-line;"></p>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-primary" onclick="LabModals.closeInfo()">OK</button>
-            </div>
-        </div>
-    </div>
+    <!-- Modals injected dynamically by LabModals.injectJV() -->
 
     <!-- Console Panel -->
     <div class="console-panel" id="console-panel">

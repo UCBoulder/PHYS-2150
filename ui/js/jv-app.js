@@ -51,7 +51,7 @@ function updatePlotTheme(plotId, isDark) {
 
 async function init() {
     LabTheme.init();
-    LabModals.init();
+    LabModals.injectJV();  // Inject and initialize modals
     await LabAPI.init();
 
     // Small delay to ensure Plotly is ready
