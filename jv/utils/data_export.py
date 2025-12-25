@@ -43,7 +43,7 @@ class JVDataExporter:
 
         template = self.config.get(
             "file_template",
-            "{date}_JV_cell{cell_number}_pixel{pixel_number}.csv"
+            "{date}_IV_cell{cell_number}_pixel{pixel_number}.csv"
         )
 
         return template.format(

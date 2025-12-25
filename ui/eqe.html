@@ -477,12 +477,26 @@
                 powerData: null,   // {wavelengths: [], values: []}
                 currentData: null, // {wavelengths: [], values: []}
                 eqeData: null,     // {wavelengths: [], eqe: []}
-                metrics: null      // {peakEQE, peakWavelength, bandgapWavelength, bandgapEV, dataPoints}
+                metrics: null,     // {peakEQE, peakWavelength, bandgapWavelength, bandgapEV, dataPoints}
+                cellNumber: null,
+                pixel: null,
+                powerFile: null,
+                currentFile: null
             },
 
             // Debug mode
             debugMode: false
         };
+
+        // Extract cell and pixel numbers from filename
+        function extractCellPixelFromFilename(filename) {
+            const cellMatch = filename.match(/cell(\d+)/i);
+            const pixelMatch = filename.match(/pixel(\d+)/i);
+            return {
+                cell: cellMatch ? cellMatch[1] : null,
+                pixel: pixelMatch ? parseInt(pixelMatch[1]) : null
+            };
+        }
 
         // ==================== Tab Navigation ====================
 
@@ -1941,6 +1955,7 @@
                 try {
                     const data = parseCSV(e.target.result);
                     state.analysis.powerData = data;
+                    state.analysis.powerFile = file.name;
                     document.getElementById('power-file-status').textContent = file.name;
                     document.getElementById('power-file-status').classList.add('loaded');
                     updateCalculateButton();
@@ -1961,6 +1976,13 @@
                 try {
                     const data = parseCSV(e.target.result);
                     state.analysis.currentData = data;
+                    state.analysis.currentFile = file.name;
+
+                    // Extract cell/pixel from current file (it's the cell measurement)
+                    const extracted = extractCellPixelFromFilename(file.name);
+                    state.analysis.cellNumber = extracted.cell;
+                    state.analysis.pixel = extracted.pixel;
+
                     document.getElementById('current-file-status').textContent = file.name;
                     document.getElementById('current-file-status').classList.add('loaded');
                     updateCalculateButton();
@@ -2167,6 +2189,10 @@
             const now = new Date();
             const localISO = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
             csv += `# Generated: ${localISO}\n`;
+            if (state.analysis.cellNumber) csv += `# Cell: ${state.analysis.cellNumber}\n`;
+            if (state.analysis.pixel) csv += `# Pixel: ${state.analysis.pixel}\n`;
+            if (state.analysis.powerFile) csv += `# Power File: ${state.analysis.powerFile}\n`;
+            if (state.analysis.currentFile) csv += `# Current File: ${state.analysis.currentFile}\n`;
             csv += '#\n';
             csv += `# Peak EQE: ${m.peakEQE.toFixed(2)}% at ${m.peakWavelength.toFixed(0)} nm\n`;
             if (m.bandgapWavelength) {

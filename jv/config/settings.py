@@ -113,7 +113,7 @@ DATA_EXPORT_CONFIG: Dict[str, Any] = {
 
     # File naming template
     "date_format": "%Y_%m_%d",
-    "file_template": "{date}_JV_cell{cell_number}_pixel{pixel_number}.csv",
+    "file_template": "{date}_IV_cell{cell_number}_pixel{pixel_number}.csv",
 
     # CSV column headers
     "headers": {

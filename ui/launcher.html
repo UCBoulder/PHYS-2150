@@ -36,7 +36,7 @@
         </button>
 
         <button class="measurement-btn btn-jv" onclick="launchJV()" id="btn-jv">
-            <span class="title">J-V Measurement</span>
+            <span class="title">I-V Measurement</span>
             <span class="description">Current-Voltage Curves<br>Solar cell characterization</span>
         </button>
     </div>
@@ -106,7 +106,7 @@
             api.launch_jv(function(result) {
                 const response = JSON.parse(result);
                 if (!response.success) {
-                    alert('Failed to launch J-V: ' + response.message);
+                    alert('Failed to launch I-V: ' + response.message);
                     btn.classList.remove('loading');
                 }
             });

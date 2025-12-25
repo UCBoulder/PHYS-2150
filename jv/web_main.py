@@ -21,7 +21,7 @@ from .models.jv_experiment import JVExperimentModel, JVExperimentError
 from .models.jv_measurement import JVMeasurementResult
 from .utils.data_export import JVDataExporter
 from .config.settings import GUI_CONFIG, VALIDATION_PATTERNS, DEFAULT_MEASUREMENT_PARAMS
-from common.utils import get_logger
+from common.utils import get_logger, TieredLogger
 
 _logger = get_logger("jv")
 
@@ -175,12 +175,61 @@ class JVApi(QObject):
 
         # Generate default filename
         timestamp = datetime.now().strftime("%Y%m%d")
-        default_filename = f"JV_Cell{cell_number}_Pixel{pixel}_{timestamp}.csv"
+        default_filename = f"IV_Cell{cell_number}_Pixel{pixel}_{timestamp}.csv"
 
         # Show save dialog
         file_path, _ = QFileDialog.getSaveFileName(
             self._window,
             "Save J-V Data",
+            default_filename,
+            "CSV files (*.csv)"
+        )
+
+        if file_path:
+            try:
+                with open(file_path, 'w', newline='') as f:
+                    f.write(csv_content)
+                return json.dumps({"success": True, "path": file_path})
+            except Exception as e:
+                return json.dumps({"success": False, "message": str(e)})
+
+        return json.dumps({"success": False, "message": "Cancelled"})
+
+    @Slot(result=str)
+    def toggle_debug_mode(self) -> str:
+        """Toggle staff debug mode for verbose console output."""
+        current = TieredLogger._staff_debug_mode
+        new_mode = not current
+        TieredLogger.set_staff_debug_mode(new_mode)
+
+        if new_mode:
+            _logger.info("Staff debug mode ENABLED (Ctrl+Shift+D) - technical output visible in console")
+        else:
+            _logger.info("Staff debug mode DISABLED")
+
+        return json.dumps({"enabled": new_mode})
+
+    @Slot(str, result=str)
+    def save_analysis_data(self, csv_content: str) -> str:
+        """
+        Save I-V analysis results to file.
+
+        Args:
+            csv_content: CSV string with analysis results
+
+        Returns:
+            JSON string with success status and file path
+        """
+        from datetime import datetime
+
+        # Generate default filename
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        default_filename = f"iv_analysis_{timestamp}.csv"
+
+        # Show save dialog
+        file_path, _ = QFileDialog.getSaveFileName(
+            self._window,
+            "Save I-V Analysis",
             default_filename,
             "CSV files (*.csv)"
         )
@@ -218,7 +267,7 @@ class JVWebWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("J-V Measurement - PHYS 2150")
+        self.setWindowTitle("I-V Measurement - PHYS 2150")
 
         # Set window icon
         icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "icon.ico")
