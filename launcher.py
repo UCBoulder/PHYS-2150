@@ -118,12 +118,12 @@ class LauncherWindow(BaseWebWindow):
         super().__init__(
             title="PHYS 2150 Measurement Suite",
             html_filename="launcher.html",
-            size=(500, 350),
+            size=(500, 300),
             allow_local_file_access=False  # Launcher doesn't need file access
         )
 
         # Launcher uses fixed size (not resizable)
-        self.setFixedSize(500, 350)
+        self.setFixedSize(500, 300)
 
         # Center window on screen
         self._center_window()
