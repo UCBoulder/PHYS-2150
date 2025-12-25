@@ -130,18 +130,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2025-04-22
 
 ### Added
-- Initial release with EQE measurement capabilities
-- SR510 hardware lock-in amplifier integration
+- Filter wheel hardware support with automated wavelength-based switching
+- Cell and pixel naming conventions for file output
+- Phase adjustment and plotting functionality
+- Correction factors for measurement accuracy
+
+### Changed
+- Improved GUI layout and usability
+- Enhanced measurement workflows
+
+## [0.1.0] - 2024-09-06
+
+### Added
+- Initial development release deployed for student use
+- EQE measurement with SR510 hardware lock-in amplifier
 - J-V measurement with Keithley 2450 SMU
 - Monochromator control for wavelength scanning
-- Filter wheel hardware support with wavelength-based switching
 - Basic tkinter GUI for measurements
 - CSV data export
-- Phase adjustment and plotting functionality
-- Cell and pixel naming conventions for file output
 - Transimpedance amplifier integration
 - Threading for non-blocking measurements
-- Correction factors for measurement accuracy
 
 ---
 
@@ -154,7 +162,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 | 2.2.0 | 2025-12-22 | Manual monochromator controls, Live Signal Monitor |
 | 2.1.0 | 2025-12-02 | PicoScope 2204A support, lock-in validation, stability test fixes |
 | 2.0.0 | 2025-11-27 | MVC refactor, PicoScope software lock-in, PySide6 GUI |
-| 1.0.0 | 2025-04-22 | Initial release with SR510 lock-in, tkinter GUI |
+| 1.0.0 | 2025-04-22 | Filter wheel automation, improved workflows |
+| 0.1.0 | 2024-09-06 | Initial development release with SR510 lock-in |
 
 [Unreleased]: https://github.com/UCBoulder/PHYS-2150/compare/v3.0.0...HEAD
 [3.0.0]: https://github.com/UCBoulder/PHYS-2150/compare/v2.3.0...v3.0.0
@@ -162,4 +171,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [2.2.0]: https://github.com/UCBoulder/PHYS-2150/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/UCBoulder/PHYS-2150/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/UCBoulder/PHYS-2150/compare/v1.0.0...v2.0.0
-[1.0.0]: https://github.com/UCBoulder/PHYS-2150/releases/tag/v1.0.0
+[1.0.0]: https://github.com/UCBoulder/PHYS-2150/compare/v0.1.0...v1.0.0
+[0.1.0]: https://github.com/UCBoulder/PHYS-2150/releases/tag/v0.1.0
