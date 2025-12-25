@@ -507,6 +507,28 @@ input[type="number"] {
     font-size: 12px;
     padding: 8px 12px;
     line-height: 1.5;
+
+    /* Modern scrollbar - Firefox */
+    scrollbar-width: thin;
+    scrollbar-color: var(--gray-600) transparent;
+}
+
+/* Modern scrollbar - Webkit (Chrome, Safari, Edge) */
+.console-output::-webkit-scrollbar {
+    width: 8px;
+}
+
+.console-output::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.console-output::-webkit-scrollbar-thumb {
+    background: var(--gray-600);
+    border-radius: 4px;
+}
+
+.console-output::-webkit-scrollbar-thumb:hover {
+    background: var(--gray-500);
 }
 
 .console-line {
