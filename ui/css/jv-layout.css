@@ -96,24 +96,7 @@ body.jv-body {
     font-size: 12px;
 }
 
-.device-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--gray-500);
-}
-
-.device-dot.connected {
-    background: var(--success);
-}
-
-.device-dot.disconnected {
-    background: var(--error);
-}
-
-.device-dot.warning {
-    background: var(--warning);
-}
+/* Device dot styles moved to components.css */
 
 .device-name {
     color: var(--text-secondary);
@@ -278,52 +261,7 @@ body.jv-body {
     height: 100%;
 }
 
-/* Move Plotly modebar to bottom as full-width banner */
-.plot-panel .modebar-container {
-    top: auto !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    width: 100% !important;
-    background: var(--bg-tertiary) !important;
-    padding: 4px 0 !important;
-    display: flex !important;
-    justify-content: center !important;
-    border-top: 1px solid var(--gray-400);
-}
-
-.plot-panel .modebar {
-    position: relative !important;
-    top: auto !important;
-    right: auto !important;
-    float: none !important;
-    background: transparent !important;
-}
-
-.plot-panel .modebar-group {
-    background: transparent !important;
-}
-
-/* Modebar icon colors for light/dark mode */
-.dark-mode .plot-panel .modebar-btn path {
-    fill: rgba(255, 255, 255, 0.7) !important;
-}
-
-.dark-mode .plot-panel .modebar-btn:hover path {
-    fill: rgba(255, 255, 255, 1) !important;
-}
-
-body:not(.dark-mode) .plot-panel .modebar-btn path {
-    fill: rgba(0, 0, 0, 0.5) !important;
-}
-
-body:not(.dark-mode) .plot-panel .modebar-btn:hover path {
-    fill: rgba(0, 0, 0, 0.8) !important;
-}
-
-body:not(.dark-mode) .plot-panel .modebar-container {
-    background: var(--gray-200) !important;
-}
+/* Modebar styles moved to components.css */
 
 
 /* ============================================

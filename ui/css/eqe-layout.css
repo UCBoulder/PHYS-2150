@@ -202,24 +202,7 @@ body.eqe-body {
     font-size: 12px;
 }
 
-.device-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--gray-500);
-}
-
-.device-dot.connected {
-    background: var(--success);
-}
-
-.device-dot.disconnected {
-    background: var(--error);
-}
-
-.device-dot.warning {
-    background: var(--warning);
-}
+/* Device dot styles moved to components.css */
 
 .device-name {
     color: var(--text-secondary);

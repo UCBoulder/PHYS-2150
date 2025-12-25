@@ -176,52 +176,7 @@ html, body {
     box-shadow: none !important;
 }
 
-/* Move Plotly modebar to bottom as full-width banner */
-.plot-container .modebar-container {
-    top: auto !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    width: 100% !important;
-    background: var(--bg-tertiary) !important;
-    padding: 4px 0 !important;
-    display: flex !important;
-    justify-content: center !important;
-    border-top: 1px solid var(--gray-400);
-}
-
-.plot-container .modebar {
-    position: relative !important;
-    top: auto !important;
-    right: auto !important;
-    float: none !important;
-    background: transparent !important;
-}
-
-.plot-container .modebar-group {
-    background: transparent !important;
-}
-
-/* Modebar icon colors for light/dark mode */
-.dark-mode .plot-container .modebar-btn path {
-    fill: rgba(255, 255, 255, 0.7) !important;
-}
-
-.dark-mode .plot-container .modebar-btn:hover path {
-    fill: rgba(255, 255, 255, 1) !important;
-}
-
-body:not(.dark-mode) .plot-container .modebar-btn path {
-    fill: rgba(0, 0, 0, 0.5) !important;
-}
-
-body:not(.dark-mode) .plot-container .modebar-btn:hover path {
-    fill: rgba(0, 0, 0, 0.8) !important;
-}
-
-body:not(.dark-mode) .plot-container .modebar-container {
-    background: var(--gray-200) !important;
-}
+/* Modebar styles moved to components.css */
 
 
 /* ============================================

@@ -244,6 +244,26 @@ input[type="number"] {
     background: var(--warning);
 }
 
+/* Device status dots (used in JV and EQE apps) */
+.device-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--gray-500);
+}
+
+.device-dot.connected {
+    background: var(--success);
+}
+
+.device-dot.disconnected {
+    background: var(--error);
+}
+
+.device-dot.warning {
+    background: var(--warning);
+}
+
 
 /* ============================================
    Modal / Dialog
@@ -594,4 +614,64 @@ input[type="number"] {
 
 .text-muted {
     color: var(--text-muted);
+}
+
+
+/* ============================================
+   Plotly Modebar Positioning (Bottom Banner)
+   ============================================ */
+
+/* Move Plotly modebar to bottom as full-width banner */
+.plot-panel .modebar-container,
+.plot-container .modebar-container {
+    top: auto !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    background: var(--bg-tertiary) !important;
+    padding: 4px 0 !important;
+    display: flex !important;
+    justify-content: center !important;
+    border-top: 1px solid var(--gray-400);
+}
+
+.plot-panel .modebar,
+.plot-container .modebar {
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+    float: none !important;
+    background: transparent !important;
+}
+
+.plot-panel .modebar-group,
+.plot-container .modebar-group {
+    background: transparent !important;
+}
+
+/* Modebar icon colors for light/dark mode */
+.dark-mode .plot-panel .modebar-btn path,
+.dark-mode .plot-container .modebar-btn path {
+    fill: rgba(255, 255, 255, 0.7) !important;
+}
+
+.dark-mode .plot-panel .modebar-btn:hover path,
+.dark-mode .plot-container .modebar-btn:hover path {
+    fill: rgba(255, 255, 255, 1) !important;
+}
+
+body:not(.dark-mode) .plot-panel .modebar-btn path,
+body:not(.dark-mode) .plot-container .modebar-btn path {
+    fill: rgba(0, 0, 0, 0.5) !important;
+}
+
+body:not(.dark-mode) .plot-panel .modebar-btn:hover path,
+body:not(.dark-mode) .plot-container .modebar-btn:hover path {
+    fill: rgba(0, 0, 0, 0.8) !important;
+}
+
+body:not(.dark-mode) .plot-panel .modebar-container,
+body:not(.dark-mode) .plot-container .modebar-container {
+    background: var(--gray-200) !important;
 }
