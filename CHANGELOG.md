@@ -7,12 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.1.0] - 2025-12-25
+
 ### Added
 - Visual feedback when launching apps from launcher
 - Remote config support for semester-specific defaults
 - Config bridge to centralize UI defaults in Python config files
 - Amplitude check to chopper reference signal validation
 - Hidden offline mode toggle in launcher (Ctrl+Shift+D) with visual indicator
+- PyInstaller build support with Windows installer (Inno Setup)
 
 ### Changed
 - Stability test current measurement now matches regular measurement method
@@ -21,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - J-V pixel input now correctly allows 1-8 instead of 1-9
 - Monochromator WaitForIdle infinite loop causing power test hang
+- PyInstaller frozen mode now correctly launches EQE/J-V apps via --app argument
+- Application icon converted to proper ICO format (was PNG renamed to .ico)
 
 ## [3.0.0] - 2025-12-24
 
@@ -176,6 +181,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Key Changes |
 |---------|------|-------------|
+| 3.1.0 | 2025-12-25 | PyInstaller/Inno Setup build, hidden offline mode toggle |
 | 3.0.0 | 2025-12-24 | Web UI with Plotly.js, Qt WebEngine architecture |
 | 2.3.0 | 2025-12-23 | Tiered logging, measurement stats export, nanoamps format |
 | 2.2.0 | 2025-12-22 | Manual monochromator controls, Live Signal Monitor |
@@ -184,7 +190,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 | 1.0.0 | 2025-04-22 | Filter wheel automation, improved workflows |
 | 0.1.0 | 2024-09-06 | Initial development release with SR510 lock-in |
 
-[Unreleased]: https://github.com/UCBoulder/PHYS-2150/compare/v3.0.0...HEAD
+[Unreleased]: https://github.com/UCBoulder/PHYS-2150/compare/v3.1.0...HEAD
+[3.1.0]: https://github.com/UCBoulder/PHYS-2150/compare/v3.0.0...v3.1.0
 [3.0.0]: https://github.com/UCBoulder/PHYS-2150/compare/v2.3.0...v3.0.0
 [2.3.0]: https://github.com/UCBoulder/PHYS-2150/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/UCBoulder/PHYS-2150/compare/v2.1.0...v2.2.0

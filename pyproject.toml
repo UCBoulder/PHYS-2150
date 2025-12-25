@@ -1,6 +1,6 @@
 [project]
 name = "phys2150"
-version = "3.0.0"
+version = "3.1.0"
 description = "PHYS 2150 Measurement Suite - EQE and J-V characterization for solar cells"
 readme = "README.md"
 requires-python = ">=3.10"
