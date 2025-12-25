@@ -9,7 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 - **Web-based user interface** using HTML/CSS/JavaScript with Plotly.js for interactive plots
 - Qt WebEngine + QWebChannel architecture replaces Qt widgets for Python-JavaScript communication
-- In-app debug console panel (Ctrl+Shift+C) for viewing application logs without external terminal
+- In-app debug console panel (Ctrl+Shift+T) for viewing application logs without external terminal
 - Chopper frequency validation detects when chopper is off and aborts gracefully with student-friendly error message
 - Web-based unified launcher with streamlined application selection
 
