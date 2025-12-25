@@ -29,22 +29,27 @@ a = Analysis(
     pathex=[str(PROJECT_ROOT)],
     binaries=[],
     datas=[
-        # Include any data files needed
-        # (str(PROJECT_ROOT / 'data'), 'data'),
+        # Web UI files (HTML, CSS, JavaScript)
+        (str(PROJECT_ROOT / 'ui'), 'ui'),
+        # Application icon
+        (str(PROJECT_ROOT / 'assets'), 'assets'),
     ],
     hiddenimports=[
-        # PySide6 modules
+        # PySide6 core modules
         'PySide6.QtCore',
         'PySide6.QtGui',
         'PySide6.QtWidgets',
+
+        # PySide6 WebEngine modules (for web UI)
+        'PySide6.QtWebEngineWidgets',
+        'PySide6.QtWebEngineCore',
+        'PySide6.QtWebChannel',
 
         # Scientific computing
         'numpy',
         'scipy',
         'scipy.signal',
         'pandas',
-        'matplotlib',
-        'matplotlib.backends.backend_qtagg',
 
         # Instrument communication
         'pyvisa',
@@ -53,25 +58,28 @@ a = Analysis(
         # PicoScope SDK
         'picosdk',
         'picosdk.ps5000a',
+        'picosdk.ps2000',
         'picosdk.ps2000a',
         'picosdk.functions',
 
-        # Application modules
+        # Application modules - EQE
         'eqe',
-        'eqe.main',
+        'eqe.web_main',
         'eqe.models',
-        'eqe.views',
         'eqe.controllers',
         'eqe.drivers',
         'eqe.config',
         'eqe.utils',
+
+        # Application modules - JV
         'jv',
-        'jv.main',
+        'jv.web_main',
         'jv.models',
-        'jv.views',
         'jv.controllers',
         'jv.config',
         'jv.utils',
+
+        # Common modules
         'common',
         'common.drivers',
         'common.ui',
@@ -86,6 +94,7 @@ a = Analysis(
         'PyQt5',
         'PyQt6',
         'wx',
+        'matplotlib',  # Replaced by Plotly.js in web UI
         'test',
         'unittest',
     ],

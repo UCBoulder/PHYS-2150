@@ -16,7 +16,7 @@
 ; - Thorlabs OPM driver (for power meter)
 
 #define MyAppName "PHYS 2150 Measurement Suite"
-#define MyAppVersion "2.0.0"
+#define MyAppVersion "3.0.0"
 #define MyAppPublisher "CU Boulder Physics Lab"
 #define MyAppURL "https://github.com/UCBoulder/PHYS-2150"
 #define MyAppExeName "PHYS2150.exe"
