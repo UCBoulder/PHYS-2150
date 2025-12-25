@@ -67,10 +67,46 @@ function getPlotLayout(isDark) {
 // Initialization
 // ============================================
 
+/**
+ * Populate form fields with defaults from config.
+ * Called after config is loaded.
+ */
+function populateFormDefaults() {
+    const defaults = LabConfig.get('defaults', {});
+    const validation = LabConfig.get('validation', {});
+
+    // Voltage parameters
+    if (defaults.start_voltage !== undefined) {
+        document.getElementById('start-voltage').value = defaults.start_voltage;
+    }
+    if (defaults.stop_voltage !== undefined) {
+        document.getElementById('stop-voltage').value = defaults.stop_voltage;
+    }
+    if (defaults.step_voltage !== undefined) {
+        document.getElementById('step-voltage').value = defaults.step_voltage;
+    }
+
+    // Pixel modal defaults
+    const pixelInput = document.getElementById('pixel-input');
+    const pixelLabel = document.querySelector('label[for="pixel-input"]');
+    if (pixelInput && validation.pixel_range) {
+        pixelInput.min = validation.pixel_range[0];
+        pixelInput.max = validation.pixel_range[1];
+        pixelInput.value = validation.pixel_range[0];
+        if (pixelLabel) {
+            pixelLabel.textContent = `Pixel Number (${validation.pixel_range[0]}-${validation.pixel_range[1]})`;
+        }
+    }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     LabTheme.init();
     LabModals.init();
     await LabAPI.init();
+    await LabConfig.load();
+
+    // Populate form defaults from config
+    populateFormDefaults();
 
     // Small delay to ensure Plotly is ready
     setTimeout(() => {

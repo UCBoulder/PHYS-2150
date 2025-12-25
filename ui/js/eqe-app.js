@@ -131,9 +131,73 @@ function escapeHtml(text) {
 // Initialization
 // ============================================
 
+/**
+ * Populate form fields with defaults from config.
+ * Called after config is loaded.
+ */
+function populateFormDefaults() {
+    const defaults = LabConfig.get('defaults', {});
+    const stability = LabConfig.get('stability', {});
+    const validation = LabConfig.get('validation', {});
+
+    // Wavelength measurement parameters
+    if (defaults.start_wavelength !== undefined) {
+        document.getElementById('start-wavelength').value = defaults.start_wavelength;
+    }
+    if (defaults.end_wavelength !== undefined) {
+        document.getElementById('end-wavelength').value = defaults.end_wavelength;
+    }
+    if (defaults.step_size !== undefined) {
+        document.getElementById('step-size').value = defaults.step_size;
+    }
+
+    // Stability test parameters
+    const stabWl = document.getElementById('stability-wavelength');
+    const stabDur = document.getElementById('stability-duration');
+    const stabInt = document.getElementById('stability-interval');
+
+    if (stabWl && stability.default_wavelength !== undefined) {
+        stabWl.value = stability.default_wavelength;
+    }
+    if (stabDur) {
+        if (stability.default_duration_min !== undefined) {
+            stabDur.value = stability.default_duration_min;
+        }
+        if (stability.duration_range) {
+            stabDur.min = stability.duration_range[0];
+            stabDur.max = stability.duration_range[1];
+        }
+    }
+    if (stabInt) {
+        if (stability.default_interval_sec !== undefined) {
+            stabInt.value = stability.default_interval_sec;
+        }
+        if (stability.interval_range) {
+            stabInt.min = stability.interval_range[0];
+            stabInt.max = stability.interval_range[1];
+        }
+    }
+
+    // Pixel modal defaults
+    const pixelInput = document.getElementById('pixel-input');
+    const pixelLabel = document.querySelector('label[for="pixel-input"]');
+    if (pixelInput && validation.pixel_range) {
+        pixelInput.min = validation.pixel_range[0];
+        pixelInput.max = validation.pixel_range[1];
+        pixelInput.value = validation.pixel_range[0];
+        if (pixelLabel) {
+            pixelLabel.textContent = `Pixel Number (${validation.pixel_range[0]}-${validation.pixel_range[1]})`;
+        }
+    }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     LabTheme.init();
     await LabAPI.init();
+    await LabConfig.load();
+
+    // Populate form defaults from config
+    populateFormDefaults();
 
     setTimeout(() => {
         initPlots();
@@ -363,8 +427,10 @@ function updateMonochromatorDisplay() {
 
 function goToWavelength() {
     const wavelength = parseFloat(document.getElementById('wavelength-input').value);
-    if (isNaN(wavelength) || wavelength < 200 || wavelength > 1200) {
-        LabModals.showError('Invalid Wavelength', 'Enter wavelength between 200-1200 nm');
+    // Get wavelength range from config, fallback to [200, 1200]
+    const wlRange = LabConfig.get('devices.monochromator.wavelength_range', [200, 1200]);
+    if (isNaN(wavelength) || wavelength < wlRange[0] || wavelength > wlRange[1]) {
+        LabModals.showError('Invalid Wavelength', `Enter wavelength between ${wlRange[0]}-${wlRange[1]} nm`);
         return;
     }
     if (state.offlineMode) {
@@ -1005,8 +1071,10 @@ function startStabilityTest() {
     state.stability.testType = testType;
 
     const wavelength = parseFloat(document.getElementById('stability-wavelength').value);
-    if (isNaN(wavelength) || wavelength < 200 || wavelength > 1200) {
-        LabModals.showError('Invalid Wavelength', 'Enter wavelength between 200-1200 nm');
+    // Get wavelength range from config, fallback to [200, 1200]
+    const wlRange = LabConfig.get('devices.monochromator.wavelength_range', [200, 1200]);
+    if (isNaN(wavelength) || wavelength < wlRange[0] || wavelength > wlRange[1]) {
+        LabModals.showError('Invalid Wavelength', `Enter wavelength between ${wlRange[0]}-${wlRange[1]} nm`);
         return;
     }
 

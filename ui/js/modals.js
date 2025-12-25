@@ -148,8 +148,13 @@ function confirmPixel() {
     const input = document.getElementById('pixel-input');
     const pixel = parseInt(input.value);
 
-    if (isNaN(pixel) || pixel < 1 || pixel > 9) {
-        alert('Pixel must be between 1 and 9');
+    // Get pixel range from config, fallback to [1, 8]
+    const pixelRange = LabConfig.get('validation.pixel_range', [1, 8]);
+    const minPixel = pixelRange[0];
+    const maxPixel = pixelRange[1];
+
+    if (isNaN(pixel) || pixel < minPixel || pixel > maxPixel) {
+        alert(`Pixel must be between ${minPixel} and ${maxPixel}`);
         input.focus();
         return;
     }
@@ -308,14 +313,16 @@ function getCellModalHTML() {
 /**
  * Get the HTML for a pixel selection modal.
  * @param {Object} options - Configuration options
- * @param {number} options.min - Minimum pixel number (default: 1)
- * @param {number} options.max - Maximum pixel number (default: 9)
+ * @param {number} options.min - Minimum pixel number (default from config)
+ * @param {number} options.max - Maximum pixel number (default from config)
  * @param {boolean} options.showCancel - Show cancel button (default: true)
  * @returns {string} Modal HTML
  */
 function getPixelModalHTML(options = {}) {
-    const min = options.min || 1;
-    const max = options.max || 9;
+    // Get pixel range from config, fallback to [1, 8]
+    const pixelRange = LabConfig.get('validation.pixel_range', [1, 8]);
+    const min = options.min || pixelRange[0];
+    const max = options.max || pixelRange[1];
     const showCancel = options.showCancel !== false;
 
     return `

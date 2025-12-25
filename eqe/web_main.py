@@ -18,7 +18,10 @@ from PySide6.QtWebChannel import QWebChannel
 
 from .models.eqe_experiment import EQEExperimentModel, EQEExperimentError
 from .models.stability_test import StabilityTestModel
-from .config.settings import GUI_CONFIG, DEFAULT_MEASUREMENT_PARAMS
+from .config.settings import (
+    GUI_CONFIG, DEFAULT_MEASUREMENT_PARAMS, VALIDATION_PATTERNS,
+    DEVICE_CONFIGS, STABILITY_TEST_CONFIG, PHASE_ADJUSTMENT_CONFIG, DeviceType
+)
 from .config import settings
 from common.utils import get_logger, TieredLogger, WebConsoleHandler
 from common.ui import BaseWebWindow, BaseWebApi
@@ -110,6 +113,28 @@ class EQEApi(BaseWebApi):
             state = self._experiment.get_monochromator_state()
             return json.dumps(state)
         return json.dumps({"wavelength": 0.0, "shutter_open": False, "filter": 0})
+
+    @Slot(result=str)
+    def get_ui_config(self) -> str:
+        """
+        Get UI configuration values from Python settings.
+
+        Returns config needed by JavaScript for form defaults and validation.
+        """
+        # Convert DeviceType enum keys to strings for JSON serialization
+        devices_config = {
+            "monochromator": DEVICE_CONFIGS[DeviceType.MONOCHROMATOR],
+            "picoscope": DEVICE_CONFIGS[DeviceType.PICOSCOPE_LOCKIN],
+            "power_meter": DEVICE_CONFIGS[DeviceType.THORLABS_POWER_METER],
+        }
+
+        return json.dumps({
+            "defaults": DEFAULT_MEASUREMENT_PARAMS,
+            "validation": VALIDATION_PATTERNS,
+            "devices": devices_config,
+            "stability": STABILITY_TEST_CONFIG,
+            "phase": PHASE_ADJUSTMENT_CONFIG,
+        })
 
     # ==================== Measurements ====================
 

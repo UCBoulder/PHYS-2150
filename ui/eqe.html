@@ -18,6 +18,7 @@
 
     <!-- Shared modules -->
     <script src="js/api.js"></script>
+    <script src="js/config.js"></script>
     <script src="js/theme.js"></script>
     <script src="js/modals.js"></script>
 </head>
@@ -91,15 +92,15 @@
                 <div class="params-grid">
                     <div class="param-field">
                         <label>Start (nm)</label>
-                        <input type="number" id="start-wavelength" value="350" step="10">
+                        <input type="number" id="start-wavelength" step="10">
                     </div>
                     <div class="param-field">
                         <label>End (nm)</label>
-                        <input type="number" id="end-wavelength" value="750" step="10">
+                        <input type="number" id="end-wavelength" step="10">
                     </div>
                     <div class="param-field">
                         <label>Step (nm)</label>
-                        <input type="number" id="step-size" value="10" step="1">
+                        <input type="number" id="step-size" step="1">
                     </div>
                     <div class="param-field">
                         <label>Cell Number</label>
@@ -200,15 +201,15 @@
                 <div class="params-grid" style="grid-template-columns: repeat(3, 1fr);">
                     <div class="param-field">
                         <label>Wavelength (nm)</label>
-                        <input type="number" id="stability-wavelength" value="550" step="10">
+                        <input type="number" id="stability-wavelength" step="10">
                     </div>
                     <div class="param-field">
                         <label>Duration (min)</label>
-                        <input type="number" id="stability-duration" value="5" min="1" max="60">
+                        <input type="number" id="stability-duration">
                     </div>
                     <div class="param-field">
                         <label>Interval (sec)</label>
-                        <input type="number" id="stability-interval" value="2" min="1" max="60">
+                        <input type="number" id="stability-interval">
                     </div>
                 </div>
             </div>
@@ -377,8 +378,8 @@
             <div class="modal-title">Select Pixel</div>
             <div class="modal-body">
                 <div class="input-group mb-0">
-                    <label for="pixel-input">Pixel Number (1-8)</label>
-                    <input type="number" id="pixel-input" min="1" max="8" value="1">
+                    <label for="pixel-input">Pixel Number</label>
+                    <input type="number" id="pixel-input">
                 </div>
             </div>
             <div class="modal-footer">

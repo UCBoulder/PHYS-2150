@@ -61,6 +61,12 @@ PHASE_ADJUSTMENT_CONFIG = {
 STABILITY_TEST_CONFIG = {
     "initial_stabilization_time": 2.0,  # seconds - initial wait before starting measurements
     "outlier_rejection_std": 2.0,       # Number of standard deviations for outlier rejection
+    # UI defaults for stability test modal
+    "default_wavelength": 550,          # nm - default wavelength for stability test
+    "default_duration_min": 5,          # minutes - default test duration
+    "duration_range": (1, 60),          # minutes - valid range (min, max)
+    "default_interval_sec": 2,          # seconds - default measurement interval
+    "interval_range": (1, 60),          # seconds - valid range (min, max)
 }
 
 # Device-specific configurations
@@ -74,6 +80,7 @@ DEVICE_CONFIGS = {
         "interface": "usb",         # Communication interface (USB via VISA)
         "timeout_msec": 29000,      # ms - command timeout (long for grating changes)
         "grating_wavelength_threshold": 685,  # nm - use grating 1 below, grating 2 above
+        "wavelength_range": (200, 1200),      # nm - device operational range (min, max)
     },
     # PicoScope 5000 series oscilloscope configured as software lock-in amplifier
     DeviceType.PICOSCOPE_LOCKIN: {

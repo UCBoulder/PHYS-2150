@@ -19,7 +19,10 @@ from PySide6.QtWebChannel import QWebChannel
 from .models.jv_experiment import JVExperimentModel, JVExperimentError
 from .models.jv_measurement import JVMeasurementResult
 from .utils.data_export import JVDataExporter
-from .config.settings import GUI_CONFIG, VALIDATION_PATTERNS, DEFAULT_MEASUREMENT_PARAMS
+from .config.settings import (
+    GUI_CONFIG, VALIDATION_PATTERNS, DEFAULT_MEASUREMENT_PARAMS,
+    JV_MEASUREMENT_CONFIG
+)
 from common.utils import get_logger, TieredLogger, WebConsoleHandler
 from common.ui import BaseWebWindow, BaseWebApi
 
@@ -76,6 +79,19 @@ class JVApi(BaseWebApi):
             "connected": False,
             "message": "No experiment model",
             "offline_mode": False
+        })
+
+    @Slot(result=str)
+    def get_ui_config(self) -> str:
+        """
+        Get UI configuration values from Python settings.
+
+        Returns config needed by JavaScript for form defaults and validation.
+        """
+        return json.dumps({
+            "defaults": DEFAULT_MEASUREMENT_PARAMS,
+            "validation": VALIDATION_PATTERNS,
+            "measurement": JV_MEASUREMENT_CONFIG,
         })
 
     @Slot(str, result=str)
