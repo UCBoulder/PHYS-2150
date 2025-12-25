@@ -9,6 +9,7 @@ but with a web-based frontend for full HTML/CSS/JS flexibility.
 import os
 import sys
 import json
+import logging
 from typing import Optional
 
 from PySide6.QtCore import Qt, QObject, Slot, QUrl, QThread, Signal
@@ -24,6 +25,37 @@ from .config.settings import GUI_CONFIG, VALIDATION_PATTERNS, DEFAULT_MEASUREMEN
 from common.utils import get_logger, TieredLogger
 
 _logger = get_logger("jv")
+
+
+class WebConsoleHandler(logging.Handler):
+    """
+    Custom logging handler that forwards log messages to the web UI console.
+
+    Uses Qt signals to safely forward messages from background threads
+    to the main thread for JavaScript execution.
+    """
+
+    def __init__(self, window: 'JVWebWindow'):
+        super().__init__()
+        self._window = window
+        # Map Python log levels to console levels
+        self._level_map = {
+            logging.DEBUG: 'debug',
+            logging.INFO: 'info',
+            logging.WARNING: 'warn',
+            logging.ERROR: 'error',
+            logging.CRITICAL: 'error',
+        }
+
+    def emit(self, record: logging.LogRecord) -> None:
+        """Forward log record to web console."""
+        try:
+            level = self._level_map.get(record.levelno, 'info')
+            message = self.format(record)
+            # Use signal to marshal to main thread
+            self._window._log_signal.emit(level, message)
+        except Exception:
+            self.handleError(record)
 
 
 class JVApi(QObject):
@@ -96,6 +128,9 @@ class JVApi(QObject):
         try:
             params = json.loads(params_json)
 
+            # Log to console
+            self._window.send_log('info', f"Starting I-V measurement: {params['start_voltage']}V to {params['stop_voltage']}V, step {params['step_voltage']}V")
+
             # Set parameters
             self._experiment.set_parameters(
                 start_voltage=params["start_voltage"],
@@ -109,9 +144,11 @@ class JVApi(QObject):
             return json.dumps({"success": True})
 
         except JVExperimentError as e:
+            self._window.send_log('error', f"Measurement failed: {e}")
             return json.dumps({"success": False, "message": str(e)})
         except Exception as e:
             _logger.error(f"Measurement start failed: {e}")
+            self._window.send_log('error', f"Measurement failed: {e}")
             return json.dumps({"success": False, "message": str(e)})
 
     @Slot(result=str)
@@ -252,11 +289,17 @@ class JVApi(QObject):
     def _on_measurement_complete(self, success: bool, result: JVMeasurementResult) -> None:
         """Forward measurement completion to JS."""
         self._current_result = result if success else None
+        if success:
+            self._window.send_log('info', f"Measurement complete: {result.num_points} data points collected")
+        else:
+            self._window.send_log('warn', "Measurement stopped or failed")
         js = f"onMeasurementComplete({str(success).lower()})"
         self._window.run_js(js)
 
     def _on_device_status_changed(self, connected: bool, message: str) -> None:
         """Forward device status change to JS."""
+        level = 'info' if connected else 'warn'
+        self._window.send_log(level, f"Device: {message}")
         js = f"updateDeviceStatus({str(connected).lower()}, '{message}')"
         self._window.run_js(js)
 
@@ -264,8 +307,14 @@ class JVApi(QObject):
 class JVWebWindow(QMainWindow):
     """Main window for J-V measurement with web UI."""
 
+    # Signal for thread-safe log forwarding
+    _log_signal = Signal(str, str)  # level, message
+
     def __init__(self):
         super().__init__()
+
+        # Connect log signal to handler
+        self._log_signal.connect(self._on_log_message)
 
         self.setWindowTitle("I-V Measurement - PHYS 2150")
 
@@ -338,6 +387,28 @@ class JVWebWindow(QMainWindow):
         self._experiment = experiment
         self.api.set_experiment(experiment)
 
+    def set_initial_theme(self, theme: str) -> None:
+        """Set the initial theme via JavaScript after page loads."""
+        # Set localStorage then reload so page initializes with correct theme
+        js = f"""
+            if (localStorage.getItem('theme') !== '{theme}') {{
+                localStorage.setItem('theme', '{theme}');
+                location.reload();
+            }}
+        """
+        self.run_js(js)
+
+    def send_log(self, level: str, message: str) -> None:
+        """Send a log message to the JS console panel."""
+        # Escape quotes in message for JS
+        escaped = message.replace('\\', '\\\\').replace("'", "\\'").replace('\n', '\\n')
+        js = f"onLogMessage('{level}', '{escaped}')"
+        self.run_js(js)
+
+    def _on_log_message(self, level: str, message: str) -> None:
+        """Handle log message signal (runs on main thread)."""
+        self.send_log(level, message)
+
     def closeEvent(self, event) -> None:
         """Handle window close."""
         if self._experiment:
@@ -363,6 +434,22 @@ class JVWebApplication:
         # Connect experiment to window
         self.window.set_experiment(self.experiment)
 
+        # Install log handler to forward all log messages to web console
+        self._install_log_handler()
+
+    def _install_log_handler(self) -> None:
+        """Install custom handler to forward log messages to web UI."""
+        # TieredLogger uses "phys2150.{name}" for the actual Python logger
+        jv_logger = logging.getLogger("phys2150.jv")
+
+        # Create and configure handler
+        handler = WebConsoleHandler(self.window)
+        handler.setFormatter(logging.Formatter('%(message)s'))
+        handler.setLevel(logging.DEBUG)  # Capture all levels
+
+        # Add to logger
+        jv_logger.addHandler(handler)
+
     def run(self) -> int:
         """Run the application."""
         # Initialize experiment (connects to hardware)
@@ -387,6 +474,12 @@ def main():
         action='store_true',
         help='Run in offline mode without hardware (for GUI testing)'
     )
+    parser.add_argument(
+        '--theme',
+        choices=['dark', 'light'],
+        default=None,
+        help='Set initial color theme'
+    )
     args = parser.parse_args()
 
     # Set offline mode in settings
@@ -399,6 +492,11 @@ def main():
 
     try:
         app = JVWebApplication()
+
+        # Apply theme from command line if specified
+        if args.theme:
+            app.window.set_initial_theme(args.theme)
+
         exit_code = app.run()
         sys.exit(exit_code)
 

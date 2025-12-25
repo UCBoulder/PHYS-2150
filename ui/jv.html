@@ -299,6 +299,26 @@
         </div>
     </div>
 
+    <!-- Console Panel -->
+    <div class="console-panel" id="console-panel">
+        <div class="console-header">
+            <div class="console-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="4 17 10 11 4 5"></polyline>
+                    <line x1="12" y1="19" x2="20" y2="19"></line>
+                </svg>
+                Console
+            </div>
+            <div class="console-actions">
+                <button class="console-btn" onclick="clearConsole()">Clear</button>
+                <button class="console-btn" onclick="toggleConsole()">Close</button>
+            </div>
+        </div>
+        <div class="console-output" id="console-output">
+            <div class="console-empty">No log messages yet. Run a measurement to see output.</div>
+        </div>
+    </div>
+
     <script>
         /**
          * I-V Measurement Application
@@ -1269,23 +1289,94 @@
         window.switchTab = switchTab;
 
         // ============================================
+        // Console Panel Functions
+        // ============================================
+
+        let consoleVisible = false;
+        const consoleMessages = [];
+        const MAX_CONSOLE_MESSAGES = 500;
+
+        function toggleConsole() {
+            consoleVisible = !consoleVisible;
+            const panel = document.getElementById('console-panel');
+            panel.classList.toggle('visible', consoleVisible);
+        }
+
+        function clearConsole() {
+            consoleMessages.length = 0;
+            const output = document.getElementById('console-output');
+            output.innerHTML = '<div class="console-empty">Console cleared.</div>';
+        }
+
+        function addConsoleMessage(level, message) {
+            const now = new Date();
+            const time = now.toTimeString().split(' ')[0];
+
+            consoleMessages.push({ time, level, message });
+            if (consoleMessages.length > MAX_CONSOLE_MESSAGES) {
+                consoleMessages.shift();
+            }
+
+            renderConsole();
+        }
+
+        function renderConsole() {
+            const output = document.getElementById('console-output');
+            if (consoleMessages.length === 0) {
+                output.innerHTML = '<div class="console-empty">No log messages yet.</div>';
+                return;
+            }
+
+            output.innerHTML = consoleMessages.map(msg => `
+                <div class="console-line">
+                    <span class="console-time">${msg.time}</span>
+                    <span class="console-level ${msg.level}">${msg.level}</span>
+                    <span class="console-message">${escapeHtml(msg.message)}</span>
+                </div>
+            `).join('');
+
+            // Auto-scroll to bottom
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Called from Python via WebChannel
+        function onLogMessage(level, message) {
+            addConsoleMessage(level, message);
+        }
+
+        window.onLogMessage = onLogMessage;
+
+        // ============================================
         // Keyboard Shortcuts
         // ============================================
 
         document.addEventListener('keydown', (e) => {
+            // Ctrl+Shift+T - Toggle console panel
+            if (e.ctrlKey && e.shiftKey && e.key === 'T') {
+                e.preventDefault();
+                toggleConsole();
+            }
             // Ctrl+Shift+D - Toggle debug mode
-            if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+            else if (e.ctrlKey && e.shiftKey && e.key === 'D') {
                 e.preventDefault();
                 const api = LabAPI.get();
                 if (api && api.toggle_debug_mode) {
                     api.toggle_debug_mode((result) => {
                         const response = JSON.parse(result);
                         if (response.enabled) {
+                            addConsoleMessage('info', 'Debug mode ENABLED - verbose output now visible');
                             LabModals.showInfo(
                                 'Debug Mode Enabled',
                                 'Technical debug output is now visible in the console.\n\nPress Ctrl+Shift+D again to disable.'
                             );
                         } else {
+                            addConsoleMessage('info', 'Debug mode DISABLED');
                             LabModals.showInfo('Debug Mode Disabled', 'Technical debug output is now hidden.');
                         }
                     });

@@ -433,6 +433,132 @@ input[type="number"] {
 
 
 /* ============================================
+   Console Panel (Developer Tools)
+   ============================================ */
+
+.console-panel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 200px;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--gray-400);
+    display: flex;
+    flex-direction: column;
+    z-index: 900;
+    transform: translateY(100%);
+    transition: transform 0.2s ease-out;
+}
+
+.console-panel.visible {
+    transform: translateY(0);
+}
+
+.console-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--gray-400);
+    flex-shrink: 0;
+}
+
+.console-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.console-title svg {
+    width: 14px;
+    height: 14px;
+}
+
+.console-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.console-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    padding: 4px 8px;
+    font-size: 11px;
+    cursor: pointer;
+    border-radius: 3px;
+}
+
+.console-btn:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.console-output {
+    flex: 1;
+    overflow-y: auto;
+    font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+    font-size: 12px;
+    padding: 8px 12px;
+    line-height: 1.5;
+}
+
+.console-line {
+    display: flex;
+    gap: 8px;
+    padding: 2px 0;
+}
+
+.console-time {
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.console-level {
+    flex-shrink: 0;
+    padding: 0 4px;
+    border-radius: 2px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.console-level.info {
+    color: var(--info);
+}
+
+.console-level.warn {
+    color: var(--warning);
+}
+
+.console-level.error {
+    color: var(--error);
+}
+
+.console-level.debug {
+    color: var(--text-muted);
+}
+
+.console-message {
+    color: var(--text-primary);
+    word-break: break-word;
+}
+
+.console-empty {
+    color: var(--text-muted);
+    font-style: italic;
+    padding: 16px;
+    text-align: center;
+}
+
+
+/* ============================================
    Utility Classes
    ============================================ */
 

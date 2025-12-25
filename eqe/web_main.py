@@ -9,6 +9,7 @@ but with a web-based frontend for full HTML/CSS/JS flexibility.
 import os
 import sys
 import json
+import logging
 from typing import Optional, Dict, Any
 
 from PySide6.QtCore import Qt, QObject, Slot, QUrl, QThread, Signal, Slot as QtSlot
@@ -24,6 +25,37 @@ from .config import settings
 from common.utils import get_logger, TieredLogger
 
 _logger = get_logger("eqe")
+
+
+class WebConsoleHandler(logging.Handler):
+    """
+    Custom logging handler that forwards log messages to the web UI console.
+
+    Uses Qt signals to safely forward messages from background threads
+    to the main thread for JavaScript execution.
+    """
+
+    def __init__(self, window: 'EQEWebWindow'):
+        super().__init__()
+        self._window = window
+        # Map Python log levels to console levels
+        self._level_map = {
+            logging.DEBUG: 'debug',
+            logging.INFO: 'info',
+            logging.WARNING: 'warn',
+            logging.ERROR: 'error',
+            logging.CRITICAL: 'error',
+        }
+
+    def emit(self, record: logging.LogRecord) -> None:
+        """Forward log record to web console."""
+        try:
+            level = self._level_map.get(record.levelno, 'info')
+            message = self.format(record)
+            # Use signal to marshal to main thread
+            self._window._log_signal.emit(level, message)
+        except Exception:
+            self.handleError(record)
 
 
 class EQEApi(QObject):
@@ -123,6 +155,9 @@ class EQEApi(QObject):
         try:
             params = json.loads(params_json)
 
+            # Log to console
+            self._window.send_log('info', f"Starting power measurement: {params['start_wavelength']}-{params['end_wavelength']}nm, step {params['step_size']}nm")
+
             # Set parameters
             self._experiment.set_measurement_parameters(
                 start_wavelength=params["start_wavelength"],
@@ -136,9 +171,11 @@ class EQEApi(QObject):
             return json.dumps({"success": True})
 
         except EQEExperimentError as e:
+            self._window.send_log('error', f"Power measurement failed: {e}")
             return json.dumps({"success": False, "message": str(e)})
         except Exception as e:
             _logger.error(f"Power measurement start failed: {e}")
+            self._window.send_log('error', f"Power measurement failed: {e}")
             return json.dumps({"success": False, "message": str(e)})
 
     @Slot(str, result=str)
@@ -149,6 +186,9 @@ class EQEApi(QObject):
 
         try:
             params = json.loads(params_json)
+
+            # Log to console
+            self._window.send_log('info', f"Starting current measurement: {params['start_wavelength']}-{params['end_wavelength']}nm, pixel {params['pixel']}")
 
             # Set parameters
             self._experiment.set_measurement_parameters(
@@ -165,9 +205,11 @@ class EQEApi(QObject):
             return json.dumps({"success": True, "phase": "adjusting"})
 
         except EQEExperimentError as e:
+            self._window.send_log('error', f"Current measurement failed: {e}")
             return json.dumps({"success": False, "message": str(e)})
         except Exception as e:
             _logger.error(f"Current measurement start failed: {e}")
+            self._window.send_log('error', f"Current measurement failed: {e}")
             return json.dumps({"success": False, "message": str(e)})
 
     @Slot(result=str)
@@ -481,6 +523,8 @@ class EQEApi(QObject):
 
     def _on_device_status_changed(self, device_name: str, is_connected: bool, message: str) -> None:
         """Forward device status change to JS."""
+        level = 'info' if is_connected else 'warn'
+        self._window.send_log(level, f"{device_name}: {message}")
         js = f"onDeviceStatusChanged('{device_name}', {str(is_connected).lower()}, '{message}')"
         self._window.run_js(js)
 
@@ -509,6 +553,12 @@ class EQEApi(QObject):
             # Notify stability test completion with failure
             self._stability_complete_signal.emit(False, message)
             return  # Don't also send to measurement complete
+
+        # Log to console
+        if success:
+            self._window.send_log('info', f"Measurement complete: {message}")
+        else:
+            self._window.send_log('warn', f"Measurement stopped: {message}")
 
         # Escape message for JS string (single quotes and newlines)
         escaped_message = message.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n")
@@ -554,8 +604,14 @@ class EQEApi(QObject):
 class EQEWebWindow(QMainWindow):
     """Main window for EQE measurement with web UI."""
 
+    # Signal for thread-safe log forwarding
+    _log_signal = Signal(str, str)  # level, message
+
     def __init__(self):
         super().__init__()
+
+        # Connect log signal to handler
+        self._log_signal.connect(self._on_log_message)
 
         self.setWindowTitle("EQE Measurement - PHYS 2150")
 
@@ -628,6 +684,28 @@ class EQEWebWindow(QMainWindow):
         self._experiment = experiment
         self.api.set_experiment(experiment)
 
+    def set_initial_theme(self, theme: str) -> None:
+        """Set the initial theme via JavaScript after page loads."""
+        # Set localStorage then reload so page initializes with correct theme
+        js = f"""
+            if (localStorage.getItem('theme') !== '{theme}') {{
+                localStorage.setItem('theme', '{theme}');
+                location.reload();
+            }}
+        """
+        self.run_js(js)
+
+    def send_log(self, level: str, message: str) -> None:
+        """Send a log message to the JS console panel."""
+        # Escape quotes in message for JS
+        escaped = message.replace('\\', '\\\\').replace("'", "\\'").replace('\n', '\\n')
+        js = f"onLogMessage('{level}', '{escaped}')"
+        self.run_js(js)
+
+    def _on_log_message(self, level: str, message: str) -> None:
+        """Handle log message signal (runs on main thread)."""
+        self.send_log(level, message)
+
     def closeEvent(self, event) -> None:
         """Handle window close."""
         # Stop stability test if running
@@ -657,9 +735,25 @@ class EQEWebApplication:
         # Connect experiment to window
         self.window.set_experiment(self.experiment)
 
+        # Install log handler to forward all log messages to web console
+        self._install_log_handler()
+
         # Connect logger stats callback to forward measurement stats to web UI
         eqe_logger = get_logger("eqe")
         eqe_logger.set_stats_callback(self._on_measurement_stats)
+
+    def _install_log_handler(self) -> None:
+        """Install custom handler to forward log messages to web UI."""
+        # TieredLogger uses "phys2150.{name}" for the actual Python logger
+        eqe_logger = logging.getLogger("phys2150.eqe")
+
+        # Create and configure handler
+        handler = WebConsoleHandler(self.window)
+        handler.setFormatter(logging.Formatter('%(message)s'))
+        handler.setLevel(logging.DEBUG)  # Capture all levels
+
+        # Add to logger
+        eqe_logger.addHandler(handler)
 
     def _on_measurement_stats(self, stats) -> None:
         """Forward measurement statistics to web UI."""
@@ -713,6 +807,12 @@ def main():
         action='store_true',
         help='Run in offline mode without hardware (for GUI testing)'
     )
+    parser.add_argument(
+        '--theme',
+        choices=['dark', 'light'],
+        default=None,
+        help='Set initial color theme'
+    )
     args = parser.parse_args()
 
     # Set offline mode in settings
@@ -724,6 +824,11 @@ def main():
 
     try:
         app = EQEWebApplication()
+
+        # Apply theme from command line if specified
+        if args.theme:
+            app.window.set_initial_theme(args.theme)
+
         exit_code = app.run()
         sys.exit(exit_code)
 

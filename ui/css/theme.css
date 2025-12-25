@@ -281,3 +281,60 @@ h1 {
 .dark-mode #moon-icon {
     display: none;
 }
+
+
+/* ============================================
+   Offline Mode Toggle (Launcher)
+   ============================================ */
+
+/* Launcher buttons */
+.btn-launcher {
+    min-width: 180px;
+    padding: 16px 32px;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.offline-toggle {
+    display: flex;
+    justify-content: center;
+    margin-top: 8px;
+    margin-bottom: 20px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--ucb-gold);
+    cursor: pointer;
+}
+
+.checkbox-label:hover {
+    color: var(--text-primary);
+}
+
+.offline-hint {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.version {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.shortcuts-hint {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-align: center;
+    margin-top: 8px;
+}

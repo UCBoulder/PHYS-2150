@@ -681,6 +681,11 @@ class PicoScopeDriver:
                 'reference_data': np.array - Raw reference waveform
             }
         """
+        # Validate reference frequency
+        if reference_freq <= 0:
+            _logger.error(f"Invalid reference frequency: {reference_freq}")
+            return None
+
         # Calculate acquisition parameters based on device type
         if self.device_type == '2000':
             # PicoScope 2204A parameters
@@ -820,8 +825,10 @@ class PicoScopeDriver:
         for i in range(1, len(ref_centered)):
             if ref_centered[i-1] < 0 and ref_centered[i] >= 0:
                 # Linear interpolation for sub-sample accuracy
-                t_cross = (i-1) + (-ref_centered[i-1]) / (ref_centered[i] - ref_centered[i-1])
-                crossings.append(t_cross)
+                denominator = ref_centered[i] - ref_centered[i-1]
+                if abs(denominator) > 1e-10:  # Avoid division by zero
+                    t_cross = (i-1) + (-ref_centered[i-1]) / denominator
+                    crossings.append(t_cross)
 
         # Need at least 2 crossings for frequency measurement
         if len(crossings) >= 2:
@@ -857,7 +864,11 @@ class PicoScopeDriver:
 
             return freqs[peak_bin]
         else:
-            return freqs[np.argmax(fft_ref[1:]) + 1]  # Skip DC
+            # Fallback: find peak outside DC, with bounds check
+            if len(fft_ref) > 1:
+                return freqs[np.argmax(fft_ref[1:]) + 1]  # Skip DC
+            else:
+                return expected_freq  # Use expected if FFT too short
     
     def _acquire_block(self, num_samples, decimation):
         """
@@ -971,35 +982,47 @@ class PicoScopeDriver:
         )
         self.assert_pico_ok(self.status["runBlock"])
         
-        # Wait for acquisition to complete
+        # Wait for acquisition to complete (with timeout)
+        import time
         ready = ctypes.c_int16(0)
         check = ctypes.c_int16(0)
+        timeout_start = time.time()
+        timeout_seconds = 5.0  # 5 second timeout
         while ready.value == check.value:
+            if time.time() - timeout_start > timeout_seconds:
+                _logger.error("PicoScope acquisition timeout")
+                ps.ps5000aStop(self.chandle)  # Stop on timeout
+                return None, None
             self.status["isReady"] = ps.ps5000aIsReady(self.chandle, ctypes.byref(ready))
-        
+            time.sleep(0.001)  # Small delay to prevent busy-waiting
+
         # Get data
         overflow = ctypes.c_int16()
         cmaxSamples = ctypes.c_int32(num_samples)
         self.status["getValues"] = ps.ps5000aGetValues(
-            self.chandle, 
+            self.chandle,
             0,  # start index
-            ctypes.byref(cmaxSamples), 
+            ctypes.byref(cmaxSamples),
             0,  # downsample ratio
             0,  # downsample ratio mode
             0,  # segment index
             ctypes.byref(overflow)
         )
         self.assert_pico_ok(self.status["getValues"])
-        
+
+        # CRITICAL: Stop the scope after getting values to prevent SDK state issues
+        self.status["stop"] = ps.ps5000aStop(self.chandle)
+        self.assert_pico_ok(self.status["stop"])
+
         # Convert ADC counts to volts
         from picosdk.functions import adc2mV
         signal_mV = adc2mV(bufferAMax, self.chA_range, self.maxADC)
         reference_mV = adc2mV(bufferBMax, self.chB_range, self.maxADC)
-        
+
         # Convert to volts
         signal_data = np.array(signal_mV) / 1000.0
         reference_data = np.array(reference_mV) / 1000.0
-        
+
         return signal_data, reference_data
     
     def _acquire_block_2000(self, num_samples, decimation):
@@ -1017,90 +1040,111 @@ class PicoScopeDriver:
             num_samples: Number of samples to acquire
             decimation: Decimation factor (used to calculate timebase)
         """
-        ps = self.ps
-        from picosdk.functions import adc2mV
+        try:
+            ps = self.ps
+            from picosdk.functions import adc2mV
 
-        # Timebase 12 gives good sample rate for lock-in at 81 Hz
-        # (approx 40960ns per sample = 24.4 kHz sample rate)
-        # With 2000 samples, this gives ~6.6 cycles at 81 Hz
-        timebase = 12
+            # Timebase 12 gives good sample rate for lock-in at 81 Hz
+            # (approx 40960ns per sample = 24.4 kHz sample rate)
+            # With 2000 samples, this gives ~6.6 cycles at 81 Hz
+            timebase = 12
 
-        # Cap samples to 2000 for dual-channel mode on 2204A
-        # The device has ~4K samples with both channels but we stay conservative
-        num_samples = min(num_samples, 2000)
+            # Cap samples to 2000 for dual-channel mode on 2204A
+            # The device has ~4K samples with both channels but we stay conservative
+            num_samples = min(num_samples, 2000)
 
-        # Get timebase info
-        timeInterval = ctypes.c_int32()
-        timeUnits = ctypes.c_int32()
-        oversample = ctypes.c_int16(1)
-        maxSamplesReturn = ctypes.c_int32()
+            # Get timebase info
+            timeInterval = ctypes.c_int32()
+            timeUnits = ctypes.c_int32()
+            oversample = ctypes.c_int16(1)
+            maxSamplesReturn = ctypes.c_int32()
 
-        self.status["getTimebase"] = ps.ps2000_get_timebase(
-            self.chandle,
-            timebase,
-            num_samples,
-            ctypes.byref(timeInterval),
-            ctypes.byref(timeUnits),
-            oversample,
-            ctypes.byref(maxSamplesReturn)
-        )
-        self.assert_pico_ok(self.status["getTimebase"])
+            self.status["getTimebase"] = ps.ps2000_get_timebase(
+                self.chandle,
+                timebase,
+                num_samples,
+                ctypes.byref(timeInterval),
+                ctypes.byref(timeUnits),
+                oversample,
+                ctypes.byref(maxSamplesReturn)
+            )
+            self.assert_pico_ok(self.status["getTimebase"])
 
-        # Set up trigger with auto-trigger
-        # ps2000_set_trigger(handle, source, threshold, direction, delay, auto_trigger_ms)
-        self.status["trigger"] = ps.ps2000_set_trigger(
-            self.chandle,
-            0,     # trigger on Channel A (signal)
-            64,    # threshold in ADC counts
-            0,     # direction: rising
-            0,     # delay
-            1000   # auto-trigger after 1000ms
-        )
-        self.assert_pico_ok(self.status["trigger"])
+            # Set up trigger with auto-trigger
+            # ps2000_set_trigger(handle, source, threshold, direction, delay, auto_trigger_ms)
+            self.status["trigger"] = ps.ps2000_set_trigger(
+                self.chandle,
+                0,     # trigger on Channel A (signal)
+                64,    # threshold in ADC counts
+                0,     # direction: rising
+                0,     # delay
+                1000   # auto-trigger after 1000ms
+            )
+            self.assert_pico_ok(self.status["trigger"])
 
-        # Run block capture
-        timeIndisposedms = ctypes.c_int32()
-        self.status["runBlock"] = ps.ps2000_run_block(
-            self.chandle,
-            num_samples,
-            timebase,
-            oversample,
-            ctypes.byref(timeIndisposedms)
-        )
-        self.assert_pico_ok(self.status["runBlock"])
+            # Run block capture
+            timeIndisposedms = ctypes.c_int32()
+            self.status["runBlock"] = ps.ps2000_run_block(
+                self.chandle,
+                num_samples,
+                timebase,
+                oversample,
+                ctypes.byref(timeIndisposedms)
+            )
+            self.assert_pico_ok(self.status["runBlock"])
 
-        # Wait for data collection to finish
-        ready = ctypes.c_int16(0)
-        check = ctypes.c_int16(0)
-        while ready.value == check.value:
-            self.status["isReady"] = ps.ps2000_ready(self.chandle)
-            ready = ctypes.c_int16(self.status["isReady"])
+            # Wait for data collection to finish (with timeout)
+            ready = ctypes.c_int16(0)
+            check = ctypes.c_int16(0)
+            timeout_start = time.time()
+            timeout_seconds = 5.0  # 5 second timeout
+            while ready.value == check.value:
+                if time.time() - timeout_start > timeout_seconds:
+                    _logger.error("PicoScope acquisition timeout")
+                    ps.ps2000_stop(self.chandle)  # Stop on timeout
+                    return None, None
+                self.status["isReady"] = ps.ps2000_ready(self.chandle)
+                ready = ctypes.c_int16(self.status["isReady"])
+                time.sleep(0.001)  # Small delay to prevent busy-waiting
 
-        # Create buffers for data
-        bufferA = (ctypes.c_int16 * num_samples)()
-        bufferB = (ctypes.c_int16 * num_samples)()
+            # Create buffers for data
+            bufferA = (ctypes.c_int16 * num_samples)()
+            bufferB = (ctypes.c_int16 * num_samples)()
 
-        # Get data from scope
-        cmaxSamples = ctypes.c_int32(num_samples)
-        self.status["getValues"] = ps.ps2000_get_values(
-            self.chandle,
-            ctypes.byref(bufferA),
-            ctypes.byref(bufferB),
-            None,  # buffer C (not used)
-            None,  # buffer D (not used)
-            ctypes.byref(oversample),
-            cmaxSamples
-        )
-        self.assert_pico_ok(self.status["getValues"])
+            # Get data from scope
+            cmaxSamples = ctypes.c_int32(num_samples)
+            self.status["getValues"] = ps.ps2000_get_values(
+                self.chandle,
+                ctypes.byref(bufferA),
+                ctypes.byref(bufferB),
+                None,  # buffer C (not used)
+                None,  # buffer D (not used)
+                ctypes.byref(oversample),
+                cmaxSamples
+            )
+            self.assert_pico_ok(self.status["getValues"])
 
-        # Convert ADC counts to mV then to V
-        signal_mV = adc2mV(bufferA, self.chA_range, self.maxADC)
-        reference_mV = adc2mV(bufferB, self.chB_range, self.maxADC)
+            # NOTE: Do NOT call ps2000_stop() between acquisitions - it causes crashes.
+            # The ps2000 SDK handles repeated run_block calls without explicit stop.
+            # Only call stop when completely done or closing the device.
 
-        signal_data = np.array(signal_mV) / 1000.0
-        reference_data = np.array(reference_mV) / 1000.0
+            # Convert ADC counts to mV then to V
+            signal_mV = adc2mV(bufferA, self.chA_range, self.maxADC)
+            reference_mV = adc2mV(bufferB, self.chB_range, self.maxADC)
 
-        return signal_data, reference_data
+            signal_data = np.array(signal_mV) / 1000.0
+            reference_data = np.array(reference_mV) / 1000.0
+
+            return signal_data, reference_data
+
+        except Exception as e:
+            _logger.error(f"PicoScope 2000 acquisition error: {e}")
+            # Try to stop the scope on error
+            try:
+                self.ps.ps2000_stop(self.chandle)
+            except:
+                pass
+            return None, None
 
     def close(self):
         """Close connection to PicoScope"""

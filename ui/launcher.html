@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PHYS 2150 Measurement Suite</title>
     <link rel="stylesheet" href="css/theme.css">
+    <link rel="stylesheet" href="css/components.css">
     <!-- Qt WebChannel JS library -->
     <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+    <script src="js/modals.js"></script>
 </head>
 <body class="dark-mode">
     <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme (Ctrl+Shift+C)" aria-label="Toggle light/dark theme">
@@ -30,18 +32,54 @@
     <p class="subtitle">Select a measurement application:</p>
 
     <div class="button-container">
-        <button class="measurement-btn btn-eqe" onclick="launchEQE()" id="btn-eqe">
-            <span class="title">EQE Measurement</span>
-            <span class="description">External Quantum Efficiency<br>Spectral response measurement</span>
+        <button class="btn btn-primary btn-launcher" onclick="launchEQE()" id="btn-eqe">
+            EQE Measurement
         </button>
 
-        <button class="measurement-btn btn-jv" onclick="launchJV()" id="btn-jv">
-            <span class="title">I-V Measurement</span>
-            <span class="description">Current-Voltage Curves<br>Solar cell characterization</span>
+        <button class="btn btn-primary btn-launcher" onclick="launchJV()" id="btn-jv">
+            I-V Measurement
         </button>
     </div>
 
-    <p class="footer">CU Boulder Physics Undergraduate Labs</p>
+    <div class="offline-toggle">
+        <label class="checkbox-label">
+            <input type="checkbox" id="offline-mode">
+            <span>Offline Mode</span>
+            <span class="offline-hint">(no hardware)</span>
+        </label>
+    </div>
+
+    <p class="footer">
+        CU Boulder Physics Undergraduate Labs<br>
+        <span class="version">v1.0.0</span>
+    </p>
+    <p class="shortcuts-hint">Press E for EQE, I for I-V</p>
+
+    <!-- Info Modal -->
+    <div class="modal-overlay" id="info-modal">
+        <div class="modal">
+            <div class="modal-title" id="info-modal-title">Info</div>
+            <div class="modal-body">
+                <p id="info-modal-message" style="color: var(--text-secondary);"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="LabModals.closeInfo()">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Modal -->
+    <div class="modal-overlay" id="error-modal">
+        <div class="modal">
+            <div class="modal-title" id="error-modal-title">Error</div>
+            <div class="modal-body">
+                <p id="error-modal-message" style="color: var(--text-secondary);"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="LabModals.closeError()">OK</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         /**
@@ -78,18 +116,26 @@
         }
 
         // Application launching
+        function isOfflineMode() {
+            return document.getElementById('offline-mode').checked;
+        }
+
+        function getTheme() {
+            return isDarkMode ? 'dark' : 'light';
+        }
+
         function launchEQE() {
             if (!api) {
-                alert('Not connected to backend');
+                LabModals.showError('Connection Error', 'Not connected to backend');
                 return;
             }
             const btn = document.getElementById('btn-eqe');
             btn.classList.add('loading');
 
-            api.launch_eqe(function(result) {
+            api.launch_eqe(isOfflineMode(), getTheme(), function(result) {
                 const response = JSON.parse(result);
                 if (!response.success) {
-                    alert('Failed to launch EQE: ' + response.message);
+                    LabModals.showError('Launch Failed', 'Failed to launch EQE: ' + response.message);
                     btn.classList.remove('loading');
                 }
             });
@@ -97,16 +143,16 @@
 
         function launchJV() {
             if (!api) {
-                alert('Not connected to backend');
+                LabModals.showError('Connection Error', 'Not connected to backend');
                 return;
             }
             const btn = document.getElementById('btn-jv');
             btn.classList.add('loading');
 
-            api.launch_jv(function(result) {
+            api.launch_jv(isOfflineMode(), getTheme(), function(result) {
                 const response = JSON.parse(result);
                 if (!response.success) {
-                    alert('Failed to launch I-V: ' + response.message);
+                    LabModals.showError('Launch Failed', 'Failed to launch I-V: ' + response.message);
                     btn.classList.remove('loading');
                 }
             });
@@ -114,9 +160,35 @@
 
         // Keyboard shortcuts
         document.addEventListener('keydown', function(e) {
+            // Ctrl+Shift+C - Toggle theme
             if (e.ctrlKey && e.shiftKey && e.key === 'C') {
                 e.preventDefault();
                 toggleTheme();
+            }
+            // Ctrl+Shift+T - Toggle terminal window
+            if (e.ctrlKey && e.shiftKey && e.key === 'T') {
+                e.preventDefault();
+                if (api && api.toggle_terminal) {
+                    api.toggle_terminal(function(result) {
+                        const r = JSON.parse(result);
+                        const status = r.show_terminal ? 'ENABLED' : 'DISABLED';
+                        LabModals.showInfo('Terminal Window', 'Terminal window: ' + status);
+                    });
+                }
+            }
+            // E - Launch EQE (when not in input)
+            if (e.key === 'e' || e.key === 'E') {
+                if (document.activeElement.tagName !== 'INPUT') {
+                    e.preventDefault();
+                    launchEQE();
+                }
+            }
+            // I - Launch I-V (when not in input)
+            if (e.key === 'i' || e.key === 'I') {
+                if (document.activeElement.tagName !== 'INPUT') {
+                    e.preventDefault();
+                    launchJV();
+                }
             }
         });
 

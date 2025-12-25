@@ -7,6 +7,7 @@ and handles the photocurrent measurement workflow.
 """
 
 import time
+import gc
 from typing import List, Tuple, Optional, Callable
 import threading
 
@@ -221,7 +222,11 @@ class CurrentMeasurementModel:
             self.monochromator.set_wavelength(current_wavelength)
             initial_stabilization = CURRENT_MEASUREMENT_CONFIG["initial_stabilization_time"]
             time.sleep(initial_stabilization)
-            
+
+            # Disable garbage collection during measurement loop to prevent
+            # ctypes buffer crashes when switching between USB devices
+            gc.disable()
+
             while current_wavelength <= end_wavelength and not self._stop_requested:
                 try:
                     # Update filter if wavelength crossed a threshold
@@ -251,9 +256,16 @@ class CurrentMeasurementModel:
                     
                 except CurrentMeasurementError as e:
                     self.logger.log(f"Error at wavelength {current_wavelength}: {e}", "ERROR")
-                
+
+                # Small delay between measurements to let USB devices settle
+                # This helps prevent crashes when switching between PicoScope and monochromator
+                time.sleep(0.05)
+
                 current_wavelength += step_size
-            
+
+            # Re-enable garbage collection after measurement loop
+            gc.enable()
+
             # Close shutter
             self.monochromator.close_shutter()
             
@@ -280,6 +292,8 @@ class CurrentMeasurementModel:
             if self.completion_callback:
                 self.completion_callback(False)
         finally:
+            # Always re-enable garbage collection
+            gc.enable()
             self._is_measuring = False
     
     def start_measurement(self, start_wavelength: float, end_wavelength: float,

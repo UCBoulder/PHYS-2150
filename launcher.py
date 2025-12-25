@@ -1,25 +1,97 @@
 """
 PHYS 2150 Measurement Suite Launcher
 
-Unified launcher for the EQE and J-V measurement applications.
-Provides a simple interface to select which measurement to perform.
+Web-based launcher for the EQE and I-V measurement applications.
+Uses Qt WebEngine to provide a modern HTML/CSS/JS interface.
 """
 
 import sys
 import os
+import json
 import subprocess
-from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QLabel, QFrame,
-)
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont, QIcon
+
+from PySide6.QtCore import QObject, Slot, QUrl
+from PySide6.QtWidgets import QApplication, QMainWindow
+from PySide6.QtGui import QIcon
+from PySide6.QtWebEngineWidgets import QWebEngineView
+from PySide6.QtWebChannel import QWebChannel
+
+
+class LauncherApi(QObject):
+    """Python API exposed to JavaScript via QWebChannel."""
+
+    def __init__(self, window: 'LauncherWindow'):
+        super().__init__()
+        self._window = window
+        self._show_terminal = False
+
+    @Slot(result=str)
+    def toggle_terminal(self) -> str:
+        """Toggle whether to show terminal window when launching apps."""
+        self._show_terminal = not self._show_terminal
+        return json.dumps({"show_terminal": self._show_terminal})
+
+    @Slot(bool, str, result=str)
+    def launch_eqe(self, offline: bool = False, theme: str = "dark") -> str:
+        """Launch the EQE measurement application."""
+        return self._launch_application("eqe", offline, theme)
+
+    @Slot(bool, str, result=str)
+    def launch_jv(self, offline: bool = False, theme: str = "dark") -> str:
+        """Launch the I-V measurement application."""
+        return self._launch_application("jv", offline, theme)
+
+    def _launch_application(self, app_name: str, offline: bool = False, theme: str = "dark") -> str:
+        """
+        Launch a measurement application.
+
+        Args:
+            app_name: Name of the application module ("eqe" or "jv")
+            offline: Whether to launch in offline mode (no hardware)
+            theme: Color theme ("dark" or "light")
+
+        Returns:
+            JSON string with success status
+        """
+        # Get the directory containing the launcher
+        launcher_dir = os.path.dirname(os.path.abspath(__file__))
+
+        # Build command
+        cmd = [sys.executable, "-m", app_name]
+        if offline:
+            cmd.append("--offline")
+        if theme:
+            cmd.extend(["--theme", theme])
+
+        try:
+            if sys.platform == 'win32':
+                # Use CREATE_NO_WINDOW by default, CREATE_NEW_CONSOLE if terminal requested
+                if self._show_terminal:
+                    flags = subprocess.CREATE_NEW_CONSOLE
+                else:
+                    flags = subprocess.CREATE_NO_WINDOW
+                subprocess.Popen(
+                    cmd,
+                    cwd=launcher_dir,
+                    creationflags=flags,
+                )
+            else:
+                subprocess.Popen(
+                    cmd,
+                    cwd=launcher_dir,
+                    start_new_session=True,
+                )
+
+            # Close the launcher after successful launch
+            QApplication.quit()
+            return json.dumps({"success": True})
+
+        except Exception as e:
+            return json.dumps({"success": False, "message": str(e)})
 
 
 class LauncherWindow(QMainWindow):
-    """
-    Main launcher window for selecting measurement application.
-    """
+    """Main launcher window with web UI."""
 
     def __init__(self):
         super().__init__()
@@ -35,8 +107,19 @@ class LauncherWindow(QMainWindow):
         # Center window on screen
         self._center_window()
 
-        # Create UI
-        self._setup_ui()
+        # Create web view
+        self.web_view = QWebEngineView()
+        self.setCentralWidget(self.web_view)
+
+        # Set up web channel for Python-JS communication
+        self.channel = QWebChannel()
+        self.api = LauncherApi(self)
+        self.channel.registerObject("api", self.api)
+        self.web_view.page().setWebChannel(self.channel)
+
+        # Load the launcher HTML
+        html_path = self._get_html_path()
+        self.web_view.setUrl(QUrl.fromLocalFile(html_path))
 
     def _center_window(self):
         """Center the window on the screen."""
@@ -47,171 +130,14 @@ class LauncherWindow(QMainWindow):
         window_geometry.moveCenter(center_point)
         self.move(window_geometry.topLeft())
 
-    def _setup_ui(self):
-        """Set up the user interface."""
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
+    def _get_html_path(self) -> str:
+        """Get path to launcher HTML file."""
+        if getattr(sys, 'frozen', False):
+            base_path = sys._MEIPASS
+        else:
+            base_path = os.path.dirname(os.path.abspath(__file__))
 
-        layout = QVBoxLayout(central_widget)
-        layout.setSpacing(20)
-        layout.setContentsMargins(30, 30, 30, 30)
-
-        # Title
-        title_label = QLabel("PHYS 2150 Measurement Suite")
-        title_font = QFont()
-        title_font.setPointSize(18)
-        title_font.setBold(True)
-        title_label.setFont(title_font)
-        title_label.setAlignment(Qt.AlignCenter)
-        layout.addWidget(title_label)
-
-        # Subtitle
-        subtitle_label = QLabel("Select a measurement application:")
-        subtitle_font = QFont()
-        subtitle_font.setPointSize(11)
-        subtitle_label.setFont(subtitle_font)
-        subtitle_label.setAlignment(Qt.AlignCenter)
-        layout.addWidget(subtitle_label)
-
-        layout.addSpacing(10)
-
-        # Buttons container
-        buttons_layout = QHBoxLayout()
-        buttons_layout.setSpacing(20)
-
-        # EQE Button with description
-        eqe_frame = self._create_measurement_button(
-            "EQE Measurement",
-            "External Quantum Efficiency\n\nMeasure spectral response\nof solar cell pixels",
-            "#4A90D9",  # Blue
-            self._launch_eqe
-        )
-        buttons_layout.addWidget(eqe_frame)
-
-        # JV Button with description
-        jv_frame = self._create_measurement_button(
-            "J-V Measurement",
-            "Current-Voltage Characterization\n\nMeasure J-V curves\nfor solar cell analysis",
-            "#5DAE5D",  # Green
-            self._launch_jv
-        )
-        buttons_layout.addWidget(jv_frame)
-
-        layout.addLayout(buttons_layout)
-
-        layout.addStretch()
-
-        # Footer
-        footer_label = QLabel("CU Boulder Physics Undergraduate Labs")
-        footer_label.setAlignment(Qt.AlignCenter)
-        footer_label.setStyleSheet("color: gray;")
-        layout.addWidget(footer_label)
-
-    def _create_measurement_button(
-        self,
-        title: str,
-        description: str,
-        color: str,
-        callback,
-    ) -> QFrame:
-        """
-        Create a measurement button with description.
-
-        Args:
-            title: Button title
-            description: Description text
-            color: Background color for the button
-            callback: Function to call when clicked
-
-        Returns:
-            QFrame containing the button and description
-        """
-        frame = QFrame()
-        frame.setFrameStyle(QFrame.NoFrame)
-        frame_layout = QVBoxLayout(frame)
-        frame_layout.setSpacing(10)
-        frame_layout.setContentsMargins(10, 10, 10, 10)
-
-        # Main button
-        button = QPushButton(title)
-        button.setMinimumSize(180, 80)
-        button_font = QFont()
-        button_font.setPointSize(12)
-        button_font.setBold(True)
-        button.setFont(button_font)
-        button.setStyleSheet(f"""
-            QPushButton {{
-                background-color: {color};
-                color: white;
-                border: none;
-                border-radius: 8px;
-                padding: 15px;
-            }}
-            QPushButton:hover {{
-                background-color: {self._darken_color(color)};
-            }}
-            QPushButton:pressed {{
-                background-color: {self._darken_color(color, 0.7)};
-            }}
-        """)
-        button.clicked.connect(callback)
-        frame_layout.addWidget(button)
-
-        return frame
-
-    def _darken_color(self, hex_color: str, factor: float = 0.85) -> str:
-        """Darken a hex color by a factor."""
-        hex_color = hex_color.lstrip('#')
-        r = int(int(hex_color[0:2], 16) * factor)
-        g = int(int(hex_color[2:4], 16) * factor)
-        b = int(int(hex_color[4:6], 16) * factor)
-        return f"#{r:02x}{g:02x}{b:02x}"
-
-    def _launch_eqe(self):
-        """Launch the EQE measurement application."""
-        self._launch_application("eqe")
-
-    def _launch_jv(self):
-        """Launch the J-V measurement application."""
-        self._launch_application("jv")
-
-    def _launch_application(self, app_name: str):
-        """
-        Launch a measurement application.
-
-        Args:
-            app_name: Name of the application module ("eqe" or "jv")
-        """
-        # Hide the launcher
-        self.hide()
-
-        # Get the directory containing the launcher
-        launcher_dir = os.path.dirname(os.path.abspath(__file__))
-
-        # Launch as a subprocess so the launcher can close cleanly
-        # Use sys.executable to ensure we use the same Python interpreter
-        try:
-            if sys.platform == 'win32':
-                # On Windows, create a new console for the subprocess
-                # This prevents the parent terminal from waiting for subprocess I/O
-                subprocess.Popen(
-                    [sys.executable, "-m", app_name],
-                    cwd=launcher_dir,
-                    creationflags=subprocess.CREATE_NEW_CONSOLE,
-                )
-            else:
-                subprocess.Popen(
-                    [sys.executable, "-m", app_name],
-                    cwd=launcher_dir,
-                    start_new_session=True,
-                )
-        except Exception as e:
-            print(f"Failed to launch {app_name}: {e}")
-            self.show()
-            return
-
-        # Close the launcher
-        QApplication.quit()
+        return os.path.join(base_path, 'ui', 'launcher.html')
 
 
 def main():
