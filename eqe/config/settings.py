@@ -80,6 +80,8 @@ DEVICE_CONFIGS = {
         # Chopper frequency - should match physical chopper wheel speed
         "default_chopper_freq": 81,        # Hz - reference frequency for lock-in detection
         "chopper_freq_tolerance": 0.15,    # fraction - measured freq must be within 15% of expected
+        # Reference signal validation - 5V square wave clipped to ~2V by PicoScope input range
+        "min_reference_amplitude": 1.0,    # V peak-to-peak - reject noise masquerading as signal
         # Integration cycles - more cycles = better noise rejection but slower
         "default_num_cycles": 100,         # cycles for accurate measurements (~1.2s at 81Hz)
         "fast_measurement_cycles": 20,     # cycles for live monitoring (~0.25s at 81Hz)

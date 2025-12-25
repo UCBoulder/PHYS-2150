@@ -181,13 +181,14 @@ class PicoScopeController:
 
             if result is None:
                 raise PicoScopeError("Lock-in measurement returned None")
-            
+
             return {
                 'X': result['X'],
                 'Y': result['Y'],
                 'R': result['R'],
                 'theta': result['theta'],
-                'freq': result['freq']
+                'freq': result['freq'],
+                'ref_amplitude': result['ref_amplitude']
             }
             
         except Exception as e:

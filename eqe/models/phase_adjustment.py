@@ -140,27 +140,47 @@ class PhaseAdjustmentModel:
             theta_deg = result['theta']
             measured_freq = result['freq']
             
+            ref_amplitude = result['ref_amplitude']
+
             self.logger.log(f"Lock-in results:")
             self.logger.log(f"  X (in-phase):    {X:+.6f} V")
             self.logger.log(f"  Y (quadrature):  {Y:+.6f} V")
             self.logger.log(f"  R (magnitude):   {R:+.6f} V")
             self.logger.log(f"  Phase:           {theta_deg:+.1f}°")
             self.logger.log(f"  Measured freq:   {measured_freq:.2f} Hz")
+            self.logger.log(f"  Ref amplitude:   {ref_amplitude:.2f} Vpp")
 
-            # Validate chopper frequency - abort if chopper appears to be off
+            # Validate chopper signal - check BOTH frequency AND amplitude
+            # This prevents noise from randomly passing frequency validation
             config = DEVICE_CONFIGS[DeviceType.PICOSCOPE_LOCKIN]
             expected_freq = config["default_chopper_freq"]
-            tolerance = config["chopper_freq_tolerance"]
-            freq_error = abs(measured_freq - expected_freq) / expected_freq
+            freq_tolerance = config["chopper_freq_tolerance"]
+            min_amplitude = config["min_reference_amplitude"]
 
-            if freq_error > tolerance:
+            freq_error = abs(measured_freq - expected_freq) / expected_freq
+            amplitude_ok = ref_amplitude >= min_amplitude
+            freq_ok = freq_error <= freq_tolerance
+
+            if not amplitude_ok or not freq_ok:
                 error = get_error("chopper_not_running", "eqe")
                 if error:
                     _logger.student_error(error.title, error.message, error.causes, error.actions)
-                raise PhaseAdjustmentError(
-                    f"Chopper frequency mismatch: measured {measured_freq:.1f} Hz, "
-                    f"expected {expected_freq} Hz. Is the chopper running?"
-                )
+
+                if not amplitude_ok and not freq_ok:
+                    raise PhaseAdjustmentError(
+                        f"No chopper signal detected: amplitude {ref_amplitude:.2f} Vpp < {min_amplitude} Vpp, "
+                        f"frequency {measured_freq:.1f} Hz not near {expected_freq} Hz. Is the chopper running?"
+                    )
+                elif not amplitude_ok:
+                    raise PhaseAdjustmentError(
+                        f"Reference signal too weak: {ref_amplitude:.2f} Vpp < {min_amplitude} Vpp minimum. "
+                        f"Check chopper is running and reference cable is connected."
+                    )
+                else:
+                    raise PhaseAdjustmentError(
+                        f"Chopper frequency mismatch: measured {measured_freq:.1f} Hz, "
+                        f"expected {expected_freq} Hz. Is the chopper running?"
+                    )
 
             # Create visualization of projected signal vs phase
             # This shows how signal varies with assumed phase

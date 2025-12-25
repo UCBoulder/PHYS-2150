@@ -793,12 +793,17 @@ class PicoScopeDriver:
         # Measure actual reference frequency using FFT
         measured_freq = self._measure_frequency(reference_data, fs, reference_freq)
 
+        # Calculate reference signal amplitude (peak-to-peak)
+        # Used to validate chopper is actually running (5V square wave clipped to ~2V)
+        ref_pp = np.max(reference_data) - np.min(reference_data)
+
         return {
             'X': X,
             'Y': Y,
             'R': R,
             'theta': theta_deg,
-            'freq': measured_freq
+            'freq': measured_freq,
+            'ref_amplitude': ref_pp
         }
 
     def _measure_frequency(self, reference_data, fs, expected_freq):
