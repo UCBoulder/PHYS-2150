@@ -176,52 +176,7 @@ html, body {
     box-shadow: none !important;
 }
 
-/* Move Plotly modebar to bottom as full-width banner */
-.plot-container .modebar-container {
-    top: auto !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    width: 100% !important;
-    background: var(--bg-tertiary) !important;
-    padding: 4px 0 !important;
-    display: flex !important;
-    justify-content: center !important;
-    border-top: 1px solid var(--gray-400);
-}
-
-.plot-container .modebar {
-    position: relative !important;
-    top: auto !important;
-    right: auto !important;
-    float: none !important;
-    background: transparent !important;
-}
-
-.plot-container .modebar-group {
-    background: transparent !important;
-}
-
-/* Modebar icon colors for light/dark mode */
-.dark-mode .plot-container .modebar-btn path {
-    fill: rgba(255, 255, 255, 0.7) !important;
-}
-
-.dark-mode .plot-container .modebar-btn:hover path {
-    fill: rgba(255, 255, 255, 1) !important;
-}
-
-body:not(.dark-mode) .plot-container .modebar-btn path {
-    fill: rgba(0, 0, 0, 0.5) !important;
-}
-
-body:not(.dark-mode) .plot-container .modebar-btn:hover path {
-    fill: rgba(0, 0, 0, 0.8) !important;
-}
-
-body:not(.dark-mode) .plot-container .modebar-container {
-    background: var(--gray-200) !important;
-}
+/* Modebar styling moved to components.css (.modebar-bottom utility class) */
 
 
 /* ============================================
@@ -308,3 +263,250 @@ body:not(.dark-mode) .plot-container .modebar-container {
 
 .w-full { width: 100%; }
 .h-full { height: 100%; }
+
+
+/* ============================================
+   Device Status Row
+   ============================================ */
+
+.device-status-row {
+    display: flex;
+    gap: 24px;
+    padding: 8px 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--gray-400);
+    border-radius: 6px;
+    flex-shrink: 0;
+    align-items: center;
+}
+
+.device-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+}
+
+.device-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--gray-500);
+}
+
+.device-dot.connected {
+    background: var(--success);
+}
+
+.device-dot.disconnected {
+    background: var(--error);
+}
+
+.device-dot.warning {
+    background: var(--warning);
+}
+
+.device-name {
+    color: var(--text-secondary);
+}
+
+.device-status {
+    color: var(--text-muted);
+    font-size: 11px;
+}
+
+.row-section-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+}
+
+
+/* ============================================
+   Panel Titles
+   ============================================ */
+
+.panel-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+}
+
+
+/* ============================================
+   Progress Panel
+   ============================================ */
+
+.progress-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 50px;
+}
+
+.progress-status {
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
+}
+
+.progress-bar-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.progress-panel .progress-bar {
+    flex: 1;
+}
+
+.progress-percent {
+    font-size: 12px;
+    min-width: 35px;
+    text-align: right;
+    color: var(--text-muted);
+}
+
+
+/* ============================================
+   Plot Panel (Shared Structure)
+   ============================================ */
+
+.plot-panel {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-secondary);
+    border: 1px solid var(--gray-400);
+    border-radius: 6px;
+    overflow: hidden;
+    min-height: 0;
+}
+
+.plot-title {
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
+    padding: 8px 12px 4px;
+    color: var(--text-primary);
+    flex-shrink: 0;
+}
+
+.plot {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+
+/* ============================================
+   Buttons Row
+   ============================================ */
+
+.buttons-row {
+    display: flex;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.buttons-row .btn {
+    flex: 1;
+    padding: 12px 20px;
+    font-size: 14px;
+}
+
+
+/* ============================================
+   Analysis Tab Shared Styles
+   ============================================ */
+
+.analysis-plots-row {
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    gap: 12px;
+    flex: 1;
+    min-height: 350px;
+}
+
+.analysis-results-panel {
+    display: flex;
+    flex-direction: column;
+}
+
+.analysis-results-panel > .btn {
+    margin-top: auto;
+}
+
+.analysis-data-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.analysis-file-status {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.analysis-file-status.loaded {
+    color: var(--success);
+}
+
+.analysis-metrics {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+}
+
+.analysis-metric {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.analysis-metric-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+}
+
+.analysis-metric-value {
+    font-size: 18px;
+    font-weight: 600;
+    font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+}
+
+.analysis-metric-value.headline {
+    font-size: 24px;
+    color: var(--success);
+}
+
+.analysis-metric-value.primary {
+    color: var(--success);
+}
+
+.analysis-metric-value.secondary {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.analysis-metric-detail {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.analysis-status-text.success {
+    color: var(--success);
+}
+
+.analysis-status-text.error {
+    color: var(--error);
+}
