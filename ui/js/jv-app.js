@@ -31,70 +31,18 @@ const state = {
 };
 
 // ============================================
-// Plot Configuration
+// Plot Configuration (uses PlotlyUtils)
 // ============================================
 
-const plotConfig = {
-    displayModeBar: true,
-    modeBarButtonsToRemove: ['lasso2d', 'select2d', 'toImage'],
-    displaylogo: false
-};
+// Convenience aliases for PlotlyUtils
+const plotConfig = PlotlyUtils.config;
 
 function getPlotLayout(isDark) {
-    const colors = {
-        text: isDark ? '#eeeeee' : '#1a1a1a',
-        grid: isDark ? '#444444' : '#dddddd',
-        zeroline: isDark ? '#666666' : '#999999',
-        legendBg: isDark ? 'rgba(50,50,50,0.9)' : 'rgba(255,255,255,0.9)'
-    };
-    return {
-        xaxis: {
-            title: 'Voltage (V)',
-            color: colors.text,
-            gridcolor: colors.grid,
-            zerolinecolor: colors.zeroline,
-            zerolinewidth: 1
-        },
-        yaxis: {
-            title: 'Current (mA)',
-            color: colors.text,
-            gridcolor: colors.grid,
-            zerolinecolor: colors.zeroline,
-            zerolinewidth: 1
-        },
-        paper_bgcolor: 'rgba(0,0,0,0)',
-        plot_bgcolor: 'rgba(0,0,0,0)',
-        font: { color: colors.text },
-        legend: {
-            font: { color: colors.text },
-            bgcolor: colors.legendBg,
-            x: 0.02,
-            y: 0.98,
-            xanchor: 'left',
-            yanchor: 'top'
-        },
-        margin: { t: 20, r: 30, b: 60, l: 60 }
-    };
+    return PlotlyUtils.getJVLayout(isDark);
 }
 
 function updatePlotTheme(plotId, isDark) {
-    const colors = {
-        text: isDark ? '#eeeeee' : '#1a1a1a',
-        grid: isDark ? '#444444' : '#dddddd',
-        zeroline: isDark ? '#666666' : '#999999',
-        legendBg: isDark ? 'rgba(50,50,50,0.9)' : 'rgba(255,255,255,0.9)'
-    };
-    Plotly.relayout(plotId, {
-        'xaxis.color': colors.text,
-        'xaxis.gridcolor': colors.grid,
-        'xaxis.zerolinecolor': colors.zeroline,
-        'yaxis.color': colors.text,
-        'yaxis.gridcolor': colors.grid,
-        'yaxis.zerolinecolor': colors.zeroline,
-        'font.color': colors.text,
-        'legend.font.color': colors.text,
-        'legend.bgcolor': colors.legendBg
-    });
+    PlotlyUtils.updateTheme(plotId, isDark);
 }
 
 // ============================================

@@ -57,52 +57,14 @@ const state = {
 };
 
 // ============================================
-// Plot Configuration
+// Plot Configuration (uses PlotlyUtils)
 // ============================================
 
-const plotConfig = {
-    displayModeBar: true,
-    modeBarButtonsToRemove: ['lasso2d', 'select2d', 'toImage'],
-    displaylogo: false
-};
+// Convenience aliases for PlotlyUtils
+const plotConfig = PlotlyUtils.config;
 
 function getPlotLayout(isDark, xLabel, yLabel) {
-    const colors = {
-        text: isDark ? '#eeeeee' : '#1a1a1a',
-        grid: isDark ? '#444444' : '#dddddd',
-        zeroline: isDark ? '#666666' : '#999999',
-        legendBg: isDark ? 'rgba(50,50,50,0.8)' : 'rgba(255,255,255,0.8)',
-        paper: isDark ? '#2a2a2a' : '#f5f5f5',
-        plot: isDark ? '#2a2a2a' : '#f5f5f5'
-    };
-    return {
-        xaxis: {
-            title: xLabel,
-            color: colors.text,
-            gridcolor: colors.grid,
-            zerolinecolor: colors.zeroline,
-            zerolinewidth: 1
-        },
-        yaxis: {
-            title: yLabel,
-            color: colors.text,
-            gridcolor: colors.grid,
-            zerolinecolor: colors.zeroline,
-            zerolinewidth: 1
-        },
-        paper_bgcolor: colors.paper,
-        plot_bgcolor: colors.plot,
-        font: { color: colors.text },
-        legend: {
-            font: { color: colors.text, size: 11 },
-            bgcolor: colors.legendBg,
-            x: 1,
-            y: 1,
-            xanchor: 'right',
-            yanchor: 'top'
-        },
-        margin: { t: 20, r: 30, b: 95, l: 60 }
-    };
+    return PlotlyUtils.getEQELayout(isDark, xLabel, yLabel);
 }
 
 // ============================================
