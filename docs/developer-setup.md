@@ -192,7 +192,11 @@ You can run `dist/PHYS2150/PHYS2150.exe` directly for testing, but for deploymen
 #### Build the installer
 
 ```bash
+# If iscc is in PATH:
 iscc build/installer.iss
+
+# Or use full path (PowerShell):
+& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" build/installer.iss
 ```
 
 This creates `dist/PHYS2150-Setup.exe` which:
@@ -222,6 +226,30 @@ The version number must be updated in two places:
 
 The launcher reads the version from `pyproject.toml` at runtime.
 
+### What to Commit
+
+**Commit these build config files:**
+- `build/phys2150.spec` - PyInstaller configuration
+- `build/installer.iss` - Inno Setup script
+- `assets/icon.ico` - Application icon
+
+**Do NOT commit (already in .gitignore):**
+- `dist/` - Contains installer and bundled app (~200MB+)
+- `build/phys2150/` - PyInstaller intermediate files
+
+### Distributing the Installer
+
+Use **GitHub Releases** to distribute the installer (not git commits):
+
+1. Go to your repo → **Releases** → "Create a new release"
+2. **Tag**: `v3.1.0` (create new tag)
+3. **Title**: "PHYS 2150 v3.1.0"
+4. **Description**: Copy relevant section from CHANGELOG.md
+5. **Attach**: Drag `dist/PHYS2150-Setup.exe` to upload (up to 2GB allowed)
+6. **Publish release**
+
+Users download from the Releases page, keeping the git repo small.
+
 ### Complete Release Process
 
 ```bash
@@ -240,14 +268,17 @@ uv run pyinstaller build/phys2150.spec
 
 # 5. Build installer
 iscc build/installer.iss
+# Or: & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" build/installer.iss
 
 # 6. Test installer on a clean machine (VM recommended)
 
-# 7. Create git tag and push
+# 7. Commit and tag
 git add -A
 git commit -m "Release v3.1.0"
 git tag -a v3.1.0 -m "Version 3.1.0 - description"
 git push origin main --tags
+
+# 8. Create GitHub Release and upload dist/PHYS2150-Setup.exe
 ```
 
 ### Troubleshooting Builds

@@ -17,9 +17,8 @@ __pycache__/
 dist/
 *.whl
 
-# PyInstaller (but keep build/phys2150.spec and build/installer.iss)
-# PyInstaller creates a 'build' folder for temp files - those get mixed with our build/ config
-# So we ignore specific PyInstaller outputs
+# PyInstaller intermediate files (but keep build/*.spec and build/*.iss)
+build/phys2150/
 *.manifest
 *.spec.bak
 

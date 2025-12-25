@@ -58,7 +58,6 @@ PrivilegesRequiredOverridesAllowed=dialog
 
 ; Visual settings
 WizardStyle=modern
-WizardResizable=no
 
 ; License and info pages (optional - uncomment if files exist)
 ; LicenseFile=..\LICENSE
@@ -91,8 +90,6 @@ Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChang
 // Pascal script for custom installation checks
 
 function InitializeSetup(): Boolean;
-var
-  ResultCode: Integer;
 begin
   Result := True;
 
