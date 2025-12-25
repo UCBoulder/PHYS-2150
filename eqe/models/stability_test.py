@@ -362,62 +362,42 @@ class StabilityTestModel:
             if self.status_callback:
                 self.status_callback("Running measurements...")
 
-            # Get lock-in configuration
+            # Get lock-in configuration (same as regular current measurement)
             num_measurements = CURRENT_MEASUREMENT_CONFIG["num_measurements"]
             TieredLogger.debug_output(f"[STAB] Will take {num_measurements} samples per measurement")
-            
+
             while time.time() < end_time and not self._stop_requested:
                 current_time = time.time() - start_time
                 TieredLogger.debug_output(f"[STAB] Loop iteration {measurement_count+1}, t={current_time:.1f}s")
 
-                # Read current using lock-in with configured averaging
-                current_readings = []
-                TieredLogger.debug_output(f"[STAB] Reading {num_measurements} lock-in samples...")
-                for i in range(num_measurements):
-                    try:
-                        current = self.lockin.read_lockin_current()
-                        if current is not None:
-                            current_readings.append(current)
-                            TieredLogger.debug_output(f"[STAB] Sample {i+1}: {current:.3e} A")
-                    except Exception as e:
-                        self.logger.warning(f"Lock-in read failed: {e}")
-                        TieredLogger.debug_output(f"[STAB] Sample {i+1} FAILED: {e}")
+                # Read current using same method as regular current measurement
+                # (uses read_current with averaging, no outlier rejection)
+                try:
+                    TieredLogger.debug_output(f"[STAB] Reading lock-in current ({num_measurements} samples averaged)...")
+                    final_current = self.lockin.read_current(num_measurements=num_measurements)
 
-                TieredLogger.debug_output(f"[STAB] Got {len(current_readings)} valid readings")
+                    if final_current is not None:
+                        timestamps.append(current_time)
+                        current_values.append(final_current)
+                        measurement_count += 1
+                        TieredLogger.debug_output(f"[STAB] Current: {final_current:.3e} A (measurement #{measurement_count})")
 
-                if current_readings:
-                    # Calculate mean and filter outliers (same as CurrentMeasurementModel)
-                    mean_current = np.mean(current_readings)
-                    std_current = np.std(current_readings)
-                    TieredLogger.debug_output(f"[STAB] Mean={mean_current:.3e}, Std={std_current:.3e}")
-
-                    # Filter outliers
-                    outlier_std = STABILITY_TEST_CONFIG["outlier_rejection_std"]
-                    filtered = [c for c in current_readings
-                               if abs(c - mean_current) <= outlier_std * std_current]
-
-                    if filtered:
-                        final_current = np.mean(filtered)
+                        # Call measurement callback
+                        if self.measurement_callback:
+                            TieredLogger.debug_output(f"[STAB] Calling measurement callback...")
+                            try:
+                                self.measurement_callback(current_time, final_current)
+                                TieredLogger.debug_output(f"[STAB] Callback completed successfully")
+                            except Exception as cb_err:
+                                self.logger.warning(f"Measurement callback error: {cb_err}")
+                                TieredLogger.debug_output(f"[STAB] Callback FAILED: {cb_err}")
                     else:
-                        final_current = mean_current
+                        self.logger.warning("No valid current reading in this interval")
+                        TieredLogger.debug_output(f"[STAB] WARNING: No valid reading!")
 
-                    timestamps.append(current_time)
-                    current_values.append(final_current)
-                    measurement_count += 1
-                    TieredLogger.debug_output(f"[STAB] Final current: {final_current:.3e} A (measurement #{measurement_count})")
-
-                    # Call measurement callback
-                    if self.measurement_callback:
-                        TieredLogger.debug_output(f"[STAB] Calling measurement callback...")
-                        try:
-                            self.measurement_callback(current_time, final_current)
-                            TieredLogger.debug_output(f"[STAB] Callback completed successfully")
-                        except Exception as cb_err:
-                            self.logger.warning(f"Measurement callback error: {cb_err}")
-                            TieredLogger.debug_output(f"[STAB] Callback FAILED: {cb_err}")
-                else:
-                    self.logger.warning("No valid current readings in this interval")
-                    TieredLogger.debug_output(f"[STAB] WARNING: No valid readings!")
+                except Exception as e:
+                    self.logger.warning(f"Lock-in read failed: {e}")
+                    TieredLogger.debug_output(f"[STAB] Lock-in read FAILED: {e}")
 
                 # Wait for next measurement
                 TieredLogger.debug_output(f"[STAB] Sleeping {interval_sec}s before next measurement...")
