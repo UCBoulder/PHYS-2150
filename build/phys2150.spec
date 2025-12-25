@@ -16,6 +16,7 @@ must be installed separately on the target Windows machine.
 
 import sys
 from pathlib import Path
+from PyInstaller.utils.hooks import collect_all, collect_submodules
 
 # Get the project root directory (parent of build/)
 SPEC_DIR = Path(SPECPATH)
@@ -23,17 +24,23 @@ PROJECT_ROOT = SPEC_DIR.parent
 
 block_cipher = None
 
+# Collect all numpy components (required for NumPy 2.x)
+numpy_datas, numpy_binaries, numpy_hiddenimports = collect_all('numpy')
+
+# Collect scipy as well
+scipy_datas, scipy_binaries, scipy_hiddenimports = collect_all('scipy')
+
 # Main application entry point
 a = Analysis(
     [str(PROJECT_ROOT / 'launcher.py')],
     pathex=[str(PROJECT_ROOT)],
-    binaries=[],
+    binaries=numpy_binaries + scipy_binaries,
     datas=[
         # Web UI files (HTML, CSS, JavaScript)
         (str(PROJECT_ROOT / 'ui'), 'ui'),
         # Application icon
         (str(PROJECT_ROOT / 'assets'), 'assets'),
-    ],
+    ] + numpy_datas + scipy_datas,
     hiddenimports=[
         # PySide6 core modules
         'PySide6.QtCore',
@@ -45,10 +52,7 @@ a = Analysis(
         'PySide6.QtWebEngineCore',
         'PySide6.QtWebChannel',
 
-        # Scientific computing
-        'numpy',
-        'scipy',
-        'scipy.signal',
+        # pandas (scipy/numpy collected separately above)
         'pandas',
 
         # Instrument communication
@@ -84,7 +88,7 @@ a = Analysis(
         'common.drivers',
         'common.ui',
         'common.utils',
-    ],
+    ] + numpy_hiddenimports + scipy_hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -96,7 +100,7 @@ a = Analysis(
         'wx',
         'matplotlib',  # Replaced by Plotly.js in web UI
         'test',
-        'unittest',
+        # Note: Don't exclude 'unittest' - scipy needs it for array_api_compat
     ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,

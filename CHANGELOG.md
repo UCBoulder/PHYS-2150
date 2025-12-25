@@ -12,9 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Remote config support for semester-specific defaults
 - Config bridge to centralize UI defaults in Python config files
 - Amplitude check to chopper reference signal validation
+- Hidden offline mode toggle in launcher (Ctrl+Shift+D) with visual indicator
 
 ### Changed
 - Stability test current measurement now matches regular measurement method
+- Launcher offline mode moved from visible checkbox to hidden hotkey (cleaner UI for students)
 
 ### Fixed
 - J-V pixel input now correctly allows 1-8 instead of 1-9

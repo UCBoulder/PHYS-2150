@@ -154,27 +154,75 @@ uv run pytest tests/test_jv_measurement.py
 
 ## Building for Distribution
 
-### 1. Build with PyInstaller
+The build process has two steps:
+1. **PyInstaller** - Bundles Python + dependencies into a standalone folder
+2. **Inno Setup** - Packages that folder into a Windows installer (.exe)
+
+### Build Outputs
+
+| Path | Description |
+|------|-------------|
+| `build/` | Intermediate PyInstaller files (ignore) |
+| `dist/PHYS2150/` | Standalone application folder |
+| `dist/PHYS2150/PHYS2150.exe` | The actual executable (can run directly) |
+| `dist/PHYS2150-Setup.exe` | Windows installer for distribution |
+
+### Step 1: Build with PyInstaller
 
 ```bash
 # Build the executable
 uv run pyinstaller build/phys2150.spec
-
-# Output: dist/PHYS2150/ folder
 ```
 
-### 2. Build Windows Installer
+This creates `dist/PHYS2150/` containing:
+- `PHYS2150.exe` - Main executable
+- `ui/` - Web UI files (HTML/CSS/JS)
+- Python runtime and all dependencies bundled
 
-Requires [Inno Setup](https://jrsoftware.org/isinfo.php) installed:
+You can run `dist/PHYS2150/PHYS2150.exe` directly for testing, but for deployment use the installer.
+
+### Step 2: Build Windows Installer
+
+#### Install Inno Setup (one-time)
+
+1. Download from https://jrsoftware.org/isdl.php
+2. Run the installer
+3. This adds `iscc` (Inno Setup Compiler) to your PATH
+
+#### Build the installer
 
 ```bash
-# Build installer (from command line)
 iscc build/installer.iss
-
-# Output: dist/PHYS2150-Setup.exe
 ```
 
-### 3. Complete Release Process
+This creates `dist/PHYS2150-Setup.exe` which:
+- Installs to `C:\Program Files\PHYS-2150\`
+- Creates Start Menu shortcuts
+- Optionally creates a desktop shortcut
+- Registers in Windows "Add/Remove Programs" for clean uninstall
+- Checks for NI-VISA and warns if not installed
+
+### Deploying to Lab Computers
+
+1. Copy `dist/PHYS2150-Setup.exe` to the target computer
+2. Run the installer (may require admin privileges)
+3. The application appears in Start Menu as "PHYS 2150 Measurement Suite"
+
+**Prerequisites on target machines:**
+- Windows 10/11 64-bit
+- NI-VISA Runtime (for instrument communication)
+- PicoScope SDK (for EQE measurements)
+- Thorlabs OPM driver (for power meter)
+
+### Version Synchronization
+
+The version number must be updated in two places:
+1. `pyproject.toml` - `version = "X.Y.Z"` (source of truth)
+2. `build/installer.iss` - `#define MyAppVersion "X.Y.Z"`
+
+The launcher reads the version from `pyproject.toml` at runtime.
+
+### Complete Release Process
 
 ```bash
 # 1. Ensure clean environment
@@ -183,8 +231,9 @@ uv sync
 # 2. Run tests
 uv run pytest
 
-# 3. Update version in pyproject.toml
-# Edit: version = "2.2.0"
+# 3. Update version in pyproject.toml AND installer.iss
+# pyproject.toml: version = "3.1.0"
+# installer.iss:  #define MyAppVersion "3.1.0"
 
 # 4. Build executable
 uv run pyinstaller build/phys2150.spec
@@ -192,11 +241,29 @@ uv run pyinstaller build/phys2150.spec
 # 5. Build installer
 iscc build/installer.iss
 
-# 6. Test on clean machine
-# 7. Create git tag
-git tag -a v2.2.0 -m "Release 2.2.0"
-git push origin v2.2.0
+# 6. Test installer on a clean machine (VM recommended)
+
+# 7. Create git tag and push
+git add -A
+git commit -m "Release v3.1.0"
+git tag -a v3.1.0 -m "Version 3.1.0 - description"
+git push origin main --tags
 ```
+
+### Troubleshooting Builds
+
+**NumPy/SciPy DLL errors:**
+The spec file uses `collect_all()` to bundle all NumPy/SciPy components. If you see DLL errors, ensure the spec file includes:
+```python
+from PyInstaller.utils.hooks import collect_all
+numpy_datas, numpy_binaries, numpy_hiddenimports = collect_all('numpy')
+```
+
+**Missing modules:**
+Add to `hiddenimports` in `build/phys2150.spec`.
+
+**Large installer size:**
+The installer is ~200-300MB due to Qt WebEngine and scientific libraries. This is expected.
 
 ## MVC Architecture
 

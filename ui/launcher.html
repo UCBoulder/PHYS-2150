@@ -43,12 +43,8 @@
         </button>
     </div>
 
-    <div class="offline-toggle">
-        <label class="checkbox-label">
-            <input type="checkbox" id="offline-mode">
-            <span>Offline Mode</span>
-            <span class="offline-hint">(no hardware)</span>
-        </label>
+    <div class="offline-indicator" id="offline-indicator" style="display: none;">
+        <span>OFFLINE MODE</span>
     </div>
 
     <div class="footer">
@@ -90,9 +86,17 @@
          * Uses shared modules: theme.js, api.js, modals.js
          */
 
-        // Application launching
+        // Offline mode state (toggled with Ctrl+Shift+O)
+        let offlineModeEnabled = false;
+
         function isOfflineMode() {
-            return document.getElementById('offline-mode').checked;
+            return offlineModeEnabled;
+        }
+
+        function toggleOfflineMode() {
+            offlineModeEnabled = !offlineModeEnabled;
+            const indicator = document.getElementById('offline-indicator');
+            indicator.style.display = offlineModeEnabled ? 'block' : 'none';
         }
 
         function getTheme() {
@@ -141,8 +145,14 @@
 
         // Keyboard shortcuts (Ctrl+Shift+C is handled by theme.js)
         document.addEventListener('keydown', function(e) {
+            // Ctrl+Shift+D - Toggle offline mode (D for Dev)
+            if (e.ctrlKey && e.shiftKey && e.code === 'KeyD') {
+                e.preventDefault();
+                toggleOfflineMode();
+                return;
+            }
             // Ctrl+Shift+T - Toggle terminal window
-            if (e.ctrlKey && e.shiftKey && e.key === 'T') {
+            if (e.ctrlKey && e.shiftKey && e.code === 'KeyT') {
                 e.preventDefault();
                 const api = LabAPI.get();
                 if (api && api.toggle_terminal) {

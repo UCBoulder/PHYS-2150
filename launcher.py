@@ -3,18 +3,29 @@ PHYS 2150 Measurement Suite Launcher
 
 Web-based launcher for the EQE and I-V measurement applications.
 Uses Qt WebEngine to provide a modern HTML/CSS/JS interface.
+
+When running as a frozen PyInstaller bundle, use --app argument to
+launch specific applications:
+    PHYS2150.exe --app eqe
+    PHYS2150.exe --app jv
 """
 
 import sys
 import os
 import json
 import subprocess
+import argparse
 from importlib.metadata import version, PackageNotFoundError
 
 from PySide6.QtCore import QObject, Slot, QTimer
 from PySide6.QtWidgets import QApplication
 
 from common.ui import BaseWebWindow
+
+
+def is_frozen() -> bool:
+    """Check if running as a PyInstaller frozen bundle."""
+    return getattr(sys, 'frozen', False)
 
 
 def get_app_version() -> str:
@@ -77,8 +88,14 @@ class LauncherApi(QObject):
         # Get the directory containing the launcher
         launcher_dir = os.path.dirname(os.path.abspath(__file__))
 
-        # Build command
-        cmd = [sys.executable, "-m", app_name]
+        # Build command - different for frozen vs development
+        if is_frozen():
+            # Running as PyInstaller bundle - use same executable with --app flag
+            cmd = [sys.executable, "--app", app_name]
+        else:
+            # Development mode - use Python module
+            cmd = [sys.executable, "-m", app_name]
+
         if offline:
             cmd.append("--offline")
         if theme:
@@ -143,7 +160,47 @@ class LauncherWindow(BaseWebWindow):
 
 
 def main():
-    """Main entry point for the launcher."""
+    """Main entry point for the launcher.
+
+    In frozen mode, supports --app argument to directly launch EQE or J-V:
+        PHYS2150.exe --app eqe [--offline] [--theme dark|light]
+        PHYS2150.exe --app jv [--offline] [--theme dark|light]
+    """
+    parser = argparse.ArgumentParser(description="PHYS 2150 Measurement Suite")
+    parser.add_argument("--app", choices=["eqe", "jv"],
+                        help="Launch specific app directly (used by launcher)")
+    parser.add_argument("--offline", action="store_true",
+                        help="Run in offline mode (no hardware)")
+    parser.add_argument("--theme", choices=["dark", "light"], default="dark",
+                        help="Color theme")
+    args = parser.parse_args()
+
+    # If --app specified, launch that app directly
+    if args.app:
+        # Filter out --app from sys.argv so the app's argparse doesn't see it
+        filtered_argv = [sys.argv[0]]
+        skip_next = False
+        for arg in sys.argv[1:]:
+            if skip_next:
+                skip_next = False
+                continue
+            if arg == "--app":
+                skip_next = True  # Skip the next arg (the app name)
+                continue
+            if arg.startswith("--app="):
+                continue
+            filtered_argv.append(arg)
+        sys.argv = filtered_argv
+
+        if args.app == "eqe":
+            from eqe.web_main import main as eqe_main
+            eqe_main()
+        elif args.app == "jv":
+            from jv.web_main import main as jv_main
+            jv_main()
+        return
+
+    # Otherwise show the launcher GUI
     app = QApplication(sys.argv)
 
     window = LauncherWindow()

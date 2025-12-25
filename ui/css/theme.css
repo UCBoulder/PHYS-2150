@@ -114,6 +114,7 @@ body {
     justify-content: center;
     padding: 30px;
     transition: background-color 0.3s, color 0.3s;
+    overflow: hidden;
 }
 
 /* Typography */
@@ -306,36 +307,22 @@ h1 {
     animation: dots 1.2s infinite;
 }
 
-.offline-toggle {
+/* Offline Mode Indicator */
+.offline-indicator {
     display: flex;
     justify-content: center;
-    margin-top: 0;
+    margin-top: 8px;
     margin-bottom: 0;
 }
 
-.checkbox-label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    font-size: 14px;
-    color: var(--text-secondary);
-}
-
-.checkbox-label input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-    accent-color: var(--ucb-gold);
-    cursor: pointer;
-}
-
-.checkbox-label:hover {
-    color: var(--text-primary);
-}
-
-.offline-hint {
-    font-size: 12px;
-    color: var(--text-muted);
+.offline-indicator span {
+    background-color: var(--warning);
+    color: #000;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
 }
 
 .version {
