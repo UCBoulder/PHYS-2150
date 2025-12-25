@@ -1,4 +1,5 @@
 import threading
+import time
 
 from common.utils import get_logger, get_error
 
@@ -160,7 +161,39 @@ class Cornerstone_Mono:
             # If response can't be parsed, assume not idle
             return False
 
-    def WaitForIdle(self, verbose=False):
-        unit_idle = self.UnitIdle()
+    def WaitForIdle(self, verbose=False, max_wait_sec=30, poll_interval_sec=0.1):
+        """
+        Wait for monochromator to become idle.
+
+        Args:
+            verbose: Enable debug logging
+            max_wait_sec: Maximum time to wait (default 30s)
+            poll_interval_sec: Time between idle? polls (default 0.1s)
+
+        Returns:
+            bool: True if device became idle, False if timeout
+        """
+        start_time = time.time()
+        timeout_count = 0
+
+        unit_idle = self.UnitIdle(verbose)
         while not unit_idle:
-            unit_idle = self.UnitIdle()
+            elapsed = time.time() - start_time
+            if elapsed > max_wait_sec:
+                _logger.error(f"WaitForIdle timeout after {elapsed:.1f}s ({timeout_count} query timeouts)")
+                return False
+
+            # Small delay between polls to avoid hammering USB
+            time.sleep(poll_interval_sec)
+
+            unit_idle = self.UnitIdle(verbose)
+            if not unit_idle:
+                timeout_count += 1
+                if timeout_count % 10 == 0:
+                    _logger.debug(f"WaitForIdle: {timeout_count} polls, {elapsed:.1f}s elapsed")
+
+        if verbose or timeout_count > 5:
+            elapsed = time.time() - start_time
+            _logger.debug(f"WaitForIdle: device idle after {elapsed:.1f}s ({timeout_count} retries)")
+
+        return True

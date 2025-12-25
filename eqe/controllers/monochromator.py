@@ -103,21 +103,24 @@ class MonochromatorController:
     def send_command(self, command: str, wait_for_idle: bool = True) -> None:
         """
         Send a command to the monochromator.
-        
+
         Args:
             command: Command string to send
             wait_for_idle: Whether to wait for device to be idle after command
-            
+
         Raises:
-            MonochromatorError: If not connected or command fails
+            MonochromatorError: If not connected, command fails, or device doesn't become idle
         """
         if not self._is_connected:
             raise MonochromatorError("Device not connected")
-        
+
         try:
             self._device.SendCommand(command, False)
             if wait_for_idle:
-                self._device.WaitForIdle()
+                if not self._device.WaitForIdle():
+                    raise MonochromatorError(f"Device did not become idle after command '{command}'")
+        except MonochromatorError:
+            raise
         except Exception as e:
             raise MonochromatorError(f"Failed to send command '{command}': {e}")
     
