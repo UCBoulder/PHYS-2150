@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- **Web-based user interface** using HTML/CSS/JavaScript with Plotly.js for interactive plots
+- Qt WebEngine + QWebChannel architecture replaces Qt widgets for Python-JavaScript communication
+- In-app debug console panel (Ctrl+Shift+C) for viewing application logs without external terminal
+- Chopper frequency validation detects when chopper is off and aborts gracefully with student-friendly error message
+- Web-based unified launcher with streamlined application selection
+
+### Changed
+- **Complete UI overhaul**: Migrated from PySide6 Qt widgets to web technologies (HTML/CSS/JS)
+- Modern CSS theming with consistent component styling across all applications
+- Interactive plots now use Plotly.js instead of Matplotlib (zoom, pan, hover tooltips)
+- PicoScope ps2000 SDK stability improvements (settling time between acquisitions, proper stop calls)
+
+### Removed
+- Legacy Qt widget UI code (~5,500 lines removed): `*/views/`, `*/main.py`, `common/ui/`
+- Matplotlib-based plot widgets replaced by Plotly.js
+
 ## [2.3.0] - 2025-12-23
 
 ### Added
