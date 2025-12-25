@@ -284,15 +284,9 @@ function closeInfoModal() {
 
 /**
  * Get the HTML for a cell number modal.
- * @param {Object} options - Configuration options
- * @param {boolean} options.showCancel - Show cancel button (default: true)
- * @param {string} options.confirmText - Confirm button text (default: "Continue")
  * @returns {string} Modal HTML
  */
-function getCellModalHTML(options = {}) {
-    const showCancel = options.showCancel !== false;
-    const confirmText = options.confirmText || 'Continue';
-
+function getCellModalHTML() {
     return `
     <div class="modal-overlay" id="cell-modal">
         <div class="modal">
@@ -305,8 +299,7 @@ function getCellModalHTML(options = {}) {
                 </div>
             </div>
             <div class="modal-footer">
-                ${showCancel ? '<button class="btn btn-secondary" onclick="LabModals.closeCell()">Cancel</button>' : ''}
-                <button class="btn btn-primary" onclick="LabModals.confirmCell()">${confirmText}</button>
+                <button class="btn btn-primary" onclick="LabModals.confirmCell()">Continue</button>
             </div>
         </div>
     </div>`;
@@ -380,7 +373,7 @@ function getErrorModalHTML() {
         <div class="modal">
             <div class="modal-title" id="error-modal-title">Error</div>
             <div class="modal-body">
-                <p id="error-modal-message" style="color: var(--text-secondary); white-space: pre-wrap; text-align: left;"></p>
+                <p id="error-modal-message" style="color: var(--text-secondary);"></p>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-primary" onclick="LabModals.closeError()">OK</button>
@@ -415,86 +408,6 @@ function getInfoModalHTML() {
 function initModals() {
     initCellModal();
     initPixelModal();
-}
-
-// ==================== Modal Injection ====================
-
-/**
- * Inject modals into the DOM.
- * Call this on app initialization to add required modals dynamically.
- *
- * @param {Object} options - Which modals to inject
- * @param {boolean|Object} options.cell - Inject cell modal (true or options object)
- * @param {boolean|Object} options.pixel - Inject pixel modal (true or options object)
- * @param {boolean} options.save - Inject save modal
- * @param {boolean} options.error - Inject error modal (default: true)
- * @param {boolean} options.info - Inject info modal (default: true)
- */
-function injectModals(options = {}) {
-    // Default: always inject error and info modals
-    const inject = {
-        cell: options.cell !== undefined ? options.cell : false,
-        pixel: options.pixel !== undefined ? options.pixel : false,
-        save: options.save || false,
-        error: options.error !== false,
-        info: options.info !== false
-    };
-
-    let html = '';
-
-    if (inject.cell) {
-        const cellOpts = typeof inject.cell === 'object' ? inject.cell : {};
-        html += getCellModalHTML(cellOpts);
-    }
-
-    if (inject.pixel) {
-        const pixelOpts = typeof inject.pixel === 'object' ? inject.pixel : {};
-        html += getPixelModalHTML(pixelOpts);
-    }
-
-    if (inject.save) {
-        html += getSaveModalHTML();
-    }
-
-    if (inject.error) {
-        html += getErrorModalHTML();
-    }
-
-    if (inject.info) {
-        html += getInfoModalHTML();
-    }
-
-    // Inject at end of body
-    document.body.insertAdjacentHTML('beforeend', html);
-
-    // Initialize event listeners for injected modals
-    if (inject.cell) initCellModal();
-    if (inject.pixel) initPixelModal();
-}
-
-/**
- * Inject JV app modals (cell, pixel, error, info).
- */
-function injectJVModals() {
-    injectModals({
-        cell: { showCancel: true, confirmText: 'Confirm' },
-        pixel: { min: 1, max: 9, showCancel: true },
-        error: true,
-        info: true
-    });
-}
-
-/**
- * Inject EQE app modals (cell, pixel, save, error, info).
- */
-function injectEQEModals() {
-    injectModals({
-        cell: { showCancel: true, confirmText: 'Continue' },
-        pixel: { min: 1, max: 8, showCancel: true },
-        save: true,
-        error: true,
-        info: true
-    });
 }
 
 // Export for use in other modules
@@ -534,11 +447,6 @@ window.LabModals = {
     showInfo: showInfoModal,
     closeInfo: closeInfoModal,
     getInfoHTML: getInfoModalHTML,
-
-    // Injection
-    inject: injectModals,
-    injectJV: injectJVModals,
-    injectEQE: injectEQEModals,
 };
 
 // Also expose individual functions globally for onclick handlers

@@ -74,7 +74,63 @@ body.jv-body {
 }
 
 
-/* Device status row styles are in layout.css */
+/* ============================================
+   Device Status Row
+   ============================================ */
+
+.device-status-row {
+    display: flex;
+    gap: 24px;
+    padding: 8px 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--gray-400);
+    border-radius: 6px;
+    flex-shrink: 0;
+    align-items: center;
+}
+
+.device-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+}
+
+.device-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--gray-500);
+}
+
+.device-dot.connected {
+    background: var(--success);
+}
+
+.device-dot.disconnected {
+    background: var(--error);
+}
+
+.device-dot.warning {
+    background: var(--warning);
+}
+
+.device-name {
+    color: var(--text-secondary);
+}
+
+.device-status {
+    color: var(--text-muted);
+    font-size: 11px;
+}
+
+.row-section-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+}
 
 
 /* ============================================
@@ -104,7 +160,14 @@ body.jv-body {
     min-width: 200px;
 }
 
-/* .panel-title is in layout.css */
+.panel-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+}
 
 
 /* ============================================
@@ -142,19 +205,63 @@ body.jv-body {
 }
 
 
-/* Progress panel styles are in layout.css */
+/* ============================================
+   Progress Panel
+   ============================================ */
+
+.progress-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 50px;
+}
+
+.progress-status {
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
+}
+
+.progress-bar-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.progress-panel .progress-bar {
+    flex: 1;
+}
+
+.progress-percent {
+    font-size: 12px;
+    min-width: 35px;
+    text-align: right;
+    color: var(--text-muted);
+}
 
 
 /* ============================================
-   Plot Panel (JV-specific)
+   Plot Panel
    ============================================ */
 
-/* Base .plot-panel, .plot-title, .plot are in layout.css */
-/* Modebar styling uses .modebar-bottom from components.css */
-
 .plot-panel {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-secondary);
+    border: 1px solid var(--gray-400);
+    border-radius: 6px;
+    overflow: hidden;
     flex: 1;
     min-height: 300px;
+}
+
+.plot-title {
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
+    padding: 8px 12px 4px;
+    color: var(--text-primary);
+    flex-shrink: 0;
 }
 
 .plot-container {
@@ -163,17 +270,156 @@ body.jv-body {
     position: relative;
 }
 
+.plot {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
 
-/* Buttons row is in layout.css */
+/* Move Plotly modebar to bottom as full-width banner */
+.plot-panel .modebar-container {
+    top: auto !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    background: var(--bg-tertiary) !important;
+    padding: 4px 0 !important;
+    display: flex !important;
+    justify-content: center !important;
+    border-top: 1px solid var(--gray-400);
+}
+
+.plot-panel .modebar {
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+    float: none !important;
+    background: transparent !important;
+}
+
+.plot-panel .modebar-group {
+    background: transparent !important;
+}
+
+/* Modebar icon colors for light/dark mode */
+.dark-mode .plot-panel .modebar-btn path {
+    fill: rgba(255, 255, 255, 0.7) !important;
+}
+
+.dark-mode .plot-panel .modebar-btn:hover path {
+    fill: rgba(255, 255, 255, 1) !important;
+}
+
+body:not(.dark-mode) .plot-panel .modebar-btn path {
+    fill: rgba(0, 0, 0, 0.5) !important;
+}
+
+body:not(.dark-mode) .plot-panel .modebar-btn:hover path {
+    fill: rgba(0, 0, 0, 0.8) !important;
+}
+
+body:not(.dark-mode) .plot-panel .modebar-container {
+    background: var(--gray-200) !important;
+}
 
 
-/* Tab navigation is in components.css */
-/* .staff-badge-small is in components.css */
+/* ============================================
+   Buttons Row
+   ============================================ */
 
-/* JV-specific tab bar additions */
+.buttons-row {
+    display: flex;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.buttons-row .btn {
+    flex: 1;
+    padding: 12px 20px;
+    font-size: 14px;
+}
+
+
+/* ============================================
+   Tab Navigation
+   ============================================ */
+
+.tab-bar {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    border-bottom: 1px solid var(--gray-400);
+    flex-shrink: 0;
+    padding: 0 16px 0 0;
+}
+
+.tab-btn {
+    padding: 10px 24px;
+    font-size: 14px;
+    font-weight: 500;
+    font-family: inherit;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+    margin-bottom: -1px;
+}
+
+.tab-btn:hover {
+    color: var(--text-primary);
+}
+
+.tab-btn.active {
+    color: var(--ucb-gold);
+    border-bottom-color: var(--ucb-gold);
+}
+
+.tab-btn:focus-visible {
+    outline: 2px solid var(--ucb-gold);
+    outline-offset: -2px;
+}
+
+.tab-bar-spacer {
+    flex: 1;
+}
+
 .tab-bar #pixel-label {
     font-size: 14px;
     color: var(--text-muted);
+}
+
+.tab-bar .theme-toggle {
+    position: static;
+    margin-left: 16px;
+}
+
+.tab-content {
+    display: none;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    gap: 12px;
+}
+
+.tab-content.active {
+    display: flex;
+}
+
+/* Staff tab badge */
+.staff-badge-small {
+    font-size: 9px;
+    font-weight: 600;
+    background: var(--ucb-gold);
+    color: #1a1a1a;
+    padding: 1px 4px;
+    border-radius: 3px;
+    margin-left: 6px;
+    vertical-align: middle;
 }
 
 
@@ -218,11 +464,99 @@ body.jv-body {
     margin-left: auto;
 }
 
-/* Shared analysis styles are in layout.css */
+.analysis-plots-row {
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    gap: 12px;
+    flex: 1;
+    min-height: 350px;
+}
 
-/* JV-specific analysis panel */
 .analysis-iv-panel {
     min-height: 350px;
+}
+
+.analysis-results-panel {
+    display: flex;
+    flex-direction: column;
+}
+
+.analysis-results-panel > .btn {
+    margin-top: auto;
+}
+
+.analysis-data-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.btn-xs {
+    padding: 3px 8px;
+    font-size: 11px;
+}
+
+.analysis-file-status {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.analysis-file-status.loaded {
+    color: var(--success);
+}
+
+.analysis-metrics {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+}
+
+.analysis-metric {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.analysis-metric-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+}
+
+.analysis-metric-value {
+    font-size: 18px;
+    font-weight: 600;
+    font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+}
+
+.analysis-metric-value.headline {
+    font-size: 24px;
+    color: var(--success);
+}
+
+.analysis-metric-value.primary {
+    color: var(--success);
+}
+
+.analysis-metric-value.secondary {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.analysis-metric-detail {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+/* Analysis status colors */
+.analysis-status-text.success {
+    color: var(--success);
+}
+
+.analysis-status-text.error {
+    color: var(--error);
 }
 
 /* Sweep selector */
@@ -237,7 +571,27 @@ body.jv-body {
     color: var(--text-secondary);
 }
 
-/* Radio group styles are in components.css */
+.radio-group {
+    display: flex;
+    gap: 16px;
+}
+
+.radio-option {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+}
+
+.radio-option input[type="radio"] {
+    accent-color: var(--ucb-gold);
+    width: 16px;
+    height: 16px;
+}
+
+.radio-option span {
+    font-size: 13px;
+}
 
 /* Cell area input */
 .area-input-group {
