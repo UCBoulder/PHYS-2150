@@ -52,10 +52,10 @@ tests/
 
 | File | Target | Key Tests |
 |------|--------|-----------|
-| `test_math_utils.py` | `eqe/utils/math_utils.py` | `fit_sine_wave()`, `calculate_r_squared()`, `find_optimal_phase()`, `moving_average()` |
-| `test_data_handling.py` | `eqe/utils/data_handling.py` | `validate_cell_number()`, `validate_pixel_number()`, `generate_filename()` |
-| `test_jv_voltage_array.py` | `jv/models/jv_measurement.py` | `generate_voltage_array()` - inclusive endpoints, rounding |
-| `test_statistics.py` | `eqe/models/stability_test.py` | `calculate_statistics()` - mean, std, CV%, range |
+| `test_math_utils.py` | `eqe/utils/math_utils.py` | `MathUtils`: `fit_sine_wave()`, `calculate_r_squared()`, `find_optimal_phase()`, `moving_average()`, `calculate_statistics()`, `normalize_data()`; `CalibrationUtils`: `wavelength_to_energy()`, `energy_to_wavelength()` |
+| `test_data_handling.py` | `eqe/utils/data_handling.py` | `DataHandler`: `validate_cell_number()`, `validate_pixel_number()`, `generate_filename()` |
+| `test_jv_voltage_array.py` | `jv/models/jv_measurement.py` | `JVMeasurementModel.generate_voltage_array()` - inclusive endpoints, decimal rounding |
+| `test_statistics.py` | `eqe/models/stability_test.py` | `StabilityTestModel.calculate_statistics()` - mean, std, CV%, range |
 
 ### Phase 2: Model Layer Tests (Mocked Controllers)
 
