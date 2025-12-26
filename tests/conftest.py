@@ -68,24 +68,43 @@ def sample_wavelengths():
     return np.array([400, 450, 500, 550, 600, 650, 700, 750, 800])
 
 
-# ==================== Phase 2: Mock Controllers (To Be Implemented) ====================
+# ==================== Phase 2: Mock Controllers ====================
 
-# @pytest.fixture
-# def mock_keithley_controller():
-#     """Mock Keithley 2450 returning physics-based I-V data."""
-#     pass
+from tests.mocks.mock_controllers import (
+    MockKeithley2450Controller,
+    MockPicoScopeController,
+    MockMonochromatorController,
+    MockPowerMeterController,
+)
 
-# @pytest.fixture
-# def mock_picoscope_controller():
-#     """Mock PicoScope lock-in with configurable signal level."""
-#     pass
 
-# @pytest.fixture
-# def mock_monochromator_controller():
-#     """Mock monochromator tracking wavelength, grating, filter, shutter."""
-#     pass
+@pytest.fixture
+def mock_keithley_controller():
+    """Mock Keithley 2450 returning physics-based I-V data."""
+    controller = MockKeithley2450Controller()
+    controller.connect()
+    return controller
 
-# @pytest.fixture
-# def mock_power_meter_controller():
-#     """Mock Thorlabs power meter returning lamp spectrum power."""
-#     pass
+
+@pytest.fixture
+def mock_picoscope_controller():
+    """Mock PicoScope lock-in with configurable signal level."""
+    controller = MockPicoScopeController()
+    controller.connect()
+    return controller
+
+
+@pytest.fixture
+def mock_monochromator_controller():
+    """Mock monochromator tracking wavelength, grating, filter, shutter."""
+    controller = MockMonochromatorController()
+    controller.connect()
+    return controller
+
+
+@pytest.fixture
+def mock_power_meter_controller():
+    """Mock Thorlabs power meter returning lamp spectrum power."""
+    controller = MockPowerMeterController()
+    controller.connect()
+    return controller
