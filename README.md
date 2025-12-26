@@ -116,10 +116,16 @@ PHYS 2150/
 │   ├── phys2150.spec       # PyInstaller spec
 │   └── installer.iss       # Windows installer script (Inno Setup)
 │
-└── docs/                    # Documentation
-    ├── hardware-setup.md   # Driver installation guide
-    ├── developer-setup.md  # Development environment
-    └── per-suggestions.md  # Physics education recommendations
+├── docs/                    # Documentation
+│   ├── hardware-setup.md   # Driver installation guide
+│   ├── developer-setup.md  # Development environment
+│   └── per-suggestions.md  # Physics education recommendations
+│
+└── tests/                   # Test Suite (201 tests)
+    ├── unit/               # Pure function tests
+    ├── models/             # Model tests with mocks
+    ├── integration/        # Workflow tests
+    └── mocks/              # Mock hardware controllers
 ```
 
 ## J-V Measurement
@@ -185,6 +191,40 @@ This separation enables:
 - GUI testing without hardware (`--offline` mode)
 - Clear code organization for maintenance
 - Modern web-based interface with Plotly.js visualizations
+
+## Testing
+
+The test suite covers measurement logic, data export, and parameter validation.
+
+```bash
+# Run all tests
+uv run pytest
+
+# Run with coverage report
+uv run pytest --cov=jv --cov=eqe --cov=common
+
+# Run specific test categories
+uv run pytest tests/unit/           # Pure function tests
+uv run pytest tests/models/         # Model layer tests
+uv run pytest tests/integration/    # Workflow tests
+```
+
+### Test Structure
+
+| Directory | Tests | Purpose |
+|-----------|-------|---------|
+| `tests/unit/` | 86 | Math utilities, data handling, statistics |
+| `tests/models/` | 74 | Measurement models with mock controllers |
+| `tests/integration/` | 41 | End-to-end measurement workflows |
+
+### What's Tested
+
+- **Measurement models** (74-86% coverage): J-V sweeps, EQE current/power/phase
+- **Data export** (56-100%): CSV generation, filename formatting
+- **Parameter validation**: Cell numbers, pixel ranges, voltage/wavelength limits
+- **Stability test**: Power and current stability measurements
+
+Mock controllers simulate hardware behavior for testing without physical devices.
 
 ## Building for Distribution
 

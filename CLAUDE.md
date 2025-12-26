@@ -25,8 +25,11 @@ uv sync                    # Recommended
 pip install -r requirements.txt  # Alternative
 
 # Run tests
-uv run pytest
-pytest                     # If using pip
+uv run pytest                                    # All tests
+uv run pytest tests/unit/                        # Unit tests only
+uv run pytest tests/integration/                 # Integration tests only
+uv run pytest -k "test_voltage"                  # Run tests matching pattern
+uv run pytest --cov=jv --cov=eqe --cov=common   # With coverage report
 
 # Lint
 uv run ruff check .
