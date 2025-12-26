@@ -175,27 +175,40 @@ class EQEExperimentModel(QObject):
             self.logger.log("Offline mode - devices simulated successfully")
             return True
         
+        self.logger.log("Initializing devices...")
+
+        # Initialize VISA resource manager
+        self._rm = visa.ResourceManager()
+
+        # Try to initialize all devices, collecting any failures
+        # This way students see ALL disconnected devices, not just the first
+        failures = []
+
         try:
-            self.logger.log("Initializing devices...")
-            
-            # Initialize VISA resource manager
-            self._rm = visa.ResourceManager()
-            
-            # Initialize device controllers
             self._initialize_power_meter()
+        except EQEExperimentError as e:
+            failures.append(str(e))
+
+        try:
             self._initialize_monochromator()
+        except EQEExperimentError as e:
+            failures.append(str(e))
+
+        try:
             self._initialize_lockin()
-            
-            # Create measurement models
-            self._create_measurement_models()
-            
-            self._devices_initialized = True
-            self.logger.log("All devices initialized successfully")
-            return True
-            
-        except Exception as e:
-            # Don't log here - device_status_changed signal already logged per-device failures
-            raise EQEExperimentError(f"Failed to initialize devices: {e}")
+        except EQEExperimentError as e:
+            failures.append(str(e))
+
+        # Create measurement models (uses whatever devices succeeded)
+        self._create_measurement_models()
+
+        if failures:
+            # Some devices failed - raise but app will continue
+            raise EQEExperimentError(f"{len(failures)} device(s) failed to initialize")
+
+        self._devices_initialized = True
+        self.logger.log("All devices initialized successfully")
+        return True
     
     def _initialize_power_meter(self) -> None:
         """Initialize Thorlabs power meter."""
