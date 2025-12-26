@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Log viewer modal (`Ctrl+Shift+L`) to view debug logs directly in the application
+  - Shows last 500 lines from `%LOCALAPPDATA%\PHYS2150\{app}_debug.log`
+  - Copy and Refresh buttons, Esc to close
+- Print capture mode (`Ctrl+Shift+D`) redirects print() statements to terminal panel
+  - Captures `TieredLogger.debug_output()` and other print() calls
+  - Shows `[print]` prefix to distinguish from logger output
 - Keyboard dismiss for info/error modals (OK button auto-focused, press Enter to close)
 - `PHYS2150_DISABLE_REMOTE_CONFIG` environment variable to skip remote config fetching during development
 - Comprehensive test suite with 201 tests (29% code coverage):
@@ -20,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Coverage configuration in pyproject.toml with pytest-cov
 
 ### Changed
+- `Ctrl+Shift+D` now toggles print capture instead of debug log levels (simpler, more useful)
 - Debug logs now written to `%LOCALAPPDATA%\PHYS2150\` for Windows compatibility when installed to Program Files
 
 ### Fixed

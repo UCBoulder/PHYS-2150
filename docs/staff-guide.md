@@ -22,33 +22,40 @@ Quick reference for TAs and instructors using the PHYS 2150 Measurement Suite.
 
 | Shortcut | Action | When to Use |
 |----------|--------|-------------|
-| `Ctrl+Shift+T` | Toggle console panel | View real-time log messages without external terminal |
-| `Ctrl+Shift+D` | Toggle debug mode | See verbose technical output (SDK calls, raw values) |
+| `Ctrl+Shift+T` | Toggle terminal panel | View real-time log messages |
+| `Ctrl+Shift+L` | Open log viewer | View full debug logs from file |
+| `Ctrl+Shift+D` | Toggle print capture | See print() statements in terminal |
 | `Ctrl+Shift+E` | Toggle analysis panel | View calculated parameters during/after measurements |
 
-### Console Panel (Ctrl+Shift+T)
+### Terminal Panel (Ctrl+Shift+T)
 
-Opens a collapsible panel showing application logs in real-time. Useful for:
-- Monitoring measurement progress
-- Seeing device connection status
-- Viewing warnings and errors as they occur
+Opens a collapsible panel showing application logs in real-time. Shows:
+- INFO, WARNING, and ERROR level messages
+- Device connection status
+- Measurement progress updates
 
-The console shows the same output as the terminal window, but integrated into the UI.
+### Log Viewer (Ctrl+Shift+L)
 
-### Debug Mode (Ctrl+Shift+D)
+Opens a modal showing the full debug log file from `%LOCALAPPDATA%\PHYS2150\`. This includes ALL log messages (including DEBUG level) and persists across sessions. Features:
+- **Copy** button to copy logs for sharing
+- **Refresh** button to reload
+- Press **Esc** to close
 
-Enables verbose logging that includes:
-- Raw ADC values and sample counts
-- SDK function calls and return codes
-- Lock-in calculation intermediates (X, Y, R, phase)
-- Timing information for each operation
+**When to use:**
+- Reviewing what happened during a failed measurement
+- Sharing logs with developers for bug reports
+- Seeing detailed technical output
+
+### Print Capture (Ctrl+Shift+D)
+
+Captures `print()` statements and shows them in the terminal panel. These are low-level debug messages that normally only appear in the system console.
 
 **When to enable:**
-- Student reports "weird" measurements
-- Debugging hardware communication issues
-- Verifying lock-in is working correctly
+- Debugging stability test issues (shows `[STAB]` messages)
+- Seeing raw hardware communication details
+- When log viewer doesn't show enough detail
 
-**Note:** Debug output goes to the console panel. Open it with `Ctrl+Shift+T` first.
+**Note:** Open the terminal panel (`Ctrl+Shift+T`) first to see captured output.
 
 ### Analysis Panel (Ctrl+Shift+E)
 
@@ -84,7 +91,7 @@ Shows calculated parameters that students don't normally see:
 
 ### "The plot looks noisy"
 
-1. Enable debug mode (`Ctrl+Shift+D`) to see CV% per measurement
+1. Open terminal panel (`Ctrl+Shift+T`) to see CV% per measurement
 2. CV% > 5% suggests:
    - Lamp not warmed up (wait 15 min)
    - Loose cable connections
@@ -92,9 +99,10 @@ Shows calculated parameters that students don't normally see:
 
 ### "Measurement crashed / froze"
 
-1. Check console (`Ctrl+Shift+T`) for error messages
-2. If PicoScope related: unplug and replug USB, restart app
-3. Check the log file: `eqe_debug.log` in the application directory
+1. Check terminal panel (`Ctrl+Shift+T`) for error messages
+2. Open log viewer (`Ctrl+Shift+L`) for detailed history
+3. If PicoScope related: unplug and replug USB, restart app
+4. Log files are in `%LOCALAPPDATA%\PHYS2150\` (e.g., `eqe_debug.log`)
 
 ---
 
@@ -137,7 +145,7 @@ uv run python -m jv
 | `eqe_debug.log` | Full EQE application log with timestamps |
 | `jv_debug.log` | Full J-V application log with timestamps |
 
-Log files are stored in `%LOCALAPPDATA%\PHYS2150\` (typically `C:\Users\<username>\AppData\Local\PHYS2150\`). They contain all debug-level messages even when debug mode is off, and rotate automatically at 5 MB.
+Log files are stored in `%LOCALAPPDATA%\PHYS2150\` (typically `C:\Users\<username>\AppData\Local\PHYS2150\`). They contain ALL log messages including DEBUG level and rotate automatically at 5 MB. Use the **Log Viewer** (`Ctrl+Shift+L`) to view these files directly in the application.
 
 ---
 

@@ -376,7 +376,10 @@ Typical location: `C:\Users\<username>\AppData\Local\PHYS2150\`
 
 Logs rotate automatically at 5 MB with 3 backup files kept.
 
-**Staff debug mode** (Ctrl+Shift+D in the application) promotes DEBUG-level messages to the console for real-time troubleshooting.
+**Viewing logs in the application:**
+- `Ctrl+Shift+L` - Opens log viewer modal showing the full debug log file
+- `Ctrl+Shift+T` - Opens terminal panel showing real-time INFO+ messages
+- `Ctrl+Shift+D` - Captures print() statements to the terminal panel
 
 ## Troubleshooting Development Issues
 
