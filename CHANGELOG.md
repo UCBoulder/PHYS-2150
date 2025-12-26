@@ -10,11 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Keyboard dismiss for info/error modals (OK button auto-focused, press Enter to close)
 - `PHYS2150_DISABLE_REMOTE_CONFIG` environment variable to skip remote config fetching during development
-- Comprehensive test suite with 156 tests:
-  - Phase 1: Unit tests for pure functions (66 tests)
-  - Phase 2: Model tests with mock controllers (49 tests)
-  - Phase 3: Integration tests for measurement workflows (41 tests)
+- Comprehensive test suite with 201 tests (29% code coverage):
+  - Unit tests for math utilities, data handling, statistics (86 tests)
+  - Model tests with mock controllers (74 tests)
+  - Integration tests for measurement workflows (41 tests)
 - Mock controllers for testing without hardware (Keithley, PicoScope, Monochromator, Power Meter)
+- Stability test model tests (power/current tests, statistics calculation)
+- Data export tests (CSV export, JV data, EQE measurements)
 - Coverage configuration in pyproject.toml with pytest-cov
 
 ### Changed
