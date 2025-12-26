@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Ctrl+Shift+D` now toggles print capture instead of debug log levels (simpler, more useful)
 - Debug logs now written to `%LOCALAPPDATA%\PHYS2150\` for Windows compatibility when installed to Program Files
 - EQE device status bar now shows clean "Connected"/"Not Connected" text (detailed errors remain in console)
+- EQE now attempts all device connections even if some fail (shows complete status instead of stopping at first failure)
 
 ### Fixed
 - Taskbar showing Python icon instead of app icon when running from source (set Windows AppUserModelID)

@@ -34,10 +34,16 @@ Opens a collapsible panel showing application logs in real-time. Shows:
 - Device connection status
 - Measurement progress updates
 
+Features:
+- **Copy** button to copy all messages to clipboard
+- **Clear** button to clear messages
+- **Drag to resize** - drag the top edge to make the panel taller/shorter
+
 ### Log Viewer (Ctrl+Shift+L)
 
-Opens a modal showing the full debug log file from `%LOCALAPPDATA%\PHYS2150\`. This includes ALL log messages (including DEBUG level) and persists across sessions. Features:
-- **Copy** button to copy logs for sharing
+Opens a modal showing the last 50 lines from the debug log file (`%LOCALAPPDATA%\PHYS2150\`). This includes ALL log messages (including DEBUG level) and persists across sessions. Features:
+- **Open Full Log** button to open complete log in Notepad
+- **Copy** button to copy displayed logs for sharing
 - **Refresh** button to reload
 - Press **Esc** to close
 
