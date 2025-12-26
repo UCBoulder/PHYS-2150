@@ -25,6 +25,7 @@ dependencies = [
 dev = [
     "pyinstaller>=6.0",
     "pytest>=7.0",
+    "pytest-cov>=4.0",
     "pytest-qt>=4.2",
     "ruff>=0.1.0",
 ]
@@ -48,6 +49,7 @@ packages = ["launcher.py", "eqe", "jv", "common"]
 dev = [
     "pyinstaller>=6.0",
     "pytest>=7.0",
+    "pytest-cov>=4.0",
     "pytest-qt>=4.2",
     "ruff>=0.1.0",
 ]
@@ -63,3 +65,23 @@ ignore = ["E501"]  # Line length handled separately
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 qt_api = "pyside6"
+addopts = "-v --tb=short"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "hardware: marks tests that require actual hardware",
+]
+
+[tool.coverage.run]
+source = ["jv", "eqe", "common"]
+omit = [
+    "*/drivers/*",
+    "*/__main__.py",
+    "*/config/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+]

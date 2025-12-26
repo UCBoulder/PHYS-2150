@@ -7,6 +7,7 @@ physics-based mock data.
 """
 
 import numpy as np
+from decimal import Decimal
 from typing import Optional, Dict, Any, List
 from unittest.mock import Mock
 
@@ -61,8 +62,20 @@ class MockKeithley2450Controller:
         current += np.random.normal(0, abs(current) * 0.001)
         return float(current)
 
+    def measure_current_precise(self) -> Decimal:
+        """Generate mock current with high precision (returns Decimal for math compatibility)."""
+        return Decimal(str(self.measure_current()))
+
     def configure_source_voltage(self) -> None:
         pass
+
+    def configure_for_jv_measurement(self, voltage_range: float = 2,
+                                      current_range: float = 10,
+                                      current_limit: float = 1,
+                                      remote_sensing: bool = True) -> None:
+        """Configure device for J-V measurement."""
+        self._current_compliance = current_limit
+        self.output_on()
 
     def set_current_compliance(self, compliance: float) -> None:
         self._current_compliance = compliance
@@ -140,8 +153,13 @@ class MockPicoScopeController:
             'Y': r * np.sin(theta),
             'R': r,
             'theta': self._phase,
-            'freq': self._reference_frequency
+            'freq': self._reference_frequency,
+            'ref_amplitude': 2.0  # Mock reference amplitude in Vpp
         }
+
+    def read_current_fast(self, num_cycles: int = 20) -> float:
+        """Fast current read with fewer cycles (for live monitoring)."""
+        return self.read_current(num_measurements=1)
 
     def measure_phase_response(self) -> tuple:
         """Measure phase response (phase, magnitude, quality)."""
@@ -173,9 +191,11 @@ class MockMonochromatorController:
         self._wavelength = 500.0
         self._grating = 1
         self._filter = 1
+        self._current_filter = 1  # Alias used by experiment model
         self._shutter_open = False
+        self.serial_number = "MOCK-CS130B-001"
 
-    def connect(self) -> bool:
+    def connect(self, interface: str = None, timeout_msec: int = 1000) -> bool:
         self._connected = True
         return True
 
@@ -203,6 +223,7 @@ class MockMonochromatorController:
 
     def set_filter(self, position: int) -> None:
         self._filter = position
+        self._current_filter = position
 
     def get_filter(self) -> int:
         return self._filter
@@ -225,6 +246,25 @@ class MockMonochromatorController:
         self.set_wavelength_with_grating_auto(wavelength)
         self.set_filter_for_wavelength(wavelength)
         return self._wavelength
+
+    def send_command(self, command: str) -> str:
+        """Send command to monochromator (mock - parses and updates state)."""
+        parts = command.lower().split()
+        if parts[0] == "grating" and len(parts) > 1:
+            self._grating = int(parts[1])
+        elif parts[0] == "gowave" and len(parts) > 1:
+            self._wavelength = float(parts[1])
+        elif parts[0] == "shutter":
+            if len(parts) > 1 and parts[1] == "o":
+                self._shutter_open = True
+            elif len(parts) > 1 and parts[1] == "c":
+                self._shutter_open = False
+        return "OK"
+
+    def align_for_measurement(self, wavelength: float) -> None:
+        """Align monochromator for visual alignment at specified wavelength."""
+        self.configure_for_wavelength(wavelength)
+        self.open_shutter()
 
     def open_shutter(self) -> None:
         self._shutter_open = True
