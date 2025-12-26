@@ -145,6 +145,12 @@ input[type="number"] {
     outline-offset: 2px;
 }
 
+/* Ensure focus ring shows in modals when focused programmatically */
+.modal .btn:focus {
+    outline: 2px solid var(--ucb-gold);
+    outline-offset: 2px;
+}
+
 .btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;

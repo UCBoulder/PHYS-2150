@@ -15,12 +15,20 @@ import os
 import json
 import subprocess
 import argparse
+import ctypes
 from importlib.metadata import version, PackageNotFoundError
 
 from PySide6.QtCore import QObject, Slot, QTimer
 from PySide6.QtWidgets import QApplication
 
 from common.ui import BaseWebWindow
+
+
+def set_windows_app_id():
+    """Set Windows AppUserModelID so taskbar shows correct icon instead of Python's."""
+    if sys.platform == 'win32':
+        app_id = 'CUBoulder.PHYS2150.MeasurementSuite'
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
 
 
 def is_frozen() -> bool:
@@ -166,6 +174,9 @@ def main():
         PHYS2150.exe --app eqe [--offline] [--theme dark|light]
         PHYS2150.exe --app jv [--offline] [--theme dark|light]
     """
+    # Set AppUserModelID before QApplication so Windows shows correct taskbar icon
+    set_windows_app_id()
+
     parser = argparse.ArgumentParser(description="PHYS 2150 Measurement Suite")
     parser.add_argument("--app", choices=["eqe", "jv"],
                         help="Launch specific app directly (used by launcher)")

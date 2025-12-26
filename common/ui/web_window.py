@@ -170,8 +170,12 @@ class BaseWebWindow(QMainWindow):
             level: Log level ('debug', 'info', 'warn', 'error')
             message: Log message text
         """
-        # Escape quotes in message for JS
-        escaped = message.replace('\\', '\\\\').replace("'", "\\'").replace('\n', '\\n')
+        # Escape special characters in message for JS string
+        escaped = (message
+            .replace('\\', '\\\\')
+            .replace("'", "\\'")
+            .replace('\r', '\\r')
+            .replace('\n', '\\n'))
         js = f"onLogMessage('{level}', '{escaped}')"
         self.run_js(js)
 

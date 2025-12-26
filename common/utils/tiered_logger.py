@@ -10,11 +10,23 @@ Staff debug mode (Ctrl+Shift+D) promotes debug messages to console.
 """
 
 import logging
-import datetime
+import os
 from enum import Enum
 from pathlib import Path
 from typing import Optional, Callable, List, Dict, Any
 from logging.handlers import RotatingFileHandler
+
+
+def _get_log_directory() -> Path:
+    """Get the default log directory (%LOCALAPPDATA%\\PHYS2150\\)."""
+    local_app_data = os.environ.get('LOCALAPPDATA')
+    if local_app_data:
+        log_dir = Path(local_app_data) / 'PHYS2150'
+    else:
+        # Fallback if LOCALAPPDATA not set (shouldn't happen on Windows)
+        log_dir = Path.home() / 'PHYS2150'
+    log_dir.mkdir(parents=True, exist_ok=True)
+    return log_dir
 
 
 class LogTier(Enum):
@@ -130,7 +142,7 @@ class TieredLogger:
             error_callback: Callback for error dialogs (title, message, causes, actions)
         """
         self.name = name
-        self.log_dir = log_dir or Path.cwd()
+        self.log_dir = log_dir or _get_log_directory()
         self.gui_callback = gui_callback
         self.stats_callback = stats_callback
         self.error_callback = error_callback

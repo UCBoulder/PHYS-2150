@@ -10,6 +10,7 @@ import os
 import sys
 import json
 import logging
+import ctypes
 from typing import Optional
 
 from PySide6.QtCore import Qt, QObject, Slot, QUrl, QThread, Signal
@@ -279,7 +280,9 @@ class JVApi(BaseWebApi):
         """Forward device status change to JS."""
         level = 'info' if connected else 'warn'
         self._window.send_log(level, f"Device: {message}")
-        js = f"updateDeviceStatus({str(connected).lower()}, '{message}')"
+        # Escape message for JS string
+        escaped = message.replace("\\", "\\\\").replace("'", "\\'").replace("\r", "\\r").replace("\n", "\\n")
+        js = f"updateDeviceStatus({str(connected).lower()}, '{escaped}')"
         self._window.run_js(js)
 
 
@@ -363,9 +366,19 @@ class JVWebApplication:
         return self.app.exec()
 
 
+def _set_windows_app_id():
+    """Set Windows AppUserModelID so taskbar shows correct icon instead of Python's."""
+    if sys.platform == 'win32':
+        app_id = 'CUBoulder.PHYS2150.JV'
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
+
+
 def main():
     """Entry point for J-V web application."""
     import argparse
+
+    # Set AppUserModelID before QApplication so Windows shows correct taskbar icon
+    _set_windows_app_id()
 
     # Parse command line arguments
     parser = argparse.ArgumentParser(description='J-V Measurement Application')

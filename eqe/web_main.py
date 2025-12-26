@@ -10,6 +10,7 @@ import os
 import sys
 import json
 import logging
+import ctypes
 from typing import Optional, Dict, Any
 
 from PySide6.QtCore import Qt, QObject, Slot, QUrl, QThread, Signal, Slot as QtSlot
@@ -493,8 +494,8 @@ class EQEApi(BaseWebApi):
     @QtSlot(bool, str)
     def _emit_stability_complete(self, success: bool, message: str) -> None:
         """Emit stability completion to JS (runs on main thread)."""
-        # Escape for JS string (backslashes, quotes, and newlines)
-        escaped = message.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n")
+        # Escape for JS string (backslashes, quotes, carriage returns, and newlines)
+        escaped = message.replace("\\", "\\\\").replace("'", "\\'").replace("\r", "\\r").replace("\n", "\\n")
         js = f"onStabilityComplete({str(success).lower()}, '{escaped}')"
         self._window.run_js(js)
 
@@ -511,7 +512,9 @@ class EQEApi(BaseWebApi):
         """Forward device status change to JS."""
         level = 'info' if is_connected else 'warn'
         self._window.send_log(level, f"{device_name}: {message}")
-        js = f"onDeviceStatusChanged('{device_name}', {str(is_connected).lower()}, '{message}')"
+        # Escape message for JS string
+        escaped = message.replace("\\", "\\\\").replace("'", "\\'").replace("\r", "\\r").replace("\n", "\\n")
+        js = f"onDeviceStatusChanged('{device_name}', {str(is_connected).lower()}, '{escaped}')"
         self._window.run_js(js)
 
     def _on_measurement_progress(self, measurement_type: str, progress_data: Dict) -> None:
@@ -546,8 +549,8 @@ class EQEApi(BaseWebApi):
         else:
             self._window.send_log('warn', f"Measurement stopped: {message}")
 
-        # Escape message for JS string (single quotes and newlines)
-        escaped_message = message.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n")
+        # Escape message for JS string
+        escaped_message = message.replace("\\", "\\\\").replace("'", "\\'").replace("\r", "\\r").replace("\n", "\\n")
         js = f"onMeasurementComplete({str(success).lower()}, '{escaped_message}')"
         self._window.run_js(js)
 
@@ -703,9 +706,19 @@ class EQEWebApplication:
         return self.app.exec()
 
 
+def _set_windows_app_id():
+    """Set Windows AppUserModelID so taskbar shows correct icon instead of Python's."""
+    if sys.platform == 'win32':
+        app_id = 'CUBoulder.PHYS2150.EQE'
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
+
+
 def main():
     """Entry point for EQE web application."""
     import argparse
+
+    # Set AppUserModelID before QApplication so Windows shows correct taskbar icon
+    _set_windows_app_id()
 
     # Parse command line arguments
     parser = argparse.ArgumentParser(description='EQE Measurement Application')

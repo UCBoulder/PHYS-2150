@@ -252,6 +252,12 @@ function showErrorModal(title, message) {
     if (messageEl) messageEl.textContent = message;
 
     showModal('error-modal');
+
+    // Focus OK button after modal transition so Enter dismisses it
+    setTimeout(() => {
+        const okBtn = document.querySelector('#error-modal .btn-primary');
+        if (okBtn) okBtn.focus();
+    }, 250);
 }
 
 /**
@@ -276,6 +282,12 @@ function showInfoModal(title, message) {
     if (messageEl) messageEl.textContent = message;
 
     showModal('info-modal');
+
+    // Focus OK button after modal transition so Enter dismisses it
+    setTimeout(() => {
+        const okBtn = document.querySelector('#info-modal .btn-primary');
+        if (okBtn) okBtn.focus();
+    }, 250);
 }
 
 /**
