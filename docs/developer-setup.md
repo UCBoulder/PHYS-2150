@@ -44,6 +44,8 @@ uv run python -m jv
 PHYS-2150/
 ├── launcher.py              # Main entry point - measurement selector
 ├── pyproject.toml           # Project configuration and dependencies
+├── requirements.txt         # Alternative pip dependencies
+├── remote-defaults.json     # Semester-specific defaults (served via GitHub)
 │
 ├── ui/                      # Web UI (shared by all apps)
 │   ├── eqe.html            # EQE measurement interface
@@ -54,7 +56,7 @@ PHYS-2150/
 │
 ├── common/                  # Shared infrastructure
 │   ├── drivers/            # Hardware drivers (TLPMX.py)
-│   └── utils/              # Logging, data export, error messages
+│   └── utils/              # Logging, data export, remote config
 │
 ├── eqe/                    # EQE measurement application
 │   ├── web_main.py        # Qt WebEngine app, Python-JS bridge
@@ -70,6 +72,13 @@ PHYS-2150/
 │   ├── models/            # J-V experiment logic
 │   ├── config/            # Settings
 │   └── utils/             # JV utilities
+│
+├── assets/                 # Application resources
+│   ├── icon.ico           # Windows application icon
+│   └── cu_logo.png        # CU Boulder logo
+│
+├── scripts/                # Utility scripts
+│   └── test_measurement_parameters.py
 │
 ├── build/                  # Build configuration
 │   ├── phys2150.spec      # PyInstaller spec
@@ -357,6 +366,18 @@ The application follows the Model-View-Controller pattern with a web-based UI:
    uv run python eqe/drivers/picoscope_driver.py
    ```
 
+### Log Files
+
+Debug logs are written to `%LOCALAPPDATA%\PHYS2150\`:
+- `eqe_debug.log` - EQE application logs
+- `jv_debug.log` - J-V application logs
+
+Typical location: `C:\Users\<username>\AppData\Local\PHYS2150\`
+
+Logs rotate automatically at 5 MB with 3 backup files kept.
+
+**Staff debug mode** (Ctrl+Shift+D in the application) promotes DEBUG-level messages to the console for real-time troubleshooting.
+
 ## Troubleshooting Development Issues
 
 ### Import Errors
@@ -459,6 +480,47 @@ When `--offline` is passed on the command line, the flag is set to `True` before
 - **UI/UX testing**: Verify button states, validation messages
 - **Demo purposes**: Show the application without hardware
 - **Debugging**: Isolate GUI issues from hardware issues
+
+---
+
+## Remote Configuration
+
+The application supports semester-specific defaults via remote configuration, allowing updates without rebuilding.
+
+### How It Works
+
+1. On startup, the launcher fetches `remote-defaults.json` from the GitHub `main` branch
+2. Settings are cached locally in `~/.phys2150/cache/` for offline use
+3. If fetch fails, cached values are used; if no cache, built-in defaults apply
+
+### Updating Defaults
+
+To change defaults for all users (e.g., new semester cell naming):
+
+1. Edit `remote-defaults.json` in the repository root
+2. Push to `main` branch
+3. Users get new defaults on next app launch
+
+### File Format
+
+```json
+{
+  "version": "2025-spring",
+  "jv": {
+    "cell_number": 1,
+    "pixel_number": 1
+  },
+  "eqe": {
+    "cell_number": 1,
+    "start_wavelength": 400,
+    "end_wavelength": 1100
+  }
+}
+```
+
+### Implementation
+
+See `common/utils/remote_config.py` for the fetch/cache logic. The `get_remote_config(app)` function returns a dict that models merge with their built-in defaults.
 
 ---
 

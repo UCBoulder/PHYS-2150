@@ -4,7 +4,21 @@ Quick reference for TAs and instructors using the PHYS 2150 Measurement Suite.
 
 ## Keyboard Shortcuts
 
-These shortcuts work in both EQE and J-V applications:
+### Global Shortcuts (work everywhere)
+
+| Shortcut | Action | When to Use |
+|----------|--------|-------------|
+| `Ctrl+Shift+C` | Toggle light/dark theme | Personal preference or screen glare |
+
+### Launcher Shortcuts
+
+| Shortcut | Action | When to Use |
+|----------|--------|-------------|
+| `Ctrl+Shift+D` | Toggle offline mode | Test GUI without hardware (indicator appears in UI) |
+| `E` | Launch EQE | Quick launch |
+| `I` | Launch J-V | Quick launch |
+
+### In-App Shortcuts (EQE and J-V)
 
 | Shortcut | Action | When to Use |
 |----------|--------|-------------|
@@ -123,7 +137,7 @@ uv run python -m jv
 | `eqe_debug.log` | Full EQE application log with timestamps |
 | `jv_debug.log` | Full J-V application log with timestamps |
 
-These files are in the application directory and contain all debug-level messages, even when debug mode is off.
+Log files are stored in `%LOCALAPPDATA%\PHYS2150\` (typically `C:\Users\<username>\AppData\Local\PHYS2150\`). They contain all debug-level messages even when debug mode is off, and rotate automatically at 5 MB.
 
 ---
 

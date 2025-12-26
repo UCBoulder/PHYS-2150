@@ -11,6 +11,8 @@ A comprehensive solar cell characterization system for the CU Boulder PHYS 2150 
 
 ### Installation
 
+**Requires Python 3.10 or later.**
+
 ```bash
 pip install uv
 git clone https://github.com/UCBoulder/PHYS-2150.git
@@ -35,6 +37,8 @@ uv run python -m jv
 uv run python -m eqe --offline
 uv run python -m jv --offline
 ```
+
+> **Staff Tip:** In the launcher, press `Ctrl+Shift+D` to toggle offline mode without command-line flags.
 
 ## Hardware Requirements
 
@@ -74,12 +78,15 @@ See [docs/hardware-setup.md](docs/hardware-setup.md) for detailed installation i
 PHYS 2150/
 ├── launcher.py              # Unified launcher - select EQE or J-V
 ├── pyproject.toml           # Project dependencies (uv sync)
+├── requirements.txt         # Alternative pip dependencies
+├── remote-defaults.json     # Semester-specific config (fetched from GitHub)
 │
 ├── ui/                      # Web UI (shared by all apps)
 │   ├── eqe.html            # EQE measurement interface
 │   ├── jv.html             # J-V measurement interface
 │   ├── launcher.html       # Application launcher
-│   └── css/                # Stylesheets
+│   ├── css/                # Stylesheets (theme.css, components.css, layout.css)
+│   └── js/                 # JavaScript modules (api.js, plotly-utils.js, etc.)
 │
 ├── jv/                      # J-V Measurement Application
 │   ├── web_main.py         # Qt WebEngine app, Python-JS bridge
@@ -98,9 +105,16 @@ PHYS 2150/
 │   ├── drivers/            # Thorlabs power meter driver
 │   └── utils/              # Data export, logging, error messages
 │
+├── assets/                  # Application resources
+│   ├── icon.ico            # Windows application icon
+│   └── cu_logo.png         # CU Boulder logo
+│
+├── scripts/                 # Utility scripts
+│   └── test_measurement_parameters.py
+│
 ├── build/                   # Build Configuration
 │   ├── phys2150.spec       # PyInstaller spec
-│   └── installer.iss       # Windows installer script
+│   └── installer.iss       # Windows installer script (Inno Setup)
 │
 └── docs/                    # Documentation
     ├── hardware-setup.md   # Driver installation guide
@@ -179,11 +193,25 @@ This separation enables:
 uv run pyinstaller build/phys2150.spec
 
 # Build Windows installer (requires Inno Setup)
+# If iscc is in PATH:
 iscc build/installer.iss
+# Or use full path (PowerShell):
+& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" build/installer.iss
+
 # Output: dist/PHYS2150-Setup.exe
 ```
 
+The Windows installer (`PHYS2150-Setup.exe`) provides a complete installation including desktop shortcuts and Start Menu entries. Lab computers can run the installed application without Python.
+
 See [docs/developer-setup.md](docs/developer-setup.md) for complete build instructions.
+
+## Configuration
+
+The application supports semester-specific default values via remote configuration:
+
+- On startup, the launcher fetches `remote-defaults.json` from the GitHub repository
+- Settings are cached locally in `~/.phys2150/cache/` for offline use
+- To update defaults for all users, edit `remote-defaults.json` and push to `main`
 
 ## Documentation
 
