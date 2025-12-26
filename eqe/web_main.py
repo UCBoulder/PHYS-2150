@@ -510,8 +510,11 @@ class EQEApi(BaseWebApi):
 
     def _on_device_status_changed(self, device_name: str, is_connected: bool, message: str) -> None:
         """Forward device status change to JS."""
-        level = 'info' if is_connected else 'warn'
-        self._window.send_log(level, f"{device_name}: {message}")
+        # Log via Python logger (WebConsoleHandler forwards to terminal panel)
+        if is_connected:
+            _logger.info(f"{device_name}: {message}")
+        else:
+            _logger.warning(f"{device_name}: {message}")
         # Escape message for JS string
         escaped = message.replace("\\", "\\\\").replace("'", "\\'").replace("\r", "\\r").replace("\n", "\\n")
         js = f"onDeviceStatusChanged('{device_name}', {str(is_connected).lower()}, '{escaped}')"

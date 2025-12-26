@@ -555,6 +555,22 @@ input[type="number"] {
     transform: translateY(0);
 }
 
+.console-resize-handle {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 6px;
+    cursor: ns-resize;
+    background: transparent;
+    z-index: 10;
+}
+
+.console-resize-handle:hover,
+.console-resize-handle.dragging {
+    background: var(--accent);
+}
+
 .console-header {
     display: flex;
     align-items: center;

@@ -447,6 +447,7 @@
                 <pre class="log-viewer-content" id="log-viewer-content">Loading...</pre>
             </div>
             <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="LabModals.openLogFile()">Open Full Log</button>
                 <button class="btn btn-secondary" id="log-copy-btn" onclick="LabModals.copyLogs()">Copy</button>
                 <button class="btn btn-secondary" onclick="LabModals.refreshLogs()">Refresh</button>
                 <button class="btn btn-primary" onclick="LabModals.closeLogViewer()">Close</button>
@@ -456,6 +457,7 @@
 
     <!-- Console Panel -->
     <div class="console-panel" id="console-panel">
+        <div class="console-resize-handle" id="console-resize-handle"></div>
         <div class="console-header">
             <div class="console-title">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -465,6 +467,7 @@
                 Console
             </div>
             <div class="console-actions">
+                <button class="console-btn" onclick="copyConsole()">Copy</button>
                 <button class="console-btn" onclick="clearConsole()">Clear</button>
                 <button class="console-btn" onclick="toggleConsole()">Close</button>
             </div>

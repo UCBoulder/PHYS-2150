@@ -74,6 +74,11 @@ class MonochromatorController:
                 rem_ifc=interface,
                 timeout_msec=timeout_msec
             )
+
+            # Check if device was actually found (driver logs errors but doesn't raise)
+            if not self._device.CS_Found():
+                raise MonochromatorError("Monochromator not found")
+
             self._serial_number = self._device.serial_number
             self._is_connected = True
             return True

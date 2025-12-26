@@ -271,9 +271,9 @@ async function showLogViewer() {
     showModal('log-viewer-modal');
     _logViewerOpen = true;
 
-    // Fetch logs from Python
+    // Fetch logs from Python (last 50 lines)
     try {
-        api.get_recent_logs(500, function(result) {
+        api.get_recent_logs(50, function(result) {
             try {
                 const response = JSON.parse(result);
                 if (response.success) {
@@ -323,7 +323,7 @@ async function refreshLogs() {
         logsContent.textContent = 'Refreshing...';
     }
 
-    api.get_recent_logs(500, function(result) {
+    api.get_recent_logs(50, function(result) {
         try {
             const response = JSON.parse(result);
             if (response.success && logsContent) {
@@ -337,23 +337,59 @@ async function refreshLogs() {
 }
 
 /**
+ * Open the full log file in Notepad.
+ */
+function openLogFile() {
+    const api = getApi();
+    if (!api || !api.open_log_file) {
+        console.error('open_log_file API not available');
+        return;
+    }
+
+    api.open_log_file(function(result) {
+        try {
+            const response = JSON.parse(result);
+            if (!response.success) {
+                console.error('Failed to open log file:', response.message);
+            }
+        } catch (e) {
+            console.error('Error opening log file:', e);
+        }
+    });
+}
+
+/**
  * Copy log content to clipboard.
+ * Uses execCommand fallback for Qt WebEngine compatibility.
  */
 function copyLogs() {
     const logsContent = document.getElementById('log-viewer-content');
-    if (logsContent) {
-        navigator.clipboard.writeText(logsContent.textContent).then(() => {
-            // Brief visual feedback
-            const copyBtn = document.getElementById('log-copy-btn');
-            if (copyBtn) {
-                const originalText = copyBtn.textContent;
-                copyBtn.textContent = 'Copied!';
-                setTimeout(() => { copyBtn.textContent = originalText; }, 1500);
-            }
-        }).catch(err => {
-            console.error('Failed to copy logs:', err);
-        });
+    if (!logsContent) return;
+
+    const text = logsContent.textContent;
+
+    // Use fallback method for Qt WebEngine compatibility
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+
+    try {
+        document.execCommand('copy');
+        // Brief visual feedback
+        const copyBtn = document.getElementById('log-copy-btn');
+        if (copyBtn) {
+            const originalText = copyBtn.textContent;
+            copyBtn.textContent = 'Copied!';
+            setTimeout(() => { copyBtn.textContent = originalText; }, 1500);
+        }
+    } catch (err) {
+        console.error('Failed to copy logs:', err);
     }
+
+    document.body.removeChild(textarea);
 }
 
 /**
@@ -372,6 +408,7 @@ function getLogViewerModalHTML() {
                 <pre class="log-viewer-content" id="log-viewer-content">Loading...</pre>
             </div>
             <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="LabModals.openLogFile()">Open Full Log</button>
                 <button class="btn btn-secondary" id="log-copy-btn" onclick="LabModals.copyLogs()">Copy</button>
                 <button class="btn btn-secondary" onclick="LabModals.refreshLogs()">Refresh</button>
                 <button class="btn btn-primary" onclick="LabModals.closeLogViewer()">Close</button>
@@ -636,6 +673,7 @@ window.LabModals = {
     toggleLogViewer: toggleLogViewer,
     refreshLogs: refreshLogs,
     copyLogs: copyLogs,
+    openLogFile: openLogFile,
     getLogViewerHTML: getLogViewerModalHTML,
 };
 

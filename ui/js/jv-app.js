@@ -938,6 +938,83 @@ function clearConsole() {
     output.innerHTML = '<div class="console-empty">Console cleared.</div>';
 }
 
+function copyConsole() {
+    if (consoleMessages.length === 0) {
+        return;
+    }
+
+    const text = consoleMessages.map(msg =>
+        `${msg.time} [${msg.level.toUpperCase()}] ${msg.message}`
+    ).join('\n');
+
+    // Use fallback method for Qt WebEngine compatibility
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+
+    try {
+        document.execCommand('copy');
+        // Brief visual feedback on the Copy button
+        const btns = document.querySelectorAll('.console-actions .console-btn');
+        const copyBtn = btns[0]; // Copy is the first button
+        if (copyBtn) {
+            const original = copyBtn.textContent;
+            copyBtn.textContent = 'Copied!';
+            setTimeout(() => { copyBtn.textContent = original; }, 1000);
+        }
+    } catch (err) {
+        console.error('Failed to copy:', err);
+    }
+
+    document.body.removeChild(textarea);
+}
+
+// Console resize functionality
+let isResizing = false;
+let startY = 0;
+let startHeight = 0;
+
+function initConsoleResize() {
+    const handle = document.getElementById('console-resize-handle');
+    const panel = document.getElementById('console-panel');
+
+    if (!handle || !panel) return;
+
+    handle.addEventListener('mousedown', (e) => {
+        isResizing = true;
+        startY = e.clientY;
+        startHeight = panel.offsetHeight;
+        handle.classList.add('dragging');
+        document.body.style.cursor = 'ns-resize';
+        document.body.style.userSelect = 'none';
+        e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isResizing) return;
+
+        const deltaY = startY - e.clientY;
+        const newHeight = Math.min(Math.max(100, startHeight + deltaY), window.innerHeight - 100);
+        panel.style.height = newHeight + 'px';
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (isResizing) {
+            isResizing = false;
+            const handle = document.getElementById('console-resize-handle');
+            if (handle) handle.classList.remove('dragging');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        }
+    });
+}
+
+// Initialize resize on DOMContentLoaded
+document.addEventListener('DOMContentLoaded', initConsoleResize);
+
 function addConsoleMessage(level, message) {
     const now = new Date();
     const time = now.toTimeString().split(' ')[0];
@@ -1036,4 +1113,5 @@ window.calculateParameters = calculateParameters;
 window.saveAnalysisResults = saveAnalysisResults;
 window.toggleConsole = toggleConsole;
 window.clearConsole = clearConsole;
+window.copyConsole = copyConsole;
 window.toggleTheme = () => LabTheme.toggle();

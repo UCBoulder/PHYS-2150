@@ -138,7 +138,7 @@ class BaseWebApi(QObject):
         return {"success": False, "message": "Cancelled"}
 
     @Slot(int, result=str)
-    def get_recent_logs(self, num_lines: int = 500) -> str:
+    def get_recent_logs(self, num_lines: int = 50) -> str:
         """
         Get recent log entries from the debug log file.
 
@@ -146,7 +146,7 @@ class BaseWebApi(QObject):
         stored in %LOCALAPPDATA%\\PHYS2150\\{app}_debug.log.
 
         Args:
-            num_lines: Number of recent lines to return (default 500)
+            num_lines: Number of recent lines to return (default 50)
 
         Returns:
             JSON string with {"success": bool, "logs": str, "path": str}
@@ -182,4 +182,41 @@ class BaseWebApi(QObject):
                 "message": f"Failed to read logs: {str(e)}",
                 "logs": "",
                 "path": ""
+            })
+
+    @Slot(result=str)
+    def open_log_file(self) -> str:
+        """
+        Open the log file in the default text editor (Notepad on Windows).
+
+        Returns:
+            JSON string with {"success": bool, "message": str}
+        """
+        import subprocess
+        import sys
+
+        try:
+            app_name = getattr(self._window, '_app_name', 'app')
+            log_dir = _get_log_directory()
+            log_file = log_dir / f"{app_name}_debug.log"
+
+            if not log_file.exists():
+                return json.dumps({
+                    "success": False,
+                    "message": f"Log file not found: {log_file}"
+                })
+
+            # Open in Notepad on Windows (read-only by default for log files)
+            if sys.platform == 'win32':
+                subprocess.Popen(['notepad.exe', str(log_file)])
+            else:
+                # Fallback for other platforms
+                subprocess.Popen(['xdg-open', str(log_file)])
+
+            return json.dumps({"success": True})
+
+        except Exception as e:
+            return json.dumps({
+                "success": False,
+                "message": f"Failed to open log file: {str(e)}"
             })

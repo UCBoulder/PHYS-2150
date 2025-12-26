@@ -8,8 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Console panel Copy button to copy all messages to clipboard
+- Console panel drag-to-resize (drag top edge to adjust height)
 - Log viewer modal (`Ctrl+Shift+L`) to view debug logs directly in the application
-  - Shows last 500 lines from `%LOCALAPPDATA%\PHYS2150\{app}_debug.log`
+  - Shows last 50 lines from `%LOCALAPPDATA%\PHYS2150\{app}_debug.log`
+  - "Open Full Log" button to open complete log in Notepad
   - Copy and Refresh buttons, Esc to close
 - Print capture mode (`Ctrl+Shift+D`) redirects print() statements to terminal panel
   - Captures `TieredLogger.debug_output()` and other print() calls
@@ -28,10 +31,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - `Ctrl+Shift+D` now toggles print capture instead of debug log levels (simpler, more useful)
 - Debug logs now written to `%LOCALAPPDATA%\PHYS2150\` for Windows compatibility when installed to Program Files
+- EQE device status bar now shows clean "Connected"/"Not Connected" text (detailed errors remain in console)
 
 ### Fixed
 - Taskbar showing Python icon instead of app icon when running from source (set Windows AppUserModelID)
 - JS syntax errors from unescaped carriage returns in device status messages
+- Monochromator showing "Connected (S/N: None)" even when device not found (controller now checks bFound flag)
+- Device connection status messages not written to debug log file (only appeared in terminal panel)
 
 ## [3.1.0] - 2025-12-25
 

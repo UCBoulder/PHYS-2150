@@ -278,8 +278,11 @@ class JVApi(BaseWebApi):
 
     def _on_device_status_changed(self, connected: bool, message: str) -> None:
         """Forward device status change to JS."""
-        level = 'info' if connected else 'warn'
-        self._window.send_log(level, f"Device: {message}")
+        # Log via Python logger (WebConsoleHandler forwards to terminal panel)
+        if connected:
+            _logger.info(f"Device: {message}")
+        else:
+            _logger.warning(f"Device: {message}")
         # Escape message for JS string
         escaped = message.replace("\\", "\\\\").replace("'", "\\'").replace("\r", "\\r").replace("\n", "\\n")
         js = f"updateDeviceStatus({str(connected).lower()}, '{escaped}')"
