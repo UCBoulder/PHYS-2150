@@ -668,6 +668,7 @@ class EQEWebApplication:
         stats_dict = {
             'mean': stats.mean,
             'std_dev': stats.std_dev,
+            'std_error': stats.std_error,  # SE = σ/√n, uncertainty in the mean
             'n': stats.n_measurements,
             'total': stats.n_total,
             'outliers': stats.n_outliers,

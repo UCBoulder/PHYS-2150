@@ -319,7 +319,7 @@ class TestEQEDataHandlerSave:
         assert len(rows) == 3
 
     def test_save_current_with_stats(self, temp_dir):
-        """Should save current measurement with statistics if enabled."""
+        """Should save current measurement with statistics including SE."""
         from eqe.utils.data_handling import DataHandler
         from unittest.mock import patch
 
@@ -331,13 +331,13 @@ class TestEQEDataHandlerSave:
             {'std_dev': 2e-9, 'n': 10, 'cv_percent': 0.4},
         ]
 
-        # Enable stats export
+        # Enable stats export with SE column
         with patch.dict('eqe.utils.data_handling.DATA_EXPORT_CONFIG', {
             'include_measurement_stats': True,
             'headers': {
                 'current_with_stats': [
                     "Wavelength (nm)", "Current_mean (nA)",
-                    "Current_std (nA)", "n", "CV_percent"
+                    "Current_std (nA)", "Current_SE (nA)", "n", "CV_percent"
                 ]
             },
             'csv_delimiter': ',',
@@ -358,9 +358,18 @@ class TestEQEDataHandlerSave:
             header = next(reader)
             rows = list(reader)
 
-        # Should have stats columns
-        assert len(header) >= 4
+        # Should have stats columns including SE
+        assert len(header) == 6
+        assert header == ["Wavelength (nm)", "Current_mean (nA)",
+                          "Current_std (nA)", "Current_SE (nA)", "n", "CV_percent"]
         assert len(rows) == 2
+
+        # Verify SE is calculated correctly: SE = std / sqrt(n)
+        # First row: std=1e-9 A = 1 nA, n=10, SE = 1/sqrt(10) ≈ 0.32 nA
+        row1 = rows[0]
+        se_value = float(row1[3])
+        expected_se = 1.0 / (10 ** 0.5)  # 1 nA / sqrt(10)
+        assert abs(se_value - expected_se) < 0.01
 
 
 class TestDataExportRobustness:

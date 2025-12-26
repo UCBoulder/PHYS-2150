@@ -712,10 +712,19 @@ function onMeasurementStats(stats) {
     state.currentData.stats.push({
         mean: stats.mean,
         std_dev: stats.std_dev,
+        std_error: stats.std_error,
         n: stats.n,
         cv_percent: stats.cv_percent
     });
     document.getElementById('stats-n').textContent = `${stats.n}/${stats.total}`;
+
+    // Format SD and SE in nanoamps for readability (current is in Amps)
+    // SD = spread of measurements, SE = uncertainty in the mean
+    const sdNanoamps = stats.std_dev * 1e9;
+    const seNanoamps = stats.std_error * 1e9;
+    document.getElementById('stats-sd').textContent = sdNanoamps.toFixed(2) + ' nA';
+    document.getElementById('stats-se').textContent = seNanoamps.toFixed(2) + ' nA';
+
     document.getElementById('stats-cv').textContent = stats.cv_percent.toFixed(1) + '%';
     const badge = document.getElementById('stats-quality');
     badge.textContent = stats.quality;
@@ -864,15 +873,16 @@ function savePowerData() {
 }
 
 function saveCurrentData() {
-    let csv = 'Wavelength (nm),Current_mean (nA),Current_std (nA),n,CV_percent\n';
+    let csv = 'Wavelength (nm),Current_mean (nA),Current_std (nA),Current_SE (nA),n,CV_percent\n';
     for (let i = 0; i < state.currentData.x.length; i++) {
         const wavelength = state.currentData.x[i];
         const current = state.currentData.y[i];
         const stats = state.currentData.stats[i] || {};
         const std_dev = stats.std_dev !== undefined ? (stats.std_dev * 1e9).toFixed(6) : '0';
+        const std_error = stats.std_error !== undefined ? (stats.std_error * 1e9).toFixed(6) : '0';
         const n = stats.n || 0;
         const cv = stats.cv_percent !== undefined ? stats.cv_percent.toFixed(2) : '0';
-        csv += `${wavelength.toFixed(1)},${current.toFixed(6)},${std_dev},${n},${cv}\n`;
+        csv += `${wavelength.toFixed(1)},${current.toFixed(6)},${std_dev},${std_error},${n},${cv}\n`;
     }
     const api = LabAPI.get();
     if (api && api.save_current_data) {
@@ -994,10 +1004,12 @@ function mockCurrentMeasurement() {
 
         const cv = 0.5 + Math.random() * 7.5;
         const std_dev = current * (cv / 100);
+        const std_error = std_dev / Math.sqrt(5);  // SE = σ/√n
         const quality = cv < 1.0 ? 'Excellent' : cv < 5.0 ? 'Good' : cv < 10.0 ? 'Fair' : 'Check';
         onMeasurementStats({
             mean: current,
             std_dev: std_dev,
+            std_error: std_error,
             n: 5, total: 5, outliers: 0,
             cv_percent: cv, quality: quality
         });

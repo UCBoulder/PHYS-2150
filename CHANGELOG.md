@@ -37,6 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Stability test model tests (power/current tests, statistics calculation)
 - Data export tests (CSV export, JV data, EQE measurements)
 - Coverage configuration in pyproject.toml with pytest-cov
+- Standard Error (SE) display in EQE measurement stats row (SE = σ/√n, uncertainty in the mean)
+- SE column added to EQE current measurement CSV export for complete uncertainty data
 
 ### Changed
 - Dark mode `--text-muted` color improved from #999999 to #ababab for WCAG AA contrast compliance (4.74:1 ratio)

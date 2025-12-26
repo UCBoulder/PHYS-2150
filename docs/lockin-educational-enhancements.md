@@ -2,15 +2,27 @@
 
 This document captures recommendations from PER (Physics Education Research) consultation for enhancing the software lock-in system to improve student learning outcomes.
 
-**Status:** Planning phase - awaiting implementation decisions
-**Last updated:** 2025-12-11
+**Status:** Partially implemented - core statistics exposure complete
+**Last updated:** 2025-12-26
 **Related:** [per-suggestions.md](per-suggestions.md), [software-lockin.md](software-lockin.md)
 
 ---
 
 ## Executive Summary
 
-The software lock-in achieves excellent technical performance (0.66% CV), but several enhancements could better support course learning goals around measurement uncertainty. The key insight: **the 5 measurements per wavelength are already being collected but hidden from students** - this directly contradicts the learning goal "articulate that repeated measurements will give a distribution of results."
+The software lock-in achieves excellent technical performance (0.66% CV), but several enhancements could better support course learning goals around measurement uncertainty.
+
+### ✅ Resolved (December 2025)
+
+The key issue has been addressed: **the 5 measurements per wavelength are now exposed to students.**
+
+- `read_current()` returns full statistics: `{current, std_dev, n, cv_percent}`
+- `MeasurementStats` dataclass provides structured data
+- `student_stats()` logger displays stats in real-time UI
+- CSV export includes: `Wavelength, Current_mean, Current_std, n, CV_percent`
+- No outlier rejection - students see honest measurement variability
+
+**Implementation:** `eqe/controllers/picoscope_lockin.py:260-344`, `eqe/utils/data_handling.py:94-161`
 
 ---
 
@@ -165,90 +177,76 @@ Right panel:  Product of signal × reference (shows mixing)
 
 ---
 
-## Part 3: Exposing Measurement Statistics (CRITICAL)
+## Part 3: Exposing Measurement Statistics ✅ IMPLEMENTED
 
-### 3.1 The Problem
+### 3.1 The Problem (RESOLVED)
 
-Current code at `eqe/controllers/picoscope_lockin.py:195-270`:
+~~Current code at `eqe/controllers/picoscope_lockin.py:195-270`:~~
 
-```python
-def read_current(self, num_measurements: int = 5) -> Optional[float]:
-    R_values = []
-    for i in range(num_measurements):
-        result = self.perform_lockin_measurement()
-        if result is not None:
-            R_values.append(result['R'])
+~~**Issue:** The 5 individual measurements are collected but discarded. Students only see the final average, never the distribution.~~
 
-    # ...averaging and filtering...
-
-    return current  # Only returns final averaged value!
-```
-
-**Issue:** The 5 individual measurements are collected but discarded. Students only see the final average, never the distribution.
+**Status:** ✅ Fixed December 2025
 
 ---
 
-### 3.2 Recommended Changes
+### 3.2 Implemented Changes
 
-#### A. Return Full Statistics from read_current()
+#### A. Return Full Statistics from read_current() ✅ DONE
 
-**Change return value from:**
+Current implementation at `eqe/controllers/picoscope_lockin.py:260-344`:
+
 ```python
-return current
+def read_current(self, num_measurements: int = 5, wavelength_nm: float = None,
+                 return_stats: bool = False) -> Optional[float]:
+    # ... performs measurements ...
+
+    # Calculate honest statistics from all measurements (no outlier rejection)
+    stats = MeasurementStats(
+        mean=current,
+        std_dev=current_std,
+        n_measurements=len(R_values),
+        n_total=num_measurements,
+        n_outliers=0,
+        cv_percent=cv,
+        unit="A",
+        wavelength_nm=wavelength_nm
+    )
+    _logger.student_stats(stats)  # Display in UI
+
+    if return_stats:
+        return {'current': current, 'std_dev': current_std, 'n': len(R_values), 'cv_percent': cv}
+    return current
 ```
 
-**To:**
-```python
-return {
-    'current': average_current,
-    'current_std': std_current,
-    'current_n': len(R_trimmed),
-    'cv_percent': cv,
-    'individual_values': R_values
-}
-```
-
-**Effort:** Low - data already collected
+**Status:** ✅ Implemented
 
 ---
 
 #### B. Real-time Distribution Display
 
-**During measurement, show:**
-```
-[Measurement at 550 nm]
+**Status:** Partial - stats shown via `student_stats()`, histogram not implemented
 
-Individual readings:     Distribution:
-  1: 1.234 nA            |
-  2: 1.241 nA            |    ***
-  3: 1.238 nA       =>   |   *****
-  4: 1.229 nA            |    ***
-  5: 1.237 nA            |
-                         +----------
-Mean: 1.236 nA           1.22  1.24  1.26 nA
-Std:  0.004 nA
-SE:   0.002 nA
-```
+**Currently shows:** Mean, std, n, CV% in real-time
+
+**Future enhancement:** Visual histogram of individual readings
 
 **Effort:** Medium
 
 ---
 
-#### C. Enhanced CSV Export
+#### C. Enhanced CSV Export ✅ DONE
 
-**Current format:**
+**Implementation:** `eqe/utils/data_handling.py:94-161`
+
+**Current format (when `include_measurement_stats=True`):**
 ```csv
-Wavelength (nm), Current (A)
-350, 1.234e-09
+Wavelength (nm), Current_mean (nA), Current_std (nA), n, CV_percent
+350, 4.24, 0.02, 5, 0.5
 ```
 
-**Proposed format:**
-```csv
-Wavelength (nm), Current_mean (A), Current_std (A), Current_n, Current_CV%
-350, 1.234e-09, 4.1e-12, 5, 0.33
-```
+Note: Values in nanoamps for student readability.
 
-**Effort:** Low
+**Status:** ✅ Implemented
 
 ---
 
@@ -262,11 +260,13 @@ Wavelength (nm), Current_mean (A), Current_std (A), Current_n, Current_CV%
 | 1-5% | Yellow | Acceptable |
 | >5% | Red | Check measurement |
 
+**Status:** CV% calculated and exported. UI color-coding not yet implemented.
+
 **Effort:** Low
 
 ---
 
-### 3.3 Teaching SD vs SE
+### 3.3 Teaching SD vs SE ✅ IMPLEMENTED
 
 This is a specific course learning goal. Display during/after measurement:
 
@@ -284,7 +284,12 @@ Standard Error (SE) = σ/√n = 0.004/√5 = 0.002 nA
   → "The true average is probably within ±0.004 nA of 1.236 nA"
 ```
 
-**Effort:** Low (UI text addition)
+**Status:** ✅ Both SD and SE now displayed in stats row (December 2025)
+
+**Implementation:**
+- `MeasurementStats.std_error` property in `common/utils/tiered_logger.py`
+- Stats row shows: `n: 5/5  SD: 0.04 nA  SE: 0.02 nA  CV: 0.5%  [Excellent]`
+- Values formatted in nanoamps for student readability
 
 ---
 
@@ -315,17 +320,19 @@ Add optional "educational mode" with reduced integration time:
 
 ## Implementation Priority Matrix
 
-| Enhancement | Learning Impact | Effort | Priority |
-|------------|-----------------|--------|----------|
-| Expose 5 individual measurements | HIGH | LOW | **CRITICAL** |
-| Add SD and SE to display | HIGH | LOW | **HIGH** |
-| CV% per wavelength point | MEDIUM | LOW | **HIGH** |
-| Enhanced CSV export | MEDIUM | LOW | **HIGH** |
-| Raw waveforms tab | HIGH | MEDIUM | **MEDIUM** |
-| X-Y phasor display | MEDIUM | LOW | **MEDIUM** |
-| Adjustable integration time | HIGH | MEDIUM | **MEDIUM** |
-| FFT spectrum display | MEDIUM | MEDIUM | **LOWER** |
-| Hilbert visualization | LOW | MEDIUM | **FUTURE** |
+| Enhancement | Learning Impact | Effort | Status |
+|------------|-----------------|--------|--------|
+| Expose 5 individual measurements | HIGH | LOW | ✅ **Done** |
+| CV% per wavelength point | MEDIUM | LOW | ✅ **Done** |
+| Enhanced CSV export | MEDIUM | LOW | ✅ **Done** |
+| Add SD to display | HIGH | LOW | ✅ **Done** |
+| Add SE to display | HIGH | LOW | ✅ **Done** |
+| CV% color-coding in UI | MEDIUM | LOW | ✅ **Done** (via quality badge) |
+| Raw waveforms tab | HIGH | MEDIUM | Pending |
+| X-Y phasor display | MEDIUM | LOW | Pending |
+| Adjustable integration time | HIGH | MEDIUM | Pending |
+| FFT spectrum display | MEDIUM | MEDIUM | Future |
+| Hilbert visualization | LOW | MEDIUM | Future |
 
 ---
 
@@ -347,26 +354,32 @@ Add optional "educational mode" with reduced integration time:
 
 ---
 
-## Next Steps
+## Next Steps (Remaining Work)
 
-1. **Decision needed:** Which enhancements to implement for next semester?
-2. **Decision needed:** Implement "educational mode" with visible variation?
-3. **Action:** Modify `read_current()` to return statistics dict
-4. **Action:** Update CSV export format
-5. **Action:** Add statistics display to measurement UI
+1. ~~**Action:** Modify `read_current()` to return statistics dict~~ ✅ Done
+2. ~~**Action:** Update CSV export format~~ ✅ Done
+3. ~~**Action:** Add statistics display to measurement UI~~ ✅ Done
+4. ~~**Pending:** Add Standard Error (SE) calculation and display~~ ✅ Done (Dec 2025)
+5. ~~**Pending:** Add CV% color-coding (green/yellow/red) in UI~~ ✅ Done (via quality badge)
+6. **Decision needed:** Implement "educational mode" with visible variation?
+7. **Future:** Raw waveform visualization tab
+8. **Future:** X-Y phasor diagram
 
 ---
 
-## Code Locations for Implementation
+## Code Locations
 
-| File | What to Change |
-|------|----------------|
-| `eqe/controllers/picoscope_lockin.py` | Return stats dict from `read_current()` |
-| `eqe/models/current_measurement.py` | Propagate individual values |
-| `ui/eqe.html` + JavaScript | Add statistics display |
-| `eqe/utils/data_handling.py` | Enhanced CSV export |
-| `eqe/config/settings.py` | Add educational mode flag |
+| File | Status |
+|------|--------|
+| `eqe/controllers/picoscope_lockin.py:260-344` | ✅ Stats returned from `read_current()` |
+| `eqe/utils/data_handling.py:94-161` | ✅ Enhanced CSV export |
+| `common/utils/tiered_logger.py` | ✅ `MeasurementStats` dataclass with `std_error` property |
+| `eqe/web_main.py:665-679` | ✅ Stats dict includes `std_error` for JS |
+| `ui/eqe.html:145-151` | ✅ Stats row with n, SD, SE, CV%, quality badge |
+| `ui/js/eqe-app.js:710-732` | ✅ `onMeasurementStats()` displays SD/SE in nanoamps |
+| `eqe/config/settings.py` | `include_measurement_stats` flag exists |
 
 ---
 
 *Document created from PER mentor consultation, 2025-12-11*
+*Last updated: 2025-12-26*

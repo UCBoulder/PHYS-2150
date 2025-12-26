@@ -120,7 +120,7 @@ class DataHandler:
 
             if include_stats:
                 headers = DATA_EXPORT_CONFIG["headers"].get("current_with_stats",
-                    ["Wavelength (nm)", "Current_mean (A)", "Current_std (A)", "n", "CV_percent"])
+                    ["Wavelength (nm)", "Current_mean (nA)", "Current_std (nA)", "Current_SE (nA)", "n", "CV_percent"])
             else:
                 headers = DATA_EXPORT_CONFIG["headers"].get(measurement_type,
                     ["Wavelength (nm)", "Measurement"])
@@ -138,10 +138,14 @@ class DataHandler:
                         current_nA = measurement * 1e9
                         stats = measurement_stats[i]
                         std_nA = stats['std_dev'] * 1e9
+                        # SE = σ/√n (standard error = uncertainty in the mean)
+                        n = stats['n']
+                        se_nA = std_nA / (n ** 0.5) if n > 0 else 0
                         row = [
                             wavelength,
                             f"{current_nA:.2f}",
                             f"{std_nA:.2f}",
+                            f"{se_nA:.2f}",
                             stats['n'],
                             f"{stats['cv_percent']:.1f}"
                         ]

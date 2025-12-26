@@ -29,13 +29,27 @@ This document outlines recommendations for enhancing the EQE and J-V measurement
 
 ## Current State Summary
 
-| Component | J-V App | EQE App | PER Opportunity |
-|-----------|---------|---------|-----------------|
-| **Uncertainty** | Single measurements only | 5 measurements averaged internally, not exposed | Students don't see distributions |
-| **Transparency** | Minimal status messages | Lock-in is "black box" | Missed learning opportunities |
-| **Parameter Extraction** | None | External script only | Disconnect from meaning |
-| **Data Export** | Basic CSV | Basic CSV | No metadata or uncertainty |
-| **Quality Indicators** | None | R² for phase fit (good!) | Partial implementation |
+| Component | J-V App | EQE App | Status |
+|-----------|---------|---------|--------|
+| **Uncertainty** | Single measurements only | ✅ 5 measurements with stats exposed | EQE done, J-V pending |
+| **Transparency** | Minimal status messages | Lock-in is "black box" | Opportunity remains |
+| **Parameter Extraction** | None | External script only | Not implemented |
+| **Data Export** | Basic CSV | ✅ CSV with mean, std, n, CV% | EQE done, J-V pending |
+| **Quality Indicators** | None | ✅ R² for phase + CV% per point | EQE done |
+
+### What's Been Implemented (December 2025)
+
+1. **EQE Statistics Exposure** - `read_current()` now returns full statistics via `return_stats=True`
+   - Location: `eqe/controllers/picoscope_lockin.py:260-344`
+   - Returns: `{current, std_dev, n, cv_percent}`
+   - Uses `MeasurementStats` dataclass for structured data
+   - Calls `_logger.student_stats()` for real-time UI display
+
+2. **Enhanced CSV Export** - Current measurements include uncertainty data
+   - Location: `eqe/utils/data_handling.py:94-161`
+   - Headers: `Wavelength (nm), Current_mean (A), Current_std (A), n, CV_percent`
+   - Controlled by `include_measurement_stats` config flag
+   - Values converted to nanoamps for student readability
 
 ---
 
@@ -56,20 +70,20 @@ JV_MEASUREMENT_CONFIG = {
 
 **Important consideration for perovskites:** Multiple measurements at the same voltage point may change cell state due to hysteresis. This feature should be optional and its implications documented.
 
-### 1.2 EQE: Expose the Hidden Uncertainty
+### 1.2 EQE: Expose the Hidden Uncertainty ✅ IMPLEMENTED
 
-**Current state:** The code already takes 5 measurements per wavelength (`current_measurement.py:126`) and averages them, but students only see the final value.
+**Status:** ✅ Completed December 2025
 
-**Problem:** This directly contradicts course goal: *"Articulate that repeated measurements will give a distribution of results and not a single number"*
+**What was done:**
+- `read_current()` now calculates and returns `{current, std_dev, n, cv_percent}`
+- `MeasurementStats` dataclass provides structured statistics
+- `_logger.student_stats()` displays stats in real-time UI
+- No outlier rejection - students see honest measurement variability
+- Comment in code: *"High CV at low signal wavelengths teaches them about SNR"*
 
-**Recommendations:**
-- **Option A (minimal):** Add CV% or quality indicator to each point shown in real-time
-- **Option B (better):** Show live histogram/distribution of the 5 measurements as they're taken
-- **Option C (full):** Export all individual measurements OR export mean + std + n
+**Implementation:** `eqe/controllers/picoscope_lockin.py:260-344`
 
-The 5 measurements are already being taken - just expose them!
-
-**Code location:** `eqe/models/current_measurement.py:126-132`
+**Future enhancement:** Option B (live histogram) not yet implemented
 
 ### 1.3 Live Statistics Display (Both Apps)
 
@@ -81,23 +95,26 @@ When repeat measurements are enabled/exposed, show in real-time:
 
 This directly supports the learning goal of differentiating standard deviation vs. standard error.
 
+**Status:** ✅ Implemented for EQE (mean, SD, SE, n, CV% shown via `student_stats()`). J-V not implemented.
+
 ### 1.4 Enhanced CSV Export Format (Both Apps)
 
 Expand data export to include uncertainty information:
 
-**J-V format:**
+**J-V format (not yet implemented):**
 ```csv
 Voltage (V), Forward_mean (mA), Forward_std (mA), Forward_n, Reverse_mean (mA), Reverse_std (mA), Reverse_n
 ```
 
-**EQE format:**
+**EQE format:** ✅ IMPLEMENTED
 ```csv
-Wavelength (nm), Current_mean (A), Current_std (A), Current_n
+Wavelength (nm), Current_mean (nA), Current_std (nA), n, CV_percent
 ```
 
-Even if currently only taking single measurements (n=1 for J-V), having the column structure in place:
-- Avoids format changes later
-- Makes clear to students that uncertainty exists even with single measurements
+**Status:** ✅ EQE implemented in `eqe/utils/data_handling.py:94-161`
+- Controlled by `include_measurement_stats` config flag
+- Values in nanoamps for student readability
+- J-V not yet implemented
 
 ### 1.5 Data Quality Indicators (Both Apps)
 
@@ -105,6 +122,8 @@ Display quality metrics that help students evaluate their measurements:
 - CV% (coefficient of variation) for each data point
 - Warning if CV exceeds threshold (e.g., >10%)
 - Overall measurement quality summary
+
+**Status:** ✅ Partially implemented - CV% calculated and exported for EQE. Threshold warnings not yet implemented.
 
 ---
 
@@ -509,24 +528,27 @@ Standalone utility that:
 
 ## Implementation Priority Matrix
 
-| Enhancement | App | Learning Impact | Effort | Priority |
-|------------|-----|-----------------|--------|----------|
-| Expose EQE 5-measurement statistics | EQE | High | Low | **High** |
-| Physics-informed error messages | Both | Medium | Low | **High** |
-| Automatic parameter extraction (Voc, Jsc, FF) | J-V | High | Low | **High** |
-| Enhanced metadata in CSV | Both | Medium | Low | **High** |
-| Lock-in amplifier explanation | EQE | High | Medium | **High** |
-| EQE calculation integration | EQE | High | Medium | **Medium-High** |
-| Pre-measurement checklist | Both | Medium | Medium | **Medium** |
-| Info/About panels | Both | Medium | Low | **Medium** |
-| Real-time status messages | Both | Medium | Low | **Medium** |
-| AM1.5G Jsc prediction | EQE | Medium | Medium | **Medium** |
-| Enhanced phase plot annotations | EQE | Medium | Low | **Medium** |
-| J-V repeat measurements option | J-V | High | Medium | **Medium** (consider hysteresis) |
-| Session logging | Both | Low | Low | **Low** |
-| Interactive cursor | Both | Low | Medium | **Low** |
-| Reference overlays | Both | Low | High | **Future** |
-| Cross-app integration | Both | Low | High | **Future** |
+| Enhancement | App | Learning Impact | Effort | Status |
+|------------|-----|-----------------|--------|--------|
+| Expose EQE 5-measurement statistics | EQE | High | Low | ✅ **Done** |
+| Enhanced CSV export with stats | EQE | Medium | Low | ✅ **Done** |
+| Live statistics display | EQE | High | Low | ✅ **Done** |
+| CV% quality indicator | EQE | Medium | Low | ✅ **Done** |
+| Physics-informed error messages | Both | Medium | Low | Pending |
+| Automatic parameter extraction (Voc, Jsc, FF) | J-V | High | Low | Pending |
+| Lock-in amplifier explanation | EQE | High | Medium | Pending |
+| EQE calculation integration | EQE | High | Medium | Pending |
+| Pre-measurement checklist | Both | Medium | Medium | Pending |
+| Info/About panels | Both | Medium | Low | Pending |
+| Real-time status messages | Both | Medium | Low | Partial |
+| AM1.5G Jsc prediction | EQE | Medium | Medium | Pending |
+| Enhanced phase plot annotations | EQE | Medium | Low | Pending |
+| J-V repeat measurements option | J-V | High | Medium | Pending (consider hysteresis) |
+| J-V enhanced CSV export | J-V | Medium | Low | Pending |
+| Session logging | Both | Low | Low | Pending |
+| Interactive cursor | Both | Low | Medium | Pending |
+| Reference overlays | Both | Low | High | Future |
+| Cross-app integration | Both | Low | High | Future |
 
 ---
 
@@ -536,10 +558,10 @@ Standalone utility that:
 
 These affect core data structures and are hard to retrofit:
 
-1. **CSV export format** - decide on column structure even if not all populated initially
-2. **Config-driven parameters** - all measurement settings in config, not hardcoded
-3. **Clean Model separation** - allows adding analysis features without touching View
-4. **Uncertainty data flow** - even if not displayed, structure models to pass uncertainty info
+1. **CSV export format** - ✅ Done for EQE; decide on J-V column structure
+2. **Config-driven parameters** - ✅ Done; all measurement settings in config
+3. **Clean Model separation** - ✅ Done; allows adding analysis features without touching View
+4. **Uncertainty data flow** - ✅ Done for EQE; `MeasurementStats` dataclass flows through system
 
 ### What Can Wait
 
@@ -577,14 +599,15 @@ These are modular additions that don't require architectural changes:
 
 ## Code Locations for Key Enhancements
 
-| Enhancement | File | Notes |
-|-------------|------|-------|
-| EQE 5-measurement averaging | `eqe/models/current_measurement.py` | Core measurement logic |
-| EQE CSV export | `eqe/utils/data_handling.py` | Data export handling |
-| EQE phase plot | `ui/eqe.html` + JavaScript | Plotly.js visualization |
-| EQE R² threshold | `eqe/config/settings.py` | Configuration |
-| J-V measurement loop | `jv/models/jv_measurement.py` | Sweep logic |
-| J-V CSV export | `jv/utils/data_export.py` | Data export handling |
+| Enhancement | File | Status |
+|-------------|------|--------|
+| EQE statistics calculation | `eqe/controllers/picoscope_lockin.py:260-344` | ✅ Done |
+| EQE CSV export with stats | `eqe/utils/data_handling.py:94-161` | ✅ Done |
+| MeasurementStats dataclass | `common/utils/tiered_logger.py` | ✅ Done |
+| EQE phase plot | `ui/eqe.html` + JavaScript | Exists |
+| EQE R² threshold | `eqe/config/settings.py` | Exists |
+| J-V measurement loop | `jv/models/jv_measurement.py` | Exists |
+| J-V CSV export | `jv/utils/data_export.py` | Needs stats |
 
 ---
 
@@ -603,5 +626,5 @@ These are modular additions that don't require architectural changes:
 ---
 
 *Document created: November 2025*
-*Last updated: November 2025*
+*Last updated: December 2025*
 *To be reviewed and updated based on instructor and student feedback each semester*

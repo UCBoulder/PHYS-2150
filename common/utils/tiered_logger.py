@@ -60,6 +60,20 @@ class MeasurementStats:
         self.unit = unit
 
     @property
+    def std_error(self) -> float:
+        """
+        Calculate standard error of the mean.
+
+        SE = σ / √n
+
+        This represents uncertainty in the mean, not spread of measurements.
+        Key learning goal: students should understand SD vs SE distinction.
+        """
+        if self.n_measurements > 0:
+            return self.std_dev / (self.n_measurements ** 0.5)
+        return 0.0
+
+    @property
     def quality(self) -> str:
         """Return quality assessment based on CV."""
         if self.cv_percent < 1.0:
