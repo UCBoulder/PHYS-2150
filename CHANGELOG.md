@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Keyboard dismiss for info/error modals (OK button auto-focused, press Enter to close)
+
+### Changed
+- Debug logs now written to `%LOCALAPPDATA%\PHYS2150\` for Windows compatibility when installed to Program Files
+
+### Fixed
+- Taskbar showing Python icon instead of app icon when running from source (set Windows AppUserModelID)
+- JS syntax errors from unescaped carriage returns in device status messages
+
 ## [3.1.0] - 2025-12-25
 
 ### Added
