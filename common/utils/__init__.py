@@ -13,6 +13,7 @@ from .error_messages import (
     format_error_message,
 )
 from .web_console import WebConsoleHandler
+from .stdout_capture import StdoutCapture
 
 __all__ = [
     'DataExporter',
@@ -27,4 +28,5 @@ __all__ = [
     'get_error',
     'format_error_message',
     'WebConsoleHandler',
+    'StdoutCapture',
 ]

@@ -1798,22 +1798,22 @@ function toggleDebugMode() {
             const r = JSON.parse(result);
             state.debugMode = r.enabled;
             if (r.enabled) {
-                addConsoleMessage('info', 'Debug mode ENABLED - verbose output now visible');
-                LabModals.showInfo('Debug Mode ENABLED',
-                    'Technical output (samples, SDK calls) now visible in console.\n\nPress Ctrl+Shift+D again to disable.');
+                addConsoleMessage('info', 'Print capture ENABLED');
+                LabModals.showInfo('Print Capture ENABLED',
+                    'print() statements are now visible in the terminal panel.\n\nThis captures debug output that normally only appears in the system console.\n\nPress Ctrl+Shift+D again to disable.');
             } else {
-                addConsoleMessage('info', 'Debug mode DISABLED');
-                LabModals.showInfo('Debug Mode DISABLED', 'Debug output turned off.');
+                addConsoleMessage('info', 'Print capture DISABLED');
+                LabModals.showInfo('Print Capture DISABLED', 'Print statements no longer captured to terminal.');
             }
         });
     } else if (state.offlineMode) {
         state.debugMode = !state.debugMode;
         if (state.debugMode) {
-            addConsoleMessage('info', 'Debug mode ENABLED (offline)');
-            LabModals.showInfo('Debug Mode ENABLED', 'Offline mode - no effect on console output.');
+            addConsoleMessage('info', 'Print capture ENABLED (offline - no effect)');
+            LabModals.showInfo('Print Capture ENABLED', 'Offline mode - no print statements to capture.');
         } else {
-            addConsoleMessage('info', 'Debug mode DISABLED');
-            LabModals.showInfo('Debug Mode DISABLED', 'Debug output turned off.');
+            addConsoleMessage('info', 'Print capture DISABLED');
+            LabModals.showInfo('Print Capture DISABLED', 'Print capture turned off.');
         }
     }
 }

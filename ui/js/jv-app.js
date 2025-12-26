@@ -988,7 +988,7 @@ document.addEventListener('keydown', (e) => {
         e.preventDefault();
         toggleConsole();
     }
-    // Ctrl+Shift+D - Toggle debug mode
+    // Ctrl+Shift+D - Toggle print capture
     else if (e.ctrlKey && e.shiftKey && e.key === 'D') {
         e.preventDefault();
         const api = LabAPI.get();
@@ -996,14 +996,14 @@ document.addEventListener('keydown', (e) => {
             api.toggle_debug_mode((result) => {
                 const response = JSON.parse(result);
                 if (response.enabled) {
-                    addConsoleMessage('info', 'Debug mode ENABLED - verbose output now visible');
+                    addConsoleMessage('info', 'Print capture ENABLED');
                     LabModals.showInfo(
-                        'Debug Mode Enabled',
-                        'Technical debug output is now visible in the console.\n\nPress Ctrl+Shift+D again to disable.'
+                        'Print Capture ENABLED',
+                        'print() statements are now visible in the terminal panel.\n\nThis captures debug output that normally only appears in the system console.\n\nPress Ctrl+Shift+D again to disable.'
                     );
                 } else {
-                    addConsoleMessage('info', 'Debug mode DISABLED');
-                    LabModals.showInfo('Debug Mode Disabled', 'Technical debug output is now hidden.');
+                    addConsoleMessage('info', 'Print capture DISABLED');
+                    LabModals.showInfo('Print Capture DISABLED', 'Print statements no longer captured to terminal.');
                 }
             });
         }

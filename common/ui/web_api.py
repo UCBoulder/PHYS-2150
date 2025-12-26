@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 from PySide6.QtCore import QObject, Slot
 from PySide6.QtWidgets import QFileDialog
 
-from common.utils import TieredLogger
+from common.utils import TieredLogger, StdoutCapture
 
 if TYPE_CHECKING:
     from .web_window import BaseWebWindow
@@ -62,36 +62,41 @@ class BaseWebApi(QObject):
         """
         super().__init__()
         self._window = window
+        self._stdout_capture = None
 
     @Slot(result=str)
     def toggle_debug_mode(self) -> str:
         """
-        Toggle staff debug mode for verbose console output.
+        Toggle stdout capture mode for viewing print statements.
 
-        When enabled, DEBUG-level log messages are shown in the
-        web console panel. When disabled, only INFO and above
-        are shown.
+        When enabled, all print() statements are forwarded to the
+        web console panel in addition to stdout. This captures
+        debug output from TieredLogger.debug_output() and any
+        other print() calls.
 
         Returns:
             JSON string with {"enabled": bool}
         """
-        current = TieredLogger._staff_debug_mode
-        new_mode = not current
-        TieredLogger.set_staff_debug_mode(new_mode)
+        # Check if capture is currently enabled
+        current_capture = StdoutCapture.get_instance()
+        is_enabled = current_capture is not None and current_capture.is_enabled()
 
-        # Also update the web console handler level
-        if hasattr(self._window, '_web_console_handler'):
-            self._window._web_console_handler.setLevel(
-                logging.DEBUG if new_mode else logging.INFO
-            )
-
-        # Log the mode change (this message will be visible in console)
-        if new_mode:
-            self._window.send_log('info', "Staff debug mode ENABLED (Ctrl+Shift+D) - technical output visible in console")
+        if is_enabled:
+            # Disable capture
+            if self._stdout_capture:
+                self._stdout_capture.disable()
+                self._stdout_capture = None
+            self._window.send_log('info', "Print capture DISABLED")
+            return json.dumps({"enabled": False})
         else:
-            self._window.send_log('info', "Staff debug mode DISABLED")
+            # Enable capture - forward prints to web console
+            def forward_to_console(level: str, message: str) -> None:
+                self._window.send_log(level, f"[print] {message}")
 
-        return json.dumps({"enabled": new_mode})
+            self._stdout_capture = StdoutCapture(forward_to_console)
+            self._stdout_capture.enable()
+            self._window.send_log('info', "Print capture ENABLED - print() statements now visible in console")
+            return json.dumps({"enabled": True})
 
     def save_file_with_dialog(
         self,
