@@ -5,7 +5,10 @@
 ;    uv run pyinstaller build/phys2150.spec
 ;
 ; 2. Then build the installer with Inno Setup:
+;    # If iscc is in PATH:
 ;    iscc build/installer.iss
+;    # Or use full path (PowerShell):
+;    & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" build/installer.iss    
 ;
 ; Output: dist/PHYS2150-Setup.exe
 ;
@@ -18,7 +21,7 @@
 ; NOTE: Keep MyAppVersion in sync with pyproject.toml [project].version
 #define MyAppName "PHYS 2150 Measurement Suite"
 #define MyAppVersion "3.1.0"
-#define MyAppPublisher "CU Boulder Physics Lab"
+#define MyAppPublisher "CU Boulder Physics Undergraduate Labs"
 #define MyAppURL "https://github.com/UCBoulder/PHYS-2150"
 #define MyAppExeName "PHYS2150.exe"
 
@@ -58,7 +61,7 @@ PrivilegesRequired=admin
 PrivilegesRequiredOverridesAllowed=dialog
 
 ; Visual settings
-WizardStyle=modern
+WizardStyle=modern dynamic
 
 ; License and info pages (optional - uncomment if files exist)
 ; LicenseFile=..\LICENSE
