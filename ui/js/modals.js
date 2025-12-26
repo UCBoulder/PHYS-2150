@@ -381,14 +381,20 @@ function getLogViewerModalHTML() {
 }
 
 /**
- * Initialize log viewer keyboard shortcut.
+ * Initialize log viewer keyboard shortcuts.
  * Ctrl+Shift+L toggles the log viewer.
+ * Escape closes it when open.
  */
 function initLogViewerShortcut() {
     document.addEventListener('keydown', (e) => {
         if (e.ctrlKey && e.shiftKey && e.key === 'L') {
             e.preventDefault();
             toggleLogViewer();
+        }
+        // Escape closes the log viewer if open
+        if (e.key === 'Escape' && _logViewerOpen) {
+            e.preventDefault();
+            closeLogViewer();
         }
     });
 }
