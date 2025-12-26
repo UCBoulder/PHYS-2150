@@ -263,7 +263,7 @@ class JVApi(BaseWebApi):
 
     def _on_measurement_point(self, direction: str, voltage: float, current: float) -> None:
         """Forward measurement point to JS."""
-        js = f"onMeasurementPoint('{direction}', {voltage}, {current})"
+        js = f"onMeasurementPoint({json.dumps(direction)}, {voltage}, {current})"
         self._window.run_js(js)
 
     def _on_measurement_complete(self, success: bool, result: JVMeasurementResult) -> None:
@@ -283,9 +283,7 @@ class JVApi(BaseWebApi):
             _logger.info(f"Device: {message}")
         else:
             _logger.warning(f"Device: {message}")
-        # Escape message for JS string
-        escaped = message.replace("\\", "\\\\").replace("'", "\\'").replace("\r", "\\r").replace("\n", "\\n")
-        js = f"updateDeviceStatus({str(connected).lower()}, '{escaped}')"
+        js = f"updateDeviceStatus({str(connected).lower()}, {json.dumps(message)})"
         self._window.run_js(js)
 
 

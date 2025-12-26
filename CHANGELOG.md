@@ -46,6 +46,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - EQE device status bar now shows clean "Connected"/"Not Connected" text (detailed errors remain in console)
 - EQE now attempts all device connections even if some fail (shows complete status instead of stopping at first failure)
 
+### Security
+- Fixed JavaScript injection vulnerability in Python-to-JS bridge by replacing manual string escaping with `json.dumps()` serialization
+
 ### Fixed
 - Taskbar showing Python icon instead of app icon when running from source (set Windows AppUserModelID)
 - JS syntax errors from unescaped carriage returns in device status messages

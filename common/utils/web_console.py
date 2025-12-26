@@ -5,6 +5,7 @@ Provides a logging.Handler that forwards log messages to the web UI
 console panel via Qt signals for thread-safe cross-thread communication.
 """
 
+import json
 import logging
 from typing import TYPE_CHECKING
 
@@ -35,7 +36,8 @@ class WebConsoleHandler(logging.Handler):
                 logging.getLogger('myapp').addHandler(handler)
 
             def _on_log_message(self, level: str, message: str):
-                self.run_js(f"onLogMessage('{level}', '{message}')")
+                # Use json.dumps for safe JavaScript string serialization
+                self.run_js(f"onLogMessage({json.dumps(level)}, {json.dumps(message)})")
     """
 
     # Map Python log levels to web console levels

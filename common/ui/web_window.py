@@ -6,6 +6,7 @@ GPU acceleration, JavaScript execution queuing, theme management,
 and logging integration.
 """
 
+import json
 import os
 import sys
 from typing import Optional
@@ -175,13 +176,8 @@ class BaseWebWindow(QMainWindow):
             level: Log level ('debug', 'info', 'warn', 'error')
             message: Log message text
         """
-        # Escape special characters in message for JS string
-        escaped = (message
-            .replace('\\', '\\\\')
-            .replace("'", "\\'")
-            .replace('\r', '\\r')
-            .replace('\n', '\\n'))
-        js = f"onLogMessage('{level}', '{escaped}')"
+        # Use json.dumps for safe JavaScript string serialization
+        js = f"onLogMessage({json.dumps(level)}, {json.dumps(message)})"
         self.run_js(js)
 
     def _on_log_message(self, level: str, message: str) -> None:

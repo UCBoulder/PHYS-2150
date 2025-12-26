@@ -494,9 +494,7 @@ class EQEApi(BaseWebApi):
     @QtSlot(bool, str)
     def _emit_stability_complete(self, success: bool, message: str) -> None:
         """Emit stability completion to JS (runs on main thread)."""
-        # Escape for JS string (backslashes, quotes, carriage returns, and newlines)
-        escaped = message.replace("\\", "\\\\").replace("'", "\\'").replace("\r", "\\r").replace("\n", "\\n")
-        js = f"onStabilityComplete({str(success).lower()}, '{escaped}')"
+        js = f"onStabilityComplete({str(success).lower()}, {json.dumps(message)})"
         self._window.run_js(js)
 
     @QtSlot(float, bool)
@@ -515,9 +513,7 @@ class EQEApi(BaseWebApi):
             _logger.info(f"{device_name}: {message}")
         else:
             _logger.warning(f"{device_name}: {message}")
-        # Escape message for JS string
-        escaped = message.replace("\\", "\\\\").replace("'", "\\'").replace("\r", "\\r").replace("\n", "\\n")
-        js = f"onDeviceStatusChanged('{device_name}', {str(is_connected).lower()}, '{escaped}')"
+        js = f"onDeviceStatusChanged({json.dumps(device_name)}, {str(is_connected).lower()}, {json.dumps(message)})"
         self._window.run_js(js)
 
     def _on_measurement_progress(self, measurement_type: str, progress_data: Dict) -> None:
@@ -552,9 +548,7 @@ class EQEApi(BaseWebApi):
         else:
             self._window.send_log('warn', f"Measurement stopped: {message}")
 
-        # Escape message for JS string
-        escaped_message = message.replace("\\", "\\\\").replace("'", "\\'").replace("\r", "\\r").replace("\n", "\\n")
-        js = f"onMeasurementComplete({str(success).lower()}, '{escaped_message}')"
+        js = f"onMeasurementComplete({str(success).lower()}, {json.dumps(message)})"
         self._window.run_js(js)
 
     def _on_live_signal_update(self, current_nA: float) -> None:
