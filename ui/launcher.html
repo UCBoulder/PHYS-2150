@@ -148,14 +148,17 @@
 
         // Keyboard shortcuts (Ctrl+Shift+C is handled by theme.js)
         document.addEventListener('keydown', function(e) {
-            // Ctrl+Shift+D - Toggle offline mode (D for Dev)
-            if (e.ctrlKey && e.shiftKey && e.code === 'KeyD') {
+            // Use Ctrl (Windows/Linux) or Cmd (Mac) + Shift + key
+            const modifierKey = e.ctrlKey || e.metaKey;
+
+            // Ctrl/Cmd+Shift+D - Toggle offline mode (D for Dev)
+            if (modifierKey && e.shiftKey && e.code === 'KeyD') {
                 e.preventDefault();
                 toggleOfflineMode();
                 return;
             }
-            // Ctrl+Shift+T - Toggle terminal window
-            if (e.ctrlKey && e.shiftKey && e.code === 'KeyT') {
+            // Ctrl/Cmd+Shift+T - Toggle terminal window
+            if (modifierKey && e.shiftKey && e.code === 'KeyT') {
                 e.preventDefault();
                 const api = LabAPI.get();
                 if (api && api.toggle_terminal) {
