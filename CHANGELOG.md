@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Keyboard dismiss for info/error modals (OK button auto-focused, press Enter to close)
+- `PHYS2150_DISABLE_REMOTE_CONFIG` environment variable to skip remote config fetching during development
 
 ### Changed
 - Debug logs now written to `%LOCALAPPDATA%\PHYS2150\` for Windows compatibility when installed to Program Files

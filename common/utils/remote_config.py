@@ -4,9 +4,13 @@ Remote configuration loader.
 Fetches config from GitHub, caches locally, merges with built-in defaults.
 This allows updating default parameters (scan settings, cell naming conventions)
 by editing a file in the GitHub repo without rebuilding the application.
+
+To disable remote config during development, set environment variable:
+    PHYS2150_DISABLE_REMOTE_CONFIG=1
 """
 import json
 import logging
+import os
 import ssl
 import urllib.request
 import urllib.error
@@ -138,6 +142,9 @@ def get_remote_config(app: str, timeout: float = 5.0) -> Dict[str, Any]:
     2. Cached config from local file
     3. Empty dict (use built-in defaults only)
 
+    Set PHYS2150_DISABLE_REMOTE_CONFIG=1 to skip remote config entirely
+    (useful during development when testing new default values).
+
     Args:
         app: 'jv' or 'eqe'
         timeout: Network timeout in seconds
@@ -145,6 +152,11 @@ def get_remote_config(app: str, timeout: float = 5.0) -> Dict[str, Any]:
     Returns:
         Config dict for the app (empty dict if no remote config available)
     """
+    # Check if remote config is disabled (for development)
+    if os.environ.get('PHYS2150_DISABLE_REMOTE_CONFIG'):
+        _logger.info("Remote config disabled via PHYS2150_DISABLE_REMOTE_CONFIG")
+        return {}
+
     # Try to fetch fresh config
     remote = fetch_remote_config(timeout)
 

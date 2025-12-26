@@ -518,6 +518,25 @@ To change defaults for all users (e.g., new semester cell naming):
 }
 ```
 
+### Disabling Remote Config (Development)
+
+When testing new default values locally, you may want to disable remote config fetching so your local changes aren't overwritten. Set this environment variable:
+
+```bash
+# PowerShell
+$env:PHYS2150_DISABLE_REMOTE_CONFIG = "1"
+uv run python -m eqe
+
+# Or in VS Code launch.json:
+{
+    "env": {
+        "PHYS2150_DISABLE_REMOTE_CONFIG": "1"
+    }
+}
+```
+
+When set, `get_remote_config()` returns an empty dict and uses built-in defaults only.
+
 ### Implementation
 
 See `common/utils/remote_config.py` for the fetch/cache logic. The `get_remote_config(app)` function returns a dict that models merge with their built-in defaults.
