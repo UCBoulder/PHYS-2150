@@ -201,6 +201,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     setTimeout(() => {
         initPlots();
+        // Ensure plots match current theme (handles theme passed from launcher)
+        const isDark = LabTheme.isDark();
+        window.dispatchEvent(new CustomEvent('themechange', { detail: { dark: isDark } }));
     }, 50);
 
     setTimeout(() => {

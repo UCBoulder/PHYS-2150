@@ -18,6 +18,7 @@ dependencies = [
     "pyside6>=6.5",
     "pyvisa>=1.13",
     "picosdk>=1.0",
+    "certifi>=2025.11.12",
 ]
 
 [project.optional-dependencies]

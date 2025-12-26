@@ -42,6 +42,7 @@ DisableProgramGroupPage=yes
 OutputDir=..\dist
 OutputBaseFilename=PHYS2150-Setup
 SetupIconFile=..\assets\icon.ico
+UninstallDisplayIcon={app}\{#MyAppExeName}
 
 ; Compression settings
 Compression=lzma2
@@ -76,11 +77,11 @@ Source: "..\dist\PHYS2150\*"; DestDir: "{app}"; Flags: ignoreversion recursesubd
 
 [Icons]
 ; Start Menu shortcuts
-Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Comment: "Launch PHYS 2150 Measurement Suite"
+Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\{#MyAppExeName}"; Comment: "Launch PHYS 2150 Measurement Suite"
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
 
 ; Desktop shortcut (optional)
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon; Comment: "Launch PHYS 2150 Measurement Suite"
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\{#MyAppExeName}"; Tasks: desktopicon; Comment: "Launch PHYS 2150 Measurement Suite"
 
 [Run]
 ; Launch application after install (optional)

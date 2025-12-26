@@ -11,21 +11,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Visual feedback when launching apps from launcher
-- Remote config support for semester-specific defaults
+- Remote config support for semester-specific defaults (fetched from GitHub, cached locally)
 - Config bridge to centralize UI defaults in Python config files
 - Amplitude check to chopper reference signal validation
 - Hidden offline mode toggle in launcher (Ctrl+Shift+D) with visual indicator
 - PyInstaller build support with Windows installer (Inno Setup)
+- `certifi` dependency for SSL certificates in frozen builds
 
 ### Changed
 - Stability test current measurement now matches regular measurement method
 - Launcher offline mode moved from visible checkbox to hidden hotkey (cleaner UI for students)
+- Remote config cache now stored in user home directory (`~/.phys2150/cache/`) for Windows compatibility
+- Application icon updated to CU Boulder logo with multi-resolution ICO (16x16 to 256x256)
 
 ### Fixed
 - J-V pixel input now correctly allows 1-8 instead of 1-9
 - Monochromator WaitForIdle infinite loop causing power test hang
 - PyInstaller frozen mode now correctly launches EQE/J-V apps via --app argument
 - Application icon converted to proper ICO format (was PNG renamed to .ico)
+- SSL certificate errors in frozen builds (added certifi CA bundle)
+- Remote config cache failing to write in Program Files (Windows permissions)
+- Theme not preserved when launching apps from launcher with different theme
+- Plots not updating to match theme when launched from launcher
+- Installer now shows icon in Windows Add/Remove Programs list
 
 ## [3.0.0] - 2025-12-24
 

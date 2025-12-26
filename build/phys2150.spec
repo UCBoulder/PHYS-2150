@@ -30,6 +30,9 @@ numpy_datas, numpy_binaries, numpy_hiddenimports = collect_all('numpy')
 # Collect scipy as well
 scipy_datas, scipy_binaries, scipy_hiddenimports = collect_all('scipy')
 
+# Collect certifi for SSL certificates (needed for HTTPS requests in frozen app)
+certifi_datas, certifi_binaries, certifi_hiddenimports = collect_all('certifi')
+
 # Main application entry point
 a = Analysis(
     [str(PROJECT_ROOT / 'launcher.py')],
@@ -40,7 +43,7 @@ a = Analysis(
         (str(PROJECT_ROOT / 'ui'), 'ui'),
         # Application icon
         (str(PROJECT_ROOT / 'assets'), 'assets'),
-    ] + numpy_datas + scipy_datas,
+    ] + numpy_datas + scipy_datas + certifi_datas,
     hiddenimports=[
         # PySide6 core modules
         'PySide6.QtCore',
@@ -88,7 +91,10 @@ a = Analysis(
         'common.drivers',
         'common.ui',
         'common.utils',
-    ] + numpy_hiddenimports + scipy_hiddenimports,
+
+        # SSL certificates
+        'certifi',
+    ] + numpy_hiddenimports + scipy_hiddenimports + certifi_hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

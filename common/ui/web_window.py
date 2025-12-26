@@ -186,11 +186,16 @@ class BaseWebWindow(QMainWindow):
         Args:
             theme: Theme name ('dark' or 'light')
         """
-        # Set localStorage then reload so page initializes with correct theme
+        # Set localStorage and apply theme directly (no reload to avoid disrupting device status)
+        # LabTheme.apply takes a boolean (true=dark, false=light)
+        is_dark = 'true' if theme == 'dark' else 'false'
         js = f"""
-            if (localStorage.getItem('theme') !== '{theme}') {{
-                localStorage.setItem('theme', '{theme}');
-                location.reload();
+            localStorage.setItem('theme', '{theme}');
+            if (typeof LabTheme !== 'undefined' && LabTheme.apply) {{
+                LabTheme.apply({is_dark});
+            }} else {{
+                document.body.classList.toggle('dark-mode', {is_dark});
+                document.body.classList.toggle('light-mode', !{is_dark});
             }}
         """
         self.run_js(js)

@@ -7,13 +7,20 @@ by editing a file in the GitHub repo without rebuilding the application.
 """
 import json
 import logging
-import os
+import ssl
 import urllib.request
 import urllib.error
 from pathlib import Path
 from typing import Optional, Dict, Any
 
 _logger = logging.getLogger(__name__)
+
+# Use certifi for SSL certificates (required for PyInstaller frozen builds)
+try:
+    import certifi
+    _SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
+except ImportError:
+    _SSL_CONTEXT = None
 
 # GitHub raw URL for remote config
 REMOTE_CONFIG_URL = "https://raw.githubusercontent.com/UCBoulder/PHYS-2150/main/remote-defaults.json"
@@ -23,17 +30,11 @@ def get_cache_path() -> Path:
     """
     Get path for cached remote config.
 
-    Tries app directory first (works for installed exe),
-    falls back to user's home if app dir not writable.
+    Uses user's home directory for cache (works reliably on all systems).
+    Program Files and other system directories often have write restrictions
+    that os.access() doesn't accurately detect on Windows.
     """
-    # Try app directory first (works for installed exe)
-    app_dir = Path(__file__).parent.parent.parent
-    cache_dir = app_dir / ".config-cache"
-
-    # Fall back to user's home if app dir not writable
-    if not os.access(app_dir, os.W_OK):
-        cache_dir = Path.home() / ".phys2150" / "cache"
-
+    cache_dir = Path.home() / ".phys2150" / "cache"
     cache_dir.mkdir(parents=True, exist_ok=True)
     return cache_dir / "remote-defaults.json"
 
@@ -53,7 +54,7 @@ def fetch_remote_config(timeout: float = 5.0) -> Optional[Dict[str, Any]]:
             REMOTE_CONFIG_URL,
             headers={'User-Agent': 'PHYS2150-Lab-App'}
         )
-        with urllib.request.urlopen(req, timeout=timeout) as response:
+        with urllib.request.urlopen(req, timeout=timeout, context=_SSL_CONTEXT) as response:
             data = json.loads(response.read().decode('utf-8'))
             _logger.info(f"Fetched remote config version: {data.get('version', 'unknown')}")
             return data

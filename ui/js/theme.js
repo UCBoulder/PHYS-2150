@@ -49,11 +49,13 @@ function applyTheme(dark) {
 
 /**
  * Check if currently in dark mode.
+ * Reads directly from localStorage to ensure consistency with Python-set themes.
  *
  * @returns {boolean} True if dark mode is active
  */
 function isDarkMode() {
-    return _isDarkMode;
+    const savedTheme = localStorage.getItem('theme');
+    return savedTheme !== 'light';
 }
 
 /**

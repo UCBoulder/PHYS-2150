@@ -111,6 +111,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Small delay to ensure Plotly is ready
     setTimeout(() => {
         initPlot();
+        // Ensure plots match current theme (handles theme passed from launcher)
+        const isDark = LabTheme.isDark();
+        window.dispatchEvent(new CustomEvent('themechange', { detail: { dark: isDark } }));
+
         checkDeviceStatus();
 
         // Prompt for cell number on startup
