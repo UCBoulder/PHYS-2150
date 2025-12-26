@@ -2,11 +2,14 @@
 Base API class for Qt WebEngine applications.
 
 Provides common functionality for Python-JavaScript API classes including
-debug mode toggling and file save dialogs.
+debug mode toggling, file save dialogs, and log viewing.
 """
 
 import json
 import logging
+import os
+from collections import deque
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QObject, Slot
@@ -16,6 +19,14 @@ from common.utils import TieredLogger
 
 if TYPE_CHECKING:
     from .web_window import BaseWebWindow
+
+
+def _get_log_directory() -> Path:
+    """Get the log directory (%LOCALAPPDATA%\\PHYS2150\\)."""
+    local_app_data = os.environ.get('LOCALAPPDATA')
+    if local_app_data:
+        return Path(local_app_data) / 'PHYS2150'
+    return Path.home() / 'PHYS2150'
 
 
 class BaseWebApi(QObject):
@@ -120,3 +131,50 @@ class BaseWebApi(QObject):
                 return {"success": False, "message": str(e)}
 
         return {"success": False, "message": "Cancelled"}
+
+    @Slot(int, result=str)
+    def get_recent_logs(self, num_lines: int = 500) -> str:
+        """
+        Get recent log entries from the debug log file.
+
+        Reads the last N lines from the application's debug log file
+        stored in %LOCALAPPDATA%\\PHYS2150\\{app}_debug.log.
+
+        Args:
+            num_lines: Number of recent lines to return (default 500)
+
+        Returns:
+            JSON string with {"success": bool, "logs": str, "path": str}
+        """
+        try:
+            # Determine app name from window title or class name
+            app_name = getattr(self._window, '_app_name', 'app')
+            log_dir = _get_log_directory()
+            log_file = log_dir / f"{app_name}_debug.log"
+
+            if not log_file.exists():
+                return json.dumps({
+                    "success": True,
+                    "logs": f"No log file found at:\n{log_file}\n\nLogs will appear here once the application generates them.",
+                    "path": str(log_file)
+                })
+
+            # Read last N lines efficiently using deque
+            with open(log_file, 'r', encoding='utf-8', errors='replace') as f:
+                recent_lines = deque(f, maxlen=num_lines)
+
+            logs = ''.join(recent_lines)
+
+            return json.dumps({
+                "success": True,
+                "logs": logs,
+                "path": str(log_file)
+            })
+
+        except Exception as e:
+            return json.dumps({
+                "success": False,
+                "message": f"Failed to read logs: {str(e)}",
+                "logs": "",
+                "path": ""
+            })

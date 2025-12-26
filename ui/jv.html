@@ -300,6 +300,24 @@
         </div>
     </div>
 
+    <!-- Log Viewer Modal (Ctrl+Shift+L) -->
+    <div class="modal-overlay" id="log-viewer-modal">
+        <div class="modal log-viewer-modal">
+            <div class="modal-title">
+                Debug Logs
+                <span class="modal-subtitle" id="log-viewer-path"></span>
+            </div>
+            <div class="modal-body log-viewer-body">
+                <pre class="log-viewer-content" id="log-viewer-content">Loading...</pre>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="log-copy-btn" onclick="LabModals.copyLogs()">Copy</button>
+                <button class="btn btn-secondary" onclick="LabModals.refreshLogs()">Refresh</button>
+                <button class="btn btn-primary" onclick="LabModals.closeLogViewer()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Console Panel -->
     <div class="console-panel" id="console-panel">
         <div class="console-header">

@@ -237,6 +237,162 @@ function confirmSaveCurrent() {
     closeSaveModal();
 }
 
+// ==================== Log Viewer Modal ====================
+
+let _logViewerOpen = false;
+
+/**
+ * Toggle the log viewer modal (Ctrl+Shift+L).
+ */
+async function toggleLogViewer() {
+    if (_logViewerOpen) {
+        closeLogViewer();
+    } else {
+        await showLogViewer();
+    }
+}
+
+/**
+ * Show the log viewer modal with recent logs.
+ */
+async function showLogViewer() {
+    const api = getApi();
+    if (!api) {
+        console.warn('API not available for log viewer');
+        return;
+    }
+
+    // Show modal first with loading state
+    const logsContent = document.getElementById('log-viewer-content');
+    const logsPath = document.getElementById('log-viewer-path');
+    if (logsContent) {
+        logsContent.textContent = 'Loading logs...';
+    }
+    showModal('log-viewer-modal');
+    _logViewerOpen = true;
+
+    // Fetch logs from Python
+    try {
+        api.get_recent_logs(500, function(result) {
+            try {
+                const response = JSON.parse(result);
+                if (response.success) {
+                    if (logsContent) {
+                        logsContent.textContent = response.logs || '(No log entries)';
+                        // Scroll to bottom to show most recent
+                        logsContent.scrollTop = logsContent.scrollHeight;
+                    }
+                    if (logsPath) {
+                        logsPath.textContent = response.path || '';
+                    }
+                } else {
+                    if (logsContent) {
+                        logsContent.textContent = `Error: ${response.message}`;
+                    }
+                }
+            } catch (e) {
+                if (logsContent) {
+                    logsContent.textContent = `Error parsing response: ${e}`;
+                }
+            }
+        });
+    } catch (e) {
+        if (logsContent) {
+            logsContent.textContent = `Error fetching logs: ${e}`;
+        }
+    }
+}
+
+/**
+ * Close the log viewer modal.
+ */
+function closeLogViewer() {
+    hideModal('log-viewer-modal');
+    _logViewerOpen = false;
+}
+
+/**
+ * Refresh logs in the log viewer.
+ */
+async function refreshLogs() {
+    const api = getApi();
+    if (!api) return;
+
+    const logsContent = document.getElementById('log-viewer-content');
+    if (logsContent) {
+        logsContent.textContent = 'Refreshing...';
+    }
+
+    api.get_recent_logs(500, function(result) {
+        try {
+            const response = JSON.parse(result);
+            if (response.success && logsContent) {
+                logsContent.textContent = response.logs || '(No log entries)';
+                logsContent.scrollTop = logsContent.scrollHeight;
+            }
+        } catch (e) {
+            console.error('Error refreshing logs:', e);
+        }
+    });
+}
+
+/**
+ * Copy log content to clipboard.
+ */
+function copyLogs() {
+    const logsContent = document.getElementById('log-viewer-content');
+    if (logsContent) {
+        navigator.clipboard.writeText(logsContent.textContent).then(() => {
+            // Brief visual feedback
+            const copyBtn = document.getElementById('log-copy-btn');
+            if (copyBtn) {
+                const originalText = copyBtn.textContent;
+                copyBtn.textContent = 'Copied!';
+                setTimeout(() => { copyBtn.textContent = originalText; }, 1500);
+            }
+        }).catch(err => {
+            console.error('Failed to copy logs:', err);
+        });
+    }
+}
+
+/**
+ * Get the HTML for the log viewer modal.
+ * @returns {string} Modal HTML
+ */
+function getLogViewerModalHTML() {
+    return `
+    <div class="modal-overlay" id="log-viewer-modal">
+        <div class="modal log-viewer-modal">
+            <div class="modal-title">
+                Debug Logs
+                <span class="modal-subtitle" id="log-viewer-path"></span>
+            </div>
+            <div class="modal-body log-viewer-body">
+                <pre class="log-viewer-content" id="log-viewer-content">Loading...</pre>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="log-copy-btn" onclick="LabModals.copyLogs()">Copy</button>
+                <button class="btn btn-secondary" onclick="LabModals.refreshLogs()">Refresh</button>
+                <button class="btn btn-primary" onclick="LabModals.closeLogViewer()">Close</button>
+            </div>
+        </div>
+    </div>`;
+}
+
+/**
+ * Initialize log viewer keyboard shortcut.
+ * Ctrl+Shift+L toggles the log viewer.
+ */
+function initLogViewerShortcut() {
+    document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.shiftKey && e.key === 'L') {
+            e.preventDefault();
+            toggleLogViewer();
+        }
+    });
+}
+
 // ==================== Error Modal ====================
 
 /**
@@ -427,6 +583,7 @@ function getInfoModalHTML() {
 function initModals() {
     initCellModal();
     initPixelModal();
+    initLogViewerShortcut();
 }
 
 // Export for use in other modules
@@ -466,6 +623,14 @@ window.LabModals = {
     showInfo: showInfoModal,
     closeInfo: closeInfoModal,
     getInfoHTML: getInfoModalHTML,
+
+    // Log viewer modal
+    showLogViewer: showLogViewer,
+    closeLogViewer: closeLogViewer,
+    toggleLogViewer: toggleLogViewer,
+    refreshLogs: refreshLogs,
+    copyLogs: copyLogs,
+    getLogViewerHTML: getLogViewerModalHTML,
 };
 
 // Also expose individual functions globally for onclick handlers

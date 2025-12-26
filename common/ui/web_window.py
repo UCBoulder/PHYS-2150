@@ -56,7 +56,8 @@ class BaseWebWindow(QMainWindow):
         html_filename: str,
         size: tuple[int, int] = (1200, 800),
         min_size: Optional[tuple[int, int]] = None,
-        allow_local_file_access: bool = True
+        allow_local_file_access: bool = True,
+        app_name: Optional[str] = None
     ):
         """
         Initialize the base web window.
@@ -67,8 +68,12 @@ class BaseWebWindow(QMainWindow):
             size: Initial window size as (width, height)
             min_size: Minimum window size as (width, height), or None for no minimum
             allow_local_file_access: Whether to enable LocalContentCanAccessFileUrls
+            app_name: Application name for log file lookup (e.g., "eqe", "jv")
         """
         super().__init__()
+
+        # Store app name for log file lookup
+        self._app_name = app_name or html_filename.replace('.html', '')
 
         # Connect log signal to handler
         self._log_signal.connect(self._on_log_message)

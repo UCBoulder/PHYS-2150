@@ -327,6 +327,72 @@ input[type="number"] {
     gap: 12px;
 }
 
+/* Log Viewer Modal */
+.log-viewer-modal {
+    width: 90%;
+    max-width: 900px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.log-viewer-modal .modal-title {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+}
+
+.log-viewer-modal .modal-subtitle {
+    font-size: 11px;
+    font-weight: normal;
+    color: var(--text-secondary);
+    font-family: monospace;
+}
+
+.log-viewer-body {
+    flex: 1;
+    min-height: 300px;
+    max-height: 60vh;
+    overflow: hidden;
+}
+
+.log-viewer-content {
+    width: 100%;
+    height: 100%;
+    max-height: 55vh;
+    overflow: auto;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 12px;
+    margin: 0;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 11px;
+    line-height: 1.4;
+    white-space: pre;
+    color: var(--text-primary);
+}
+
+/* Scrollbar styling for log viewer */
+.log-viewer-content::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.log-viewer-content::-webkit-scrollbar-track {
+    background: var(--bg-tertiary);
+    border-radius: 4px;
+}
+
+.log-viewer-content::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+}
+
+.log-viewer-content::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
+}
+
 
 /* ============================================
    Progress / Loading
