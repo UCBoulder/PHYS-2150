@@ -23,26 +23,28 @@
     <script src="js/modals.js"></script>
 </head>
 <body class="dark-mode eqe-body">
-    <div class="eqe-app">
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    <main id="main-content" class="eqe-app">
+        <h1 class="visually-hidden">EQE Measurement Application</h1>
         <!-- Tab Navigation with Header Actions -->
-        <div class="tab-bar">
-            <button class="tab-btn active" onclick="switchTab('measurement')">Measurement</button>
-            <button class="tab-btn" onclick="switchTab('stability')">Stability Test</button>
-            <button class="tab-btn staff-tab" id="analysis-tab-btn" onclick="switchTab('analysis')" style="display: none;">
+        <div class="tab-bar" role="tablist" aria-label="Application views">
+            <button class="tab-btn active" role="tab" id="tab-measurement-btn" aria-selected="true" aria-controls="tab-measurement" onclick="switchTab('measurement')">Measurement</button>
+            <button class="tab-btn" role="tab" id="tab-stability-btn" aria-selected="false" aria-controls="tab-stability" onclick="switchTab('stability')">Stability Test</button>
+            <button class="tab-btn staff-tab" role="tab" id="analysis-tab-btn" aria-selected="false" aria-controls="tab-analysis" onclick="switchTab('analysis')" style="display: none;">
                 EQE Analysis
                 <span class="staff-badge-small">STAFF</span>
             </button>
             <div class="tab-bar-spacer"></div>
             <span id="pixel-label" class="text-muted">Pixel: --</span>
-            <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
-                <svg id="sun-icon" class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme" aria-label="Toggle light/dark theme">
+                <svg id="sun-icon" class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                     <circle cx="12" cy="12" r="5"/>
                     <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
                     <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
                     <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
                     <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
                 </svg>
-                <svg id="moon-icon" class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg id="moon-icon" class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                     <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
                 </svg>
             </button>
@@ -56,26 +58,26 @@
         <div class="device-status-row">
             <span class="row-section-title">Device Status</span>
             <div class="device-item">
-                <span class="device-dot disconnected" id="picoscope-dot"></span>
+                <span class="device-dot disconnected" id="picoscope-dot" aria-hidden="true"></span>
                 <span class="device-name">PicoScope:</span>
-                <span class="device-status" id="picoscope-status">Connecting...</span>
+                <span class="device-status" id="picoscope-status" aria-live="polite">Connecting...</span>
             </div>
             <div class="device-item">
-                <span class="device-dot disconnected" id="mono-dot"></span>
+                <span class="device-dot disconnected" id="mono-dot" aria-hidden="true"></span>
                 <span class="device-name">Monochromator:</span>
-                <span class="device-status" id="mono-status">Connecting...</span>
+                <span class="device-status" id="mono-status" aria-live="polite">Connecting...</span>
             </div>
             <div class="device-item">
-                <span class="device-dot disconnected" id="power-dot"></span>
+                <span class="device-dot disconnected" id="power-dot" aria-hidden="true"></span>
                 <span class="device-name">Power Meter:</span>
-                <span class="device-status" id="power-status">Connecting...</span>
+                <span class="device-status" id="power-status" aria-live="polite">Connecting...</span>
             </div>
 
             <div class="mono-controls-inline">
                 <span class="row-section-title">Monochromator</span>
                 <span class="mono-state"><span id="mono-wavelength">--</span> nm</span>
                 <span class="shutter-badge closed" id="shutter-badge">Closed</span>
-                <input type="number" id="wavelength-input" placeholder="nm" min="200" max="1200">
+                <input type="number" id="wavelength-input" placeholder="nm" min="200" max="1200" aria-label="Target wavelength in nanometers">
                 <button class="btn btn-secondary btn-small" onclick="goToWavelength()">Go</button>
                 <button class="btn btn-secondary btn-small" id="shutter-btn" onclick="toggleShutter()">Open</button>
                 <button class="btn btn-secondary btn-small" onclick="alignMonochromator()">Align</button>
@@ -83,7 +85,7 @@
         </div>
 
         <!-- ==================== MEASUREMENT TAB ==================== -->
-        <div id="tab-measurement" class="tab-content active">
+        <div id="tab-measurement" class="tab-content active" role="tabpanel" aria-labelledby="tab-measurement-btn">
 
         <!-- Top Section: Parameters + Progress -->
         <div class="top-section">
@@ -91,20 +93,20 @@
                 <div class="panel-title">Measurement Parameters</div>
                 <div class="params-grid">
                     <div class="param-field">
-                        <label>Start (nm)</label>
-                        <input type="number" id="start-wavelength" step="10">
+                        <label for="start-wavelength">Start (nm)</label>
+                        <input type="number" id="start-wavelength" step="10" aria-label="Start wavelength in nanometers">
                     </div>
                     <div class="param-field">
-                        <label>End (nm)</label>
-                        <input type="number" id="end-wavelength" step="10">
+                        <label for="end-wavelength">End (nm)</label>
+                        <input type="number" id="end-wavelength" step="10" aria-label="End wavelength in nanometers">
                     </div>
                     <div class="param-field">
-                        <label>Step (nm)</label>
-                        <input type="number" id="step-size" step="1">
+                        <label for="step-size">Step (nm)</label>
+                        <input type="number" id="step-size" step="1" aria-label="Step size in nanometers">
                     </div>
                     <div class="param-field">
-                        <label>Cell Number</label>
-                        <input type="text" id="cell-number" placeholder="e.g. 140" maxlength="3">
+                        <label for="cell-number">Cell Number</label>
+                        <input type="text" id="cell-number" placeholder="e.g. 140" maxlength="3" aria-label="Cell number, 3 digits">
                     </div>
                 </div>
             </div>
@@ -112,7 +114,7 @@
             <div class="progress-panel">
                 <div class="panel-title">Status</div>
                 <div class="progress-content">
-                    <div class="progress-status" id="progress-status">Ready</div>
+                    <div class="progress-status" id="progress-status" role="status" aria-live="polite">Ready</div>
                     <div class="progress-bar-container" id="progress-bar-row">
                         <div class="progress-bar">
                             <div class="progress-bar-fill" id="progress-fill" style="width: 0%"></div>
@@ -177,7 +179,7 @@
         </div><!-- End Measurement Tab -->
 
         <!-- ==================== STABILITY TEST TAB ==================== -->
-        <div id="tab-stability" class="tab-content">
+        <div id="tab-stability" class="tab-content" role="tabpanel" aria-labelledby="tab-stability-btn">
 
         <!-- Configuration Row -->
         <div class="stability-config">
@@ -200,16 +202,16 @@
                 </div>
                 <div class="params-grid" style="grid-template-columns: repeat(3, 1fr);">
                     <div class="param-field">
-                        <label>Wavelength (nm)</label>
-                        <input type="number" id="stability-wavelength" step="10">
+                        <label for="stability-wavelength">Wavelength (nm)</label>
+                        <input type="number" id="stability-wavelength" step="10" aria-label="Test wavelength in nanometers">
                     </div>
                     <div class="param-field">
-                        <label>Duration (min)</label>
-                        <input type="number" id="stability-duration">
+                        <label for="stability-duration">Duration (min)</label>
+                        <input type="number" id="stability-duration" aria-label="Test duration in minutes">
                     </div>
                     <div class="param-field">
-                        <label>Interval (sec)</label>
-                        <input type="number" id="stability-interval">
+                        <label for="stability-interval">Interval (sec)</label>
+                        <input type="number" id="stability-interval" aria-label="Measurement interval in seconds">
                     </div>
                 </div>
             </div>
@@ -217,7 +219,7 @@
             <div class="progress-panel">
                 <div class="panel-title">Status</div>
                 <div class="progress-content">
-                    <div class="progress-status" id="stability-status">Ready</div>
+                    <div class="progress-status" id="stability-status" role="status" aria-live="polite">Ready</div>
                     <div class="progress-bar-container">
                         <div class="progress-bar">
                             <div class="progress-bar-fill" id="stability-progress-fill" style="width: 0%"></div>
@@ -284,7 +286,7 @@
         </div><!-- End Stability Tab -->
 
         <!-- EQE Analysis Tab (Staff Mode - Ctrl+Shift+E) -->
-        <div id="tab-analysis" class="tab-content">
+        <div id="tab-analysis" class="tab-content" role="tabpanel" aria-labelledby="analysis-tab-btn">
             <!-- Top Section: Data Source + Status -->
             <div class="top-section">
                 <div class="params-panel analysis-source-panel">
@@ -310,7 +312,7 @@
                 <div class="progress-panel">
                     <div class="panel-title">Status</div>
                     <div class="progress-content">
-                        <div class="progress-status analysis-status-text" id="analysis-status">Ready - load power and current data to calculate EQE</div>
+                        <div class="progress-status analysis-status-text" id="analysis-status" role="status" aria-live="polite">Ready - load power and current data to calculate EQE</div>
                     </div>
                 </div>
             </div>
@@ -352,17 +354,17 @@
             </div>
         </div><!-- End Analysis Tab -->
 
-    </div>
+    </main>
 
     <!-- Cell Number Modal (shown on startup) -->
     <div class="modal-overlay" id="cell-modal">
-        <div class="modal">
-            <div class="modal-title">Enter Cell Number</div>
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cell-modal-title">
+            <h2 class="modal-title" id="cell-modal-title">Enter Cell Number</h2>
             <div class="modal-body">
                 <div class="input-group mb-0">
                     <label for="cell-input">Cell Number (e.g., 195)</label>
-                    <input type="text" id="cell-input" pattern="[0-9]{3}" maxlength="3" placeholder="000">
-                    <span class="input-error" id="cell-input-error">Please enter a 3-digit cell number</span>
+                    <input type="text" id="cell-input" pattern="[0-9]{3}" maxlength="3" placeholder="000" aria-describedby="cell-input-error">
+                    <span class="input-error" id="cell-input-error" role="alert">Please enter a 3-digit cell number</span>
                 </div>
             </div>
             <div class="modal-footer">
@@ -374,8 +376,8 @@
 
     <!-- Pixel Selection Modal -->
     <div class="modal-overlay" id="pixel-modal">
-        <div class="modal">
-            <div class="modal-title">Select Pixel</div>
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="pixel-modal-title">
+            <h2 class="modal-title" id="pixel-modal-title">Select Pixel</h2>
             <div class="modal-body">
                 <div class="input-group mb-0">
                     <label for="pixel-input">Pixel Number</label>
@@ -391,8 +393,8 @@
 
     <!-- Save Data Modal -->
     <div class="modal-overlay" id="save-modal">
-        <div class="modal">
-            <div class="modal-title">Save Data</div>
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="save-modal-title">
+            <h2 class="modal-title" id="save-modal-title">Save Data</h2>
             <div class="modal-body">
                 <p style="margin-bottom: 16px; color: var(--text-secondary);">Which data would you like to save?</p>
                 <div class="save-options">
@@ -412,8 +414,8 @@
 
     <!-- Error Modal -->
     <div class="modal-overlay" id="error-modal">
-        <div class="modal">
-            <div class="modal-title" id="error-modal-title">Error</div>
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="error-modal-title">
+            <h2 class="modal-title" id="error-modal-title">Error</h2>
             <div class="modal-body">
                 <p id="error-modal-message" style="color: var(--text-secondary); white-space: pre-wrap; text-align: left;"></p>
             </div>
@@ -425,8 +427,8 @@
 
     <!-- Info Modal -->
     <div class="modal-overlay" id="info-modal">
-        <div class="modal">
-            <div class="modal-title" id="info-modal-title">Info</div>
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="info-modal-title">
+            <h2 class="modal-title" id="info-modal-title">Info</h2>
             <div class="modal-body">
                 <p id="info-modal-message" style="color: var(--text-secondary); white-space: pre-line;"></p>
             </div>
@@ -438,11 +440,11 @@
 
     <!-- Log Viewer Modal (Ctrl+Shift+L) -->
     <div class="modal-overlay" id="log-viewer-modal">
-        <div class="modal log-viewer-modal">
-            <div class="modal-title">
+        <div class="modal log-viewer-modal" role="dialog" aria-modal="true" aria-labelledby="log-viewer-title">
+            <h2 class="modal-title" id="log-viewer-title">
                 Debug Logs
                 <span class="modal-subtitle" id="log-viewer-path"></span>
-            </div>
+            </h2>
             <div class="modal-body log-viewer-body">
                 <pre class="log-viewer-content" id="log-viewer-content">Loading...</pre>
             </div>
@@ -460,7 +462,7 @@
         <div class="console-resize-handle" id="console-resize-handle"></div>
         <div class="console-header">
             <div class="console-title">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                     <polyline points="4 17 10 11 4 5"></polyline>
                     <line x1="12" y1="19" x2="20" y2="19"></line>
                 </svg>

@@ -7,25 +7,99 @@
 
 // ==================== Generic Modal Helpers ====================
 
+// Track the element that had focus before modal opened
+let _previousActiveElement = null;
+
+/**
+ * Get all focusable elements within a container.
+ * @param {HTMLElement} container - The container to search within
+ * @returns {HTMLElement[]} Array of focusable elements
+ */
+function getFocusableElements(container) {
+    const focusableSelectors = [
+        'button:not([disabled])',
+        'input:not([disabled])',
+        'select:not([disabled])',
+        'textarea:not([disabled])',
+        'a[href]',
+        '[tabindex]:not([tabindex="-1"])'
+    ].join(', ');
+    return Array.from(container.querySelectorAll(focusableSelectors));
+}
+
+/**
+ * Handle keyboard events for focus trapping within modal.
+ * @param {KeyboardEvent} e - The keyboard event
+ * @param {HTMLElement} modal - The modal element
+ */
+function handleModalKeydown(e, modal) {
+    if (e.key !== 'Tab') return;
+
+    const focusable = getFocusableElements(modal);
+    if (focusable.length === 0) return;
+
+    const firstElement = focusable[0];
+    const lastElement = focusable[focusable.length - 1];
+
+    if (e.shiftKey) {
+        // Shift+Tab: if on first element, wrap to last
+        if (document.activeElement === firstElement) {
+            e.preventDefault();
+            lastElement.focus();
+        }
+    } else {
+        // Tab: if on last element, wrap to first
+        if (document.activeElement === lastElement) {
+            e.preventDefault();
+            firstElement.focus();
+        }
+    }
+}
+
 /**
  * Show a modal by adding the 'active' class.
+ * Sets up focus trap and saves previous focus.
  * @param {string} modalId - The modal element ID
  */
 function showModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.classList.add('active');
+    const overlay = document.getElementById(modalId);
+    if (overlay) {
+        // Save current focus to restore later
+        _previousActiveElement = document.activeElement;
+
+        overlay.classList.add('active');
+
+        // Set up focus trap on the inner modal
+        const modal = overlay.querySelector('.modal');
+        if (modal) {
+            modal._focusTrapHandler = (e) => handleModalKeydown(e, modal);
+            modal.addEventListener('keydown', modal._focusTrapHandler);
+        }
     }
 }
 
 /**
  * Hide a modal by removing the 'active' class.
+ * Removes focus trap and restores previous focus.
  * @param {string} modalId - The modal element ID
  */
 function hideModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.classList.remove('active');
+    const overlay = document.getElementById(modalId);
+    if (overlay) {
+        overlay.classList.remove('active');
+
+        // Remove focus trap handler
+        const modal = overlay.querySelector('.modal');
+        if (modal && modal._focusTrapHandler) {
+            modal.removeEventListener('keydown', modal._focusTrapHandler);
+            delete modal._focusTrapHandler;
+        }
+
+        // Restore focus to previous element
+        if (_previousActiveElement && _previousActiveElement.focus) {
+            _previousActiveElement.focus();
+            _previousActiveElement = null;
+        }
     }
 }
 

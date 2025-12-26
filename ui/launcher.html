@@ -13,8 +13,9 @@
     <script src="js/modals.js"></script>
 </head>
 <body class="dark-mode">
+    <a href="#main-content" class="skip-link">Skip to main content</a>
     <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme (Ctrl+Shift+C)" aria-label="Toggle light/dark theme">
-        <svg id="sun-icon" class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg id="sun-icon" class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <circle cx="12" cy="12" r="5"/>
             <line x1="12" y1="1" x2="12" y2="3"/>
             <line x1="12" y1="21" x2="12" y2="23"/>
@@ -25,15 +26,16 @@
             <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
             <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
         </svg>
-        <svg id="moon-icon" class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg id="moon-icon" class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
         </svg>
     </button>
 
-    <h1>PHYS 2150 Measurement Suite</h1>
-    <p class="subtitle">Select a measurement application:</p>
+    <main id="main-content">
+        <h1>PHYS 2150 Measurement Suite</h1>
+        <p class="subtitle">Select a measurement application:</p>
 
-    <div class="button-container">
+        <div class="button-container">
         <button class="btn btn-primary btn-launcher" onclick="launchEQE()" id="btn-eqe">
             EQE Measurement
         </button>
@@ -41,22 +43,23 @@
         <button class="btn btn-primary btn-launcher" onclick="launchJV()" id="btn-jv">
             I-V Measurement
         </button>
-    </div>
+        </div>
 
-    <div class="offline-indicator" id="offline-indicator" style="display: none;">
-        <span>OFFLINE MODE</span>
-    </div>
+        <div class="offline-indicator" id="offline-indicator" style="display: none;">
+            <span>OFFLINE MODE</span>
+        </div>
 
-    <div class="footer">
-        <p class="shortcuts-hint">Press E for EQE, I for I-V</p>
-        <p class="version" id="app-version"></p>
-        <p class="institution">CU Boulder Physics Undergraduate Labs</p>
-    </div>
+        <footer class="footer">
+            <p class="shortcuts-hint">Press E for EQE, I for I-V</p>
+            <p class="version" id="app-version"></p>
+            <p class="institution">CU Boulder Physics Undergraduate Labs</p>
+        </footer>
+    </main>
 
     <!-- Info Modal -->
     <div class="modal-overlay" id="info-modal">
-        <div class="modal">
-            <div class="modal-title" id="info-modal-title">Info</div>
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="info-modal-title">
+            <h2 class="modal-title" id="info-modal-title">Info</h2>
             <div class="modal-body">
                 <p id="info-modal-message" style="color: var(--text-secondary);"></p>
             </div>
@@ -68,8 +71,8 @@
 
     <!-- Error Modal -->
     <div class="modal-overlay" id="error-modal">
-        <div class="modal">
-            <div class="modal-title" id="error-modal-title">Error</div>
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="error-modal-title">
+            <h2 class="modal-title" id="error-modal-title">Error</h2>
             <div class="modal-body">
                 <p id="error-modal-message" style="color: var(--text-secondary);"></p>
             </div>

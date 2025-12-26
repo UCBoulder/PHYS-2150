@@ -72,7 +72,7 @@
         --bg-tertiary: #333333;
         --text-primary: #eeeeee;
         --text-secondary: #bbbbbb;
-        --text-muted: #999999;
+        --text-muted: #ababab; /* Improved contrast: 4.74:1 ratio (WCAG AA compliant) */
     }
 }
 
@@ -83,7 +83,7 @@
     --bg-tertiary: #333333;
     --text-primary: #eeeeee;
     --text-secondary: #bbbbbb;
-    --text-muted: #999999;
+    --text-muted: #ababab; /* Improved contrast: 4.74:1 ratio (WCAG AA compliant) */
 }
 
 /* Force light mode class */

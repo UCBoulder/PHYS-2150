@@ -23,19 +23,21 @@
     <script src="js/modals.js"></script>
 </head>
 <body class="dark-mode jv-body">
-    <div class="jv-app">
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    <main id="main-content" class="jv-app">
+        <h1 class="visually-hidden">I-V Measurement Application</h1>
         <!-- Tab Bar -->
-        <div class="tab-bar">
-            <button class="tab-btn active" onclick="switchTab('measurement')">Measurement</button>
-            <button class="tab-btn staff-tab" id="analysis-tab-btn"
+        <div class="tab-bar" role="tablist" aria-label="Application views">
+            <button class="tab-btn active" role="tab" id="tab-measurement-btn" aria-selected="true" aria-controls="tab-measurement" onclick="switchTab('measurement')">Measurement</button>
+            <button class="tab-btn staff-tab" role="tab" id="analysis-tab-btn" aria-selected="false" aria-controls="tab-analysis"
                     onclick="switchTab('analysis')" style="display: none;">
                 I-V Analysis
                 <span class="staff-badge-small">STAFF</span>
             </button>
             <div class="tab-bar-spacer"></div>
             <span id="pixel-label" class="text-muted">Pixel: --</span>
-            <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
-                <svg id="sun-icon" class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme" aria-label="Toggle light/dark theme">
+                <svg id="sun-icon" class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                     <circle cx="12" cy="12" r="5"/>
                     <line x1="12" y1="1" x2="12" y2="3"/>
                     <line x1="12" y1="21" x2="12" y2="23"/>
@@ -46,7 +48,7 @@
                     <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
                     <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
                 </svg>
-                <svg id="moon-icon" class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg id="moon-icon" class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                     <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
                 </svg>
             </button>
@@ -55,14 +57,14 @@
         <!-- ============================================
              MEASUREMENT TAB
              ============================================ -->
-        <div id="tab-measurement" class="tab-content active">
+        <div id="tab-measurement" class="tab-content active" role="tabpanel" aria-labelledby="tab-measurement-btn">
             <!-- Device Status Row -->
             <div class="device-status-row">
                 <span class="row-section-title">Device Status</span>
                 <div class="device-item">
-                    <span class="device-dot disconnected" id="status-dot"></span>
+                    <span class="device-dot disconnected" id="status-dot" aria-hidden="true"></span>
                     <span class="device-name">Keithley 2450:</span>
-                    <span class="device-status" id="status-text">Connecting...</span>
+                    <span class="device-status" id="status-text" aria-live="polite">Connecting...</span>
                 </div>
             </div>
 
@@ -73,26 +75,26 @@
                     <div class="params-grid">
                         <div class="param-field">
                             <label for="start-voltage">Start (V)</label>
-                            <input type="text" id="start-voltage" autocomplete="off">
+                            <input type="text" id="start-voltage" autocomplete="off" aria-label="Start voltage in volts">
                         </div>
                         <div class="param-field">
                             <label for="stop-voltage">Stop (V)</label>
-                            <input type="text" id="stop-voltage" autocomplete="off">
+                            <input type="text" id="stop-voltage" autocomplete="off" aria-label="Stop voltage in volts">
                         </div>
                         <div class="param-field">
                             <label for="step-voltage">Step (V)</label>
-                            <input type="text" id="step-voltage" autocomplete="off">
+                            <input type="text" id="step-voltage" autocomplete="off" aria-label="Voltage step size in volts">
                         </div>
                         <div class="param-field">
                             <label for="cell-number">Cell Number</label>
-                            <input type="text" id="cell-number" placeholder="e.g. 140" maxlength="3">
+                            <input type="text" id="cell-number" placeholder="e.g. 140" maxlength="3" aria-label="Cell number, 3 digits">
                         </div>
                     </div>
                 </div>
                 <div class="progress-panel">
                     <div class="panel-title">Status</div>
                     <div class="progress-content">
-                        <div class="progress-status" id="status-message">Ready</div>
+                        <div class="progress-status" id="status-message" role="status" aria-live="polite">Ready</div>
                         <div class="progress-bar-container">
                             <div class="progress-bar">
                                 <div class="progress-bar-fill" id="progress-fill" style="width: 0%"></div>
@@ -124,7 +126,7 @@
         <!-- ============================================
              ANALYSIS TAB (Staff Mode)
              ============================================ -->
-        <div id="tab-analysis" class="tab-content">
+        <div id="tab-analysis" class="tab-content" role="tabpanel" aria-labelledby="analysis-tab-btn">
             <!-- Compact Data Source Row -->
             <div class="params-panel" style="padding: 10px 16px; flex: none;">
                 <div class="analysis-source-row">
@@ -155,8 +157,8 @@
                     <!-- Cell area -->
                     <div class="area-input-group">
                         <label for="cell-area">Area:</label>
-                        <input type="text" id="cell-area" placeholder="opt.">
-                        <span class="unit">cm²</span>
+                        <input type="text" id="cell-area" placeholder="opt." aria-label="Cell area in square centimeters, optional">
+                        <span class="unit" aria-hidden="true">cm²</span>
                     </div>
 
                     <button class="btn btn-primary btn-xs" id="calculate-params-btn"
@@ -233,7 +235,7 @@
                 </div>
             </div>
         </div>
-    </div>
+    </main>
 
     <!-- Hidden file input for CSV loading -->
     <input type="file" id="csv-file-input" accept=".csv" style="display: none"
@@ -241,13 +243,13 @@
 
     <!-- Cell Number Modal -->
     <div class="modal-overlay" id="cell-modal">
-        <div class="modal">
-            <div class="modal-title">Enter Cell Number</div>
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cell-modal-title">
+            <h2 class="modal-title" id="cell-modal-title">Enter Cell Number</h2>
             <div class="modal-body">
                 <div class="input-group mb-0">
                     <label for="cell-input">Cell Number (e.g., 195)</label>
-                    <input type="text" id="cell-input" pattern="[0-9]{3}" maxlength="3" placeholder="000">
-                    <span class="input-error" id="cell-input-error">Please enter a 3-digit cell number</span>
+                    <input type="text" id="cell-input" pattern="[0-9]{3}" maxlength="3" placeholder="000" aria-describedby="cell-input-error">
+                    <span class="input-error" id="cell-input-error" role="alert">Please enter a 3-digit cell number</span>
                 </div>
             </div>
             <div class="modal-footer">
@@ -259,8 +261,8 @@
 
     <!-- Pixel Selection Modal -->
     <div class="modal-overlay" id="pixel-modal">
-        <div class="modal">
-            <div class="modal-title">Select Pixel</div>
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="pixel-modal-title">
+            <h2 class="modal-title" id="pixel-modal-title">Select Pixel</h2>
             <div class="modal-body">
                 <div class="input-group mb-0">
                     <label for="pixel-input">Pixel Number</label>
@@ -276,8 +278,8 @@
 
     <!-- Error Modal -->
     <div class="modal-overlay" id="error-modal">
-        <div class="modal">
-            <div class="modal-title" id="error-modal-title">Error</div>
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="error-modal-title">
+            <h2 class="modal-title" id="error-modal-title">Error</h2>
             <div class="modal-body">
                 <p id="error-modal-message" style="color: var(--text-secondary); white-space: pre-wrap; text-align: left;"></p>
             </div>
@@ -289,8 +291,8 @@
 
     <!-- Info Modal -->
     <div class="modal-overlay" id="info-modal">
-        <div class="modal">
-            <div class="modal-title" id="info-modal-title">Info</div>
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="info-modal-title">
+            <h2 class="modal-title" id="info-modal-title">Info</h2>
             <div class="modal-body">
                 <p id="info-modal-message" style="color: var(--text-secondary); white-space: pre-line;"></p>
             </div>
@@ -302,11 +304,11 @@
 
     <!-- Log Viewer Modal (Ctrl+Shift+L) -->
     <div class="modal-overlay" id="log-viewer-modal">
-        <div class="modal log-viewer-modal">
-            <div class="modal-title">
+        <div class="modal log-viewer-modal" role="dialog" aria-modal="true" aria-labelledby="log-viewer-title">
+            <h2 class="modal-title" id="log-viewer-title">
                 Debug Logs
                 <span class="modal-subtitle" id="log-viewer-path"></span>
-            </div>
+            </h2>
             <div class="modal-body log-viewer-body">
                 <pre class="log-viewer-content" id="log-viewer-content">Loading...</pre>
             </div>
@@ -324,7 +326,7 @@
         <div class="console-resize-handle" id="console-resize-handle"></div>
         <div class="console-header">
             <div class="console-title">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                     <polyline points="4 17 10 11 4 5"></polyline>
                     <line x1="12" y1="19" x2="20" y2="19"></line>
                 </svg>

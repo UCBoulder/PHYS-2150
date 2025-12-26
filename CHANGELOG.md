@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Comprehensive WCAG 2.1 AA accessibility improvements:
+  - Skip navigation links on all pages (visible on focus)
+  - ARIA dialog semantics (`role="dialog"`, `aria-modal`, `aria-labelledby`) on all modals
+  - ARIA tabpanel pattern (`role="tablist"`, `role="tab"`, `role="tabpanel"`) on tab interfaces
+  - Focus trap in modals to keep keyboard navigation within dialog
+  - Semantic `<main>` landmarks and visually-hidden `<h1>` headings
+  - `aria-live="polite"` on status messages and device connection text
+  - `aria-describedby` linking form inputs to error messages
+  - `aria-hidden="true"` on decorative SVG icons
+  - Focus-visible styling on console panel buttons
 - Console panel Copy button to copy all messages to clipboard
 - Console panel drag-to-resize (drag top edge to adjust height)
 - Log viewer modal (`Ctrl+Shift+L`) to view debug logs directly in the application
@@ -29,6 +39,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Coverage configuration in pyproject.toml with pytest-cov
 
 ### Changed
+- Dark mode `--text-muted` color improved from #999999 to #ababab for WCAG AA contrast compliance (4.74:1 ratio)
+- Modal titles changed from `<div>` to `<h2>` for proper heading hierarchy
 - `Ctrl+Shift+D` now toggles print capture instead of debug log levels (simpler, more useful)
 - Debug logs now written to `%LOCALAPPDATA%\PHYS2150\` for Windows compatibility when installed to Program Files
 - EQE device status bar now shows clean "Connected"/"Not Connected" text (detailed errors remain in console)
