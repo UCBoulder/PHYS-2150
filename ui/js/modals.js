@@ -498,7 +498,10 @@ function getLogViewerModalHTML() {
  */
 function initLogViewerShortcut() {
     document.addEventListener('keydown', (e) => {
-        if (e.ctrlKey && e.shiftKey && e.key === 'L') {
+        // Use Ctrl (Windows/Linux) or Cmd (Mac) + Shift + key
+        // Use e.code for reliable cross-platform detection
+        const modifierKey = e.ctrlKey || e.metaKey;
+        if (modifierKey && e.shiftKey && e.code === 'KeyL') {
             e.preventDefault();
             toggleLogViewer();
         }

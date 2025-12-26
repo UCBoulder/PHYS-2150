@@ -1060,13 +1060,17 @@ function onLogMessage(level, message) {
 // ============================================
 
 document.addEventListener('keydown', (e) => {
-    // Ctrl+Shift+T - Toggle console panel
-    if (e.ctrlKey && e.shiftKey && e.key === 'T') {
+    // Use Ctrl (Windows/Linux) or Cmd (Mac) + Shift + key
+    // Use e.code for reliable cross-platform detection
+    const modifierKey = e.ctrlKey || e.metaKey;
+
+    // Ctrl/Cmd+Shift+T - Toggle console panel
+    if (modifierKey && e.shiftKey && e.code === 'KeyT') {
         e.preventDefault();
         toggleConsole();
     }
-    // Ctrl+Shift+D - Toggle print capture
-    else if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+    // Ctrl/Cmd+Shift+D - Toggle print capture
+    else if (modifierKey && e.shiftKey && e.code === 'KeyD') {
         e.preventDefault();
         const api = LabAPI.get();
         if (api && api.toggle_debug_mode) {
@@ -1085,8 +1089,8 @@ document.addEventListener('keydown', (e) => {
             });
         }
     }
-    // Ctrl+Shift+E - Toggle analysis panel (staff mode)
-    else if (e.ctrlKey && e.shiftKey && e.key === 'E') {
+    // Ctrl/Cmd+Shift+E - Toggle analysis panel (staff mode)
+    else if (modifierKey && e.shiftKey && e.code === 'KeyE') {
         e.preventDefault();
         toggleAnalysisPanel();
     }

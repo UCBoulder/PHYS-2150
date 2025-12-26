@@ -83,9 +83,12 @@ function createThemeToggle() {
     `;
 }
 
-// Keyboard shortcut: Ctrl+Shift+C
+// Keyboard shortcut: Ctrl/Cmd+Shift+C
 document.addEventListener('keydown', function(e) {
-    if (e.ctrlKey && e.shiftKey && e.key === 'C') {
+    // Use Ctrl (Windows/Linux) or Cmd (Mac) + Shift + key
+    // Use e.code for reliable cross-platform detection
+    const modifierKey = e.ctrlKey || e.metaKey;
+    if (modifierKey && e.shiftKey && e.code === 'KeyC') {
         e.preventDefault();
         toggleTheme();
     }

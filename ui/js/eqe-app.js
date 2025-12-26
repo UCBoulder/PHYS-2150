@@ -1915,15 +1915,19 @@ function toggleDebugMode() {
 // ============================================
 
 document.addEventListener('keydown', (e) => {
-    if (e.ctrlKey && e.shiftKey && e.key === 'T') {
+    // Use Ctrl (Windows/Linux) or Cmd (Mac) + Shift + key
+    // Use e.code for reliable cross-platform detection
+    const modifierKey = e.ctrlKey || e.metaKey;
+
+    if (modifierKey && e.shiftKey && e.code === 'KeyT') {
         e.preventDefault();
         toggleConsole();
     }
-    else if (e.ctrlKey && e.shiftKey && e.key === 'E') {
+    else if (modifierKey && e.shiftKey && e.code === 'KeyE') {
         e.preventDefault();
         toggleAnalysisPanel();
     }
-    else if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+    else if (modifierKey && e.shiftKey && e.code === 'KeyD') {
         e.preventDefault();
         toggleDebugMode();
     }
