@@ -358,9 +358,9 @@ class JVWebApplication:
         # Initialize experiment (connects to hardware)
         try:
             self.experiment.initialize_device()
-        except JVExperimentError as e:
-            _logger.warning(f"Device initialization failed: {e}")
-            # Continue anyway - UI will show disconnected status
+        except JVExperimentError:
+            # Continue anyway - device_status_changed signal already notified UI
+            pass
 
         self.window.show()
         return self.app.exec()

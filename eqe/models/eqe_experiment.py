@@ -194,7 +194,7 @@ class EQEExperimentModel(QObject):
             return True
             
         except Exception as e:
-            self.logger.log(f"Device initialization failed: {e}", "ERROR")
+            # Don't log here - device_status_changed signal already logged per-device failures
             raise EQEExperimentError(f"Failed to initialize devices: {e}")
     
     def _initialize_power_meter(self) -> None:

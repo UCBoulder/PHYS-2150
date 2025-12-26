@@ -685,9 +685,9 @@ class EQEWebApplication:
         # Initialize experiment (connects to hardware)
         try:
             self.experiment.initialize_devices()
-        except EQEExperimentError as e:
-            _logger.warning(f"Device initialization failed: {e}")
-            # Continue anyway - UI will show disconnected status
+        except EQEExperimentError:
+            # Continue anyway - device_status_changed signal already notified UI of failures
+            pass
 
         # Initialize stability test model with shared hardware controllers
         self.stability_model = StabilityTestModel(
