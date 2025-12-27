@@ -183,7 +183,7 @@ class EQEApi(BaseWebApi):
 
     @Slot(str, result=str)
     def start_current_measurement(self, params_json: str) -> str:
-        """Start a current measurement (includes phase adjustment first)."""
+        """Start a current measurement."""
         if not self._experiment:
             return json.dumps({"success": False, "message": "No experiment model"})
 
@@ -202,10 +202,9 @@ class EQEApi(BaseWebApi):
                 pixel_number=params["pixel"],
             )
 
-            # Start phase adjustment first (current measurement follows automatically)
-            # pixel_number already set above, no need to pass it again
-            self._experiment.start_phase_adjustment()
-            return json.dumps({"success": True, "phase": "adjusting"})
+            # Start current measurement directly (chopper validation happens at start)
+            self._experiment.start_current_measurement()
+            return json.dumps({"success": True})
 
         except EQEExperimentError as e:
             self._window.send_log('error', f"Current measurement failed: {e}")

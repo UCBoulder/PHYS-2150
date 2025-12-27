@@ -66,9 +66,8 @@ Perfect for testing the GUI when you're away from the lab! The application will 
 2. Configure measurement parameters in the control panel
 3. Connect devices (automatic device detection on startup)
 4. Run power calibration measurement
-5. Perform phase adjustment
-6. Execute EQE measurement
-7. Save results to CSV
+5. Execute current measurement (chopper validated automatically)
+6. Save results to CSV
 
 ## Device Configuration
 

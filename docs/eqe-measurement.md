@@ -159,13 +159,10 @@ The **Green Dot** button (in the Monochromator Controls panel) sets the monochro
 1. POWER CALIBRATION (Reference detector)
    └── Measures lamp spectrum P(λ)
 
-2. PHASE ADJUSTMENT (Optional)
-   └── Optimizes lock-in phase
+2. CURRENT MEASUREMENT (Solar cell)
+   └── Validates chopper, then measures photocurrent I(λ)
 
-3. CURRENT MEASUREMENT (Solar cell)
-   └── Measures photocurrent I(λ)
-
-4. CALCULATE EQE
+3. CALCULATE EQE
    └── EQE(λ) = (I/q) / (P/E_photon)
 ```
 
@@ -188,22 +185,7 @@ Measures the incident optical power at each wavelength using a calibrated refere
 
 **Output:** `YYYY_MM_DD_power_cell{N}.csv`
 
-### Step 2: Phase Adjustment (Optional)
-
-The lock-in extracts both magnitude (R) and phase (θ). While magnitude is phase-independent with our software lock-in, phase adjustment can optimize signal quality.
-
-**When to use:**
-- First measurement of the day
-- After changing optical alignment
-- If measurements seem noisy
-
-**Procedure:**
-1. Set monochromator to alignment wavelength (532 nm)
-2. Place sample in beam
-3. Run phase sweep (0° to 360°)
-4. Software determines optimal phase
-
-### Step 3: Current Measurement
+### Step 2: Current Measurement
 
 Measures the photocurrent from the solar cell at each wavelength.
 
@@ -218,7 +200,7 @@ Measures the photocurrent from the solar cell at each wavelength.
 
 **Output:** `YYYY_MM_DD_current_cell{N}_pixel{P}.csv`
 
-### Step 4: EQE Calculation
+### Step 3: EQE Calculation
 
 ```
          I(λ) / q          I(λ) × hc

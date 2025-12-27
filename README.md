@@ -174,8 +174,8 @@ External Quantum Efficiency measures the spectral response - the fraction of inc
 ### EQE Workflow
 
 1. **Power Calibration** - Scan reference detector to measure lamp spectrum
-2. **Phase Adjustment** - Optimize lock-in phase (optional, magnitude is phase-independent)
-3. **EQE Scan** - Measure solar cell response across wavelength range
+2. **Current Measurement** - Measure solar cell photocurrent (chopper validated automatically)
+3. **EQE Calculation** - Compute quantum efficiency from power and current data
 
 ## Architecture
 

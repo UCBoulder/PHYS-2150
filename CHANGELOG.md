@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- EQE Measurement tab simplified from three plots to two (removed Phase Response plot)
+- Current measurements now start directly without phase adjustment step (Hilbert transform provides phase-independent magnitude)
+- Chopper validation moved to start of current measurement workflow (catches "chopper not running" errors early)
+
+### Removed
+- Phase adjustment step from EQE current measurement workflow (unnecessary with quadrature lock-in detection)
+- Phase Response and Sine Fit visualization from Measurement tab (was artifact from analog lock-in era)
+
 ### Added
 - Comprehensive WCAG 2.1 AA accessibility improvements:
   - Skip navigation links on all pages (visible on focus)
@@ -39,13 +48,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Coverage configuration in pyproject.toml with pytest-cov
 - Standard Error (SE) display in EQE measurement stats row (SE = σ/√n, uncertainty in the mean)
 - SE column added to EQE current measurement CSV export for complete uncertainty data
-- Lock-in Lab tab for educational exploration of lock-in amplifier concepts:
-  - X-Y phasor diagram showing in-phase and quadrature components
-  - R² = X² + Y² verification display for quantitative understanding
-  - Time-domain waveforms (signal, reference, product)
-  - FFT spectrum showing frequency selectivity at chopper frequency
-  - Adjustable integration cycles slider (10-200 cycles)
-  - Collapsible explanation panel for conceptual learning
+- Lock-in Lab tab for step-by-step exploration of phase-sensitive detection:
+  - Deconstructed algorithm: toggle processing steps to build up PSD incrementally
+  - Simulated data mode with adjustable signal parameters (modulation, DC offset, noise)
+  - Live data mode to apply learned concepts to real PicoScope measurements
+  - Expected vs Extracted value comparison for verification
+  - Context-sensitive explanations that update with each processing step
+  - Reference phase slider to demonstrate phase sensitivity
 
 ### Changed
 - Dark mode `--text-muted` color improved from #999999 to #ababab for WCAG AA contrast compliance (4.74:1 ratio)

@@ -6,19 +6,26 @@ software lock-in amplifier and monochromator. It coordinates device operations
 and handles the photocurrent measurement workflow.
 """
 
-import time
 import gc
-from typing import List, Tuple, Optional, Callable
 import threading
+import time
+from typing import Callable, List, Optional, Tuple
 
-from ..controllers.picoscope_lockin import PicoScopeController, PicoScopeError
-from ..controllers.monochromator import MonochromatorController, MonochromatorError
+from common.utils import get_error, get_logger
+
 from ..config.settings import (
     CURRENT_MEASUREMENT_CONFIG,
-    PHASE_ADJUSTMENT_CONFIG,
     DATA_EXPORT_CONFIG,
+    DEVICE_CONFIGS,
+    PHASE_ADJUSTMENT_CONFIG,
+    DeviceType,
 )
+from ..controllers.monochromator import MonochromatorController, MonochromatorError
+from ..controllers.picoscope_lockin import PicoScopeController, PicoScopeError
 from ..utils.data_handling import MeasurementDataLogger
+
+# Module-level logger for current measurement
+_logger = get_logger("eqe")
 
 
 class CurrentMeasurementError(Exception):
@@ -34,7 +41,7 @@ class CurrentMeasurementModel:
     across a wavelength range using the PicoScope software lock-in amplifier
     and monochromator.
     """
-    
+
     def __init__(self, lockin: PicoScopeController,
                  monochromator: MonochromatorController,
                  logger: Optional[MeasurementDataLogger] = None):
@@ -49,7 +56,7 @@ class CurrentMeasurementModel:
         self.lockin = lockin
         self.monochromator = monochromator
         self.logger = logger or MeasurementDataLogger()
-        
+
         # Measurement state
         self._is_measuring = False
         self._stop_requested = False
@@ -60,15 +67,15 @@ class CurrentMeasurementModel:
         self.currents: List[float] = []
         self.measurement_stats: List[dict] = []  # Stats per wavelength: {std_dev, n, cv_percent}
         self.pixel_number: Optional[int] = None
-        
+
         # Callbacks for progress updates
         self.progress_callback: Optional[Callable[[float, float, float], None]] = None
         self.completion_callback: Optional[Callable[[bool], None]] = None
-    
+
     def is_measuring(self) -> bool:
         """Check if measurement is in progress."""
         return self._is_measuring
-    
+
     def set_progress_callback(self, callback: Callable[[float, float, float], None]) -> None:
         """
         Set callback for measurement progress updates.
@@ -77,7 +84,7 @@ class CurrentMeasurementModel:
             callback: Function(wavelength, current, progress_percent)
         """
         self.progress_callback = callback
-    
+
     def set_completion_callback(self, callback: Callable[[bool], None]) -> None:
         """
         Set callback for measurement completion.
@@ -86,7 +93,7 @@ class CurrentMeasurementModel:
             callback: Function(success)
         """
         self.completion_callback = callback
-    
+
     def _configure_for_wavelength(self, wavelength: float) -> float:
         """
         Configure devices for specific wavelength.
@@ -99,9 +106,9 @@ class CurrentMeasurementModel:
         """
         # Configure monochromator
         confirmed_wavelength = self.monochromator.configure_for_wavelength(wavelength)
-        
+
         return confirmed_wavelength
-    
+
     def _read_lockin_current(self, wavelength_nm: float = None, return_stats: bool = False):
         """
         Read current using PicoScope software lock-in amplifier.
@@ -141,7 +148,64 @@ class CurrentMeasurementModel:
 
         except PicoScopeError as e:
             raise CurrentMeasurementError(f"Failed to read current: {e}")
-    
+
+    def _validate_chopper(self) -> None:
+        """
+        Validate that the chopper is running before starting measurement.
+
+        Performs a lock-in measurement and checks both frequency and amplitude
+        of the reference signal to ensure the chopper is operational.
+
+        Raises:
+            CurrentMeasurementError: If chopper validation fails
+        """
+        self.logger.log("Validating chopper signal...")
+
+        try:
+            result = self.lockin.perform_lockin_measurement()
+
+            if result is None:
+                raise CurrentMeasurementError("Failed to perform lock-in measurement for chopper validation")
+
+            measured_freq = result['freq']
+            ref_amplitude = result['ref_amplitude']
+
+            # Get validation thresholds from config
+            config = DEVICE_CONFIGS[DeviceType.PICOSCOPE_LOCKIN]
+            expected_freq = config["default_chopper_freq"]
+            freq_tolerance = config["chopper_freq_tolerance"]
+            min_amplitude = config["min_reference_amplitude"]
+
+            freq_error = abs(measured_freq - expected_freq) / expected_freq
+            amplitude_ok = ref_amplitude >= min_amplitude
+            freq_ok = freq_error <= freq_tolerance
+
+            if not amplitude_ok or not freq_ok:
+                error = get_error("chopper_not_running", "eqe")
+                if error:
+                    _logger.student_error(error.title, error.message, error.causes, error.actions)
+
+                if not amplitude_ok and not freq_ok:
+                    raise CurrentMeasurementError(
+                        f"No chopper signal detected: amplitude {ref_amplitude:.2f} Vpp < {min_amplitude} Vpp, "
+                        f"frequency {measured_freq:.1f} Hz not near {expected_freq} Hz. Is the chopper running?"
+                    )
+                elif not amplitude_ok:
+                    raise CurrentMeasurementError(
+                        f"Reference signal too weak: {ref_amplitude:.2f} Vpp < {min_amplitude} Vpp minimum. "
+                        f"Check chopper is running and reference cable is connected."
+                    )
+                else:
+                    raise CurrentMeasurementError(
+                        f"Chopper frequency mismatch: measured {measured_freq:.1f} Hz, "
+                        f"expected {expected_freq} Hz. Is the chopper running?"
+                    )
+
+            self.logger.log(f"Chopper validated: {measured_freq:.1f} Hz, {ref_amplitude:.2f} Vpp")
+
+        except PicoScopeError as e:
+            raise CurrentMeasurementError(f"Failed to validate chopper: {e}")
+
     def measure_current_at_wavelength(self, wavelength: float, return_stats: bool = False):
         """
         Measure current at a specific wavelength.
@@ -180,7 +244,7 @@ class CurrentMeasurementModel:
 
         except (CurrentMeasurementError, MonochromatorError) as e:
             raise CurrentMeasurementError(f"Failed to measure current at {wavelength} nm: {e}")
-    
+
     def _measurement_worker(self, start_wavelength: float, end_wavelength: float,
                            step_size: float, pixel_number: int) -> None:
         """
@@ -205,19 +269,27 @@ class CurrentMeasurementModel:
             # Prepare monochromator
             self.monochromator.open_shutter()
 
+            # Validate chopper is running before starting measurement
+            # This catches common errors like chopper not turned on
+            alignment_wavelength = PHASE_ADJUSTMENT_CONFIG["alignment_wavelength"]
+            self.monochromator.set_wavelength(alignment_wavelength)
+            stabilization_time = PHASE_ADJUSTMENT_CONFIG["stabilization_time"]
+            time.sleep(stabilization_time)
+            self._validate_chopper()
+
             # Set initial filter based on starting wavelength
             self.monochromator.set_filter_for_wavelength(start_wavelength)
             initial_filter = self.monochromator.get_filter_for_wavelength(start_wavelength)
             self.logger.debug(f"Set filter to {initial_filter}")
-            
+
             # PicoScope doesn't need parameter configuration (it's software-based)
-            
+
             # Calculate total number of measurements for progress
             total_measurements = int((end_wavelength - start_wavelength) / step_size) + 1
             measurement_count = 0
-            
+
             current_wavelength = start_wavelength
-            
+
             # Set initial wavelength and wait for stabilization
             self.monochromator.set_wavelength(current_wavelength)
             initial_stabilization = CURRENT_MEASUREMENT_CONFIG["initial_stabilization_time"]
@@ -246,14 +318,14 @@ class CurrentMeasurementModel:
                     # Store data
                     self.wavelengths.append(confirmed_wavelength)
                     self.currents.append(current)
-                    
+
                     # Update progress
                     measurement_count += 1
                     progress_percent = (measurement_count / total_measurements) * 100
-                    
+
                     if self.progress_callback:
                         self.progress_callback(confirmed_wavelength, current, progress_percent)
-                    
+
                 except CurrentMeasurementError as e:
                     self.logger.log(f"Error at wavelength {current_wavelength}: {e}", "ERROR")
 
@@ -268,17 +340,17 @@ class CurrentMeasurementModel:
 
             # Close shutter
             self.monochromator.close_shutter()
-            
+
             success = not self._stop_requested
             if success:
                 self.logger.log(f"Current measurement completed for pixel {pixel_number}")
             else:
                 self.logger.log(f"Current measurement stopped for pixel {pixel_number}")
-            
+
             # Notify completion first (triggers save dialog)
             if self.completion_callback:
                 self.completion_callback(success)
-            
+
             # Set monochromator to green alignment dot position (happens during/after save dialog)
             try:
                 alignment_wl = PHASE_ADJUSTMENT_CONFIG["alignment_wavelength"]
@@ -286,7 +358,7 @@ class CurrentMeasurementModel:
                 self.monochromator.align_for_measurement(alignment_wl)
             except MonochromatorError as e:
                 self.logger.log(f"Warning: Failed to set alignment position: {e}", "WARNING")
-                
+
         except Exception as e:
             self.logger.log(f"Current measurement failed: {e}", "ERROR")
             if self.completion_callback:
@@ -295,7 +367,7 @@ class CurrentMeasurementModel:
             # Always re-enable garbage collection
             gc.enable()
             self._is_measuring = False
-    
+
     def start_measurement(self, start_wavelength: float, end_wavelength: float,
                          step_size: float, pixel_number: int) -> bool:
         """
@@ -315,19 +387,19 @@ class CurrentMeasurementModel:
         """
         if self._is_measuring:
             raise CurrentMeasurementError("Measurement already in progress")
-        
+
         if not (self.lockin.is_connected() and self.monochromator.is_connected()):
             raise CurrentMeasurementError("Devices not connected")
-        
+
         if start_wavelength >= end_wavelength:
             raise CurrentMeasurementError("Start wavelength must be less than end wavelength")
-        
+
         if step_size <= 0:
             raise CurrentMeasurementError("Step size must be positive")
-        
+
         if not (1 <= pixel_number <= 8):
             raise CurrentMeasurementError("Pixel number must be between 1 and 8")
-        
+
         # Start measurement thread
         self._is_measuring = True
         self._stop_requested = False
@@ -337,15 +409,15 @@ class CurrentMeasurementModel:
             daemon=True
         )
         self._measurement_thread.start()
-        
+
         return True
-    
+
     def stop_measurement(self) -> None:
         """Stop the current measurement."""
         if self._is_measuring:
             self._stop_requested = True
             self.logger.log("Stop requested for current measurement")
-    
+
     def wait_for_completion(self, timeout: Optional[float] = None) -> bool:
         """
         Wait for measurement to complete.
@@ -360,7 +432,7 @@ class CurrentMeasurementModel:
             self._measurement_thread.join(timeout)
             return not self._measurement_thread.is_alive()
         return True
-    
+
     def get_measurement_data(self) -> Tuple[List[float], List[float], Optional[int], List[dict]]:
         """
         Get the current measurement data.
@@ -385,7 +457,7 @@ class CurrentMeasurementModel:
         self.currents.clear()
         self.measurement_stats.clear()
         self.pixel_number = None
-    
+
     def align_monochromator(self, alignment_wavelength: float = None) -> None:
         """
         Align monochromator for visual alignment.
@@ -400,7 +472,7 @@ class CurrentMeasurementModel:
             self.monochromator.align_for_measurement(alignment_wavelength)
         except MonochromatorError as e:
             raise CurrentMeasurementError(f"Failed to align monochromator: {e}")
-    
+
     def get_measurement_progress(self) -> dict:
         """
         Get current measurement progress information.

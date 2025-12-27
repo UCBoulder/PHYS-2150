@@ -295,7 +295,6 @@ function switchTab(tabName) {
         setTimeout(() => {
             Plotly.Plots.resize('power-plot');
             Plotly.Plots.resize('current-plot');
-            Plotly.Plots.resize('phase-plot');
         }, 50);
     }
 }
@@ -320,23 +319,12 @@ function initPlots() {
         getPlotLayout(isDark, 'Wavelength (nm)', 'Current (nA)'),
         plotConfig
     );
-
-    Plotly.newPlot('phase-plot',
-        [
-            { x: [], y: [], mode: 'markers', type: 'scatter', name: 'Measured',
-              marker: { color: PLOT_COLORS.phaseMeasured, size: 8 } },
-            { x: [], y: [], mode: 'lines', type: 'scatter', name: 'Sine Fit',
-              line: { color: PLOT_COLORS.phaseFit, width: 2 } }
-        ],
-        getPlotLayout(isDark, 'Phase (degrees)', 'Signal (V)'),
-        plotConfig
-    );
 }
 
 window.addEventListener('resize', () => {
     if (typeof Plotly !== 'undefined') {
         const plotIds = [
-            'power-plot', 'current-plot', 'phase-plot',
+            'power-plot', 'current-plot',
             'stability-time-plot', 'stability-hist-plot',
             'eqe-plot', 'lockinlab-plot'
         ];
@@ -350,7 +338,7 @@ window.addEventListener('resize', () => {
 window.addEventListener('themechange', (e) => {
     const isDark = e.detail.dark;
     const plotIds = [
-        'power-plot', 'current-plot', 'phase-plot',
+        'power-plot', 'current-plot',
         'stability-time-plot', 'stability-hist-plot',
         'eqe-plot', 'lockinlab-plot'
     ];
@@ -591,13 +579,11 @@ function startCurrentMeasurement() {
 
 function startCurrentMeasurementWithPixel(pixel) {
     state.currentPixel = pixel;
-    state.measurementState = 'phase';
-    state.phaseData = { x: [], y: [] };
+    state.measurementState = 'current';
     state.currentData = { x: [], y: [], stats: [] };
-    clearPlot('phase');
     clearPlot('current');
     setMeasuringState(true);
-    updateProgress(0, 'Phase adjustment...');
+    updateProgress(0, 'Validating chopper...');
     document.getElementById('pixel-label').textContent = 'Pixel: ' + pixel;
     document.getElementById('stats-row').classList.remove('hidden');
     setTimeout(() => {
@@ -605,7 +591,7 @@ function startCurrentMeasurementWithPixel(pixel) {
     }, 50);
 
     if (state.offlineMode) {
-        mockPhaseThenCurrentMeasurement(pixel);
+        mockCurrentMeasurement(pixel);
         return;
     }
 
@@ -656,7 +642,6 @@ function setMeasuringState(measuring) {
         setTimeout(() => {
             Plotly.Plots.resize('power-plot');
             Plotly.Plots.resize('current-plot');
-            Plotly.Plots.resize('phase-plot');
         }, 50);
     }
 }
@@ -691,10 +676,6 @@ function onCurrentProgress(wavelength, current, percent) {
     state.currentData.x.push(wavelength);
     state.currentData.y.push(currentNA);
 
-    if (state.measurementState === 'phase') {
-        state.measurementState = 'current';
-    }
-
     const isDark = LabTheme.isDark();
     Plotly.newPlot('current-plot',
         [{ x: state.currentData.x, y: state.currentData.y, mode: 'markers', type: 'scatter',
@@ -706,20 +687,10 @@ function onCurrentProgress(wavelength, current, percent) {
 }
 
 function onPhaseProgress(phase, signal) {
+    // Used by stability test phase adjustment - just update progress
+    // (phase plot removed from Measurement tab)
     state.phaseData.x.push(phase);
     state.phaseData.y.push(signal);
-
-    const isDark = LabTheme.isDark();
-    Plotly.newPlot('phase-plot',
-        [
-            { x: state.phaseData.x, y: state.phaseData.y, mode: 'markers', type: 'scatter',
-              name: 'Measured', marker: { color: PLOT_COLORS.phaseMeasured, size: 8 } },
-            { x: [], y: [], mode: 'lines', type: 'scatter', name: 'Sine Fit',
-              line: { color: PLOT_COLORS.phaseFit, width: 2 } }
-        ],
-        getPlotLayout(isDark, 'Phase (degrees)', 'Signal (V)'),
-        plotConfig
-    );
     updateProgress(0, `Phase adjustment: ${phase.toFixed(0)}°`);
 }
 
@@ -766,24 +737,10 @@ function onMeasurementStats(stats) {
 }
 
 function onPhaseAdjustmentComplete(data) {
+    // Used by stability test phase adjustment - just update progress and store data
+    // (phase plot removed from Measurement tab)
     state.phaseData.x = data.phase_data || [];
     state.phaseData.y = data.signal_data || [];
-
-    const fitX = data.fit_phases || [];
-    const fitY = data.fit_signals || [];
-
-    const isDark = LabTheme.isDark();
-    Plotly.newPlot('phase-plot',
-        [
-            { x: state.phaseData.x, y: state.phaseData.y, mode: 'markers', type: 'scatter',
-              name: 'Measured', marker: { color: PLOT_COLORS.phaseMeasured, size: 8 } },
-            { x: fitX, y: fitY, mode: 'lines', type: 'scatter', name: 'Sine Fit',
-              line: { color: PLOT_COLORS.phaseFit, width: 2 } }
-        ],
-        getPlotLayout(isDark, 'Phase (degrees)', 'Signal (V)'),
-        plotConfig
-    );
-
     updateProgress(0, `Phase: ${data.optimal_phase?.toFixed(1) || '--'}° (R² = ${data.r_squared?.toFixed(4) || '--'})`);
 }
 
@@ -801,17 +758,6 @@ function clearPlot(type) {
             [{ x: [], y: [], mode: 'markers', type: 'scatter', name: 'Current',
                marker: { color: PLOT_COLORS.current, size: 8 } }],
             getPlotLayout(isDark, 'Wavelength (nm)', 'Current (nA)'),
-            plotConfig
-        );
-    } else if (type === 'phase') {
-        Plotly.newPlot('phase-plot',
-            [
-                { x: [], y: [], mode: 'markers', type: 'scatter', name: 'Measured',
-                  marker: { color: PLOT_COLORS.phaseMeasured, size: 8 } },
-                { x: [], y: [], mode: 'lines', type: 'scatter', name: 'Sine Fit',
-                  line: { color: PLOT_COLORS.phaseFit, width: 2 } }
-            ],
-            getPlotLayout(isDark, 'Phase (degrees)', 'Signal (V)'),
             plotConfig
         );
     }
@@ -962,48 +908,6 @@ function mockPowerMeasurement() {
         onPowerProgress(wavelength, power, (count / total) * 100);
         wavelength += step;
     }, 100);
-}
-
-function mockPhaseThenCurrentMeasurement(pixel) {
-    state.wavelength = 532;
-    state.shutterOpen = true;
-    updateMonochromatorDisplay();
-
-    const phaseData = [];
-    const signalData = [];
-    const optimalPhase = 45;
-    const amplitude = 0.4;
-    const offset = 0.5;
-
-    for (let phase = 0; phase <= 360; phase += 15) {
-        const signal = offset + amplitude * Math.sin((phase - optimalPhase) * Math.PI / 180) + 0.02 * (Math.random() - 0.5);
-        phaseData.push(phase);
-        signalData.push(signal);
-        onPhaseProgress(phase, signal);
-    }
-
-    const fitPhases = [];
-    const fitSignals = [];
-    for (let phase = 0; phase <= 360; phase += 5) {
-        fitPhases.push(phase);
-        fitSignals.push(offset + amplitude * Math.sin((phase - optimalPhase) * Math.PI / 180));
-    }
-
-    setTimeout(() => {
-        if (state.measurementState === 'idle') return;
-
-        onPhaseAdjustmentComplete({
-            phase_data: phaseData,
-            signal_data: signalData,
-            fit_phases: fitPhases,
-            fit_signals: fitSignals,
-            optimal_phase: optimalPhase,
-            r_squared: 0.9876
-        });
-
-        state.measurementState = 'current';
-        mockCurrentMeasurement();
-    }, 500);
 }
 
 function mockCurrentMeasurement() {

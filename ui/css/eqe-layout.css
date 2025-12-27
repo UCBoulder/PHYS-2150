@@ -255,7 +255,7 @@ body.eqe-body {
 
 
 /* ============================================
-   Three Plots Row
+   Plots Row (default: three columns)
    ============================================ */
 
 .plots-row {
@@ -264,6 +264,11 @@ body.eqe-body {
     gap: 12px;
     flex: 1;
     min-height: 250px;
+}
+
+/* Two-column variant for Measurement tab */
+.plots-row.plots-row-two {
+    grid-template-columns: repeat(2, 1fr);
 }
 
 .plot-panel {
