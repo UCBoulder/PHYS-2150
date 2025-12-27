@@ -31,7 +31,7 @@ const state = {
     filter: 0,
 
     powerData: { x: [], y: [] },
-    currentData: { x: [], y: [], stats: [] },
+    currentData: { x: [], y: [], stats: [], colors: [], pendingQuality: null },
     phaseData: { x: [], y: [] },
     stats: null,
 
@@ -580,7 +580,7 @@ function startCurrentMeasurement() {
 function startCurrentMeasurementWithPixel(pixel) {
     state.currentPixel = pixel;
     state.measurementState = 'current';
-    state.currentData = { x: [], y: [], stats: [] };
+    state.currentData = { x: [], y: [], stats: [], colors: [], pendingQuality: null };
     clearPlot('current');
     setMeasuringState(true);
     updateProgress(0, 'Validating chopper...');
@@ -676,10 +676,23 @@ function onCurrentProgress(wavelength, current, percent) {
     state.currentData.x.push(wavelength);
     state.currentData.y.push(currentNA);
 
+    // Determine point color from pending quality (stats arrive before progress in Python)
+    // Maps quality strings from Python's tiered_logger.py
+    const qualityColorMap = {
+        'Excellent': PLOT_COLORS.qualityExcellent,
+        'Good': PLOT_COLORS.qualityGood,
+        'Fair': PLOT_COLORS.qualityFair,
+        'Check measurement': PLOT_COLORS.qualityPoor,
+        'Check': PLOT_COLORS.qualityPoor  // alias for mock mode
+    };
+    const pointColor = qualityColorMap[state.currentData.pendingQuality] || PLOT_COLORS.current;
+    state.currentData.colors.push(pointColor);
+    state.currentData.pendingQuality = null;  // Clear after use
+
     const isDark = LabTheme.isDark();
     Plotly.newPlot('current-plot',
         [{ x: state.currentData.x, y: state.currentData.y, mode: 'markers', type: 'scatter',
-           name: 'Current', marker: { color: PLOT_COLORS.current, size: 8 } }],
+           name: 'Current', marker: { color: state.currentData.colors, size: 8 } }],
         getPlotLayout(isDark, 'Wavelength (nm)', 'Current (nA)'),
         plotConfig
     );
@@ -734,6 +747,10 @@ function onMeasurementStats(stats) {
     const badge = document.getElementById('stats-quality');
     badge.textContent = stats.quality;
     badge.className = 'quality-badge quality-' + stats.quality.toLowerCase();
+
+    // Store quality for the upcoming data point (stats arrive before progress in Python)
+    // onCurrentProgress will use this to set the point color
+    state.currentData.pendingQuality = stats.quality;
 }
 
 function onPhaseAdjustmentComplete(data) {
@@ -940,7 +957,8 @@ function mockCurrentMeasurement() {
         state.wavelength = wavelength;
         updateMonochromatorDisplay();
 
-        const cv = 0.5 + Math.random() * 7.5;
+        // Call stats first (stores pending quality - matches Python order)
+        const cv = 0.5 + Math.random() * 11.5;  // 0.5-12% range covers all quality levels
         const std_dev = current * (cv / 100);
         const std_error = std_dev / Math.sqrt(5);  // SE = σ/√n
         const quality = cv < 1.0 ? 'Excellent' : cv < 5.0 ? 'Good' : cv < 10.0 ? 'Fair' : 'Check';
@@ -952,7 +970,9 @@ function mockCurrentMeasurement() {
             cv_percent: cv, quality: quality
         });
 
+        // Then call progress (adds point with quality-based color)
         onCurrentProgress(wavelength, current, (count / total) * 100);
+
         wavelength += step;
     }, 150);
 }

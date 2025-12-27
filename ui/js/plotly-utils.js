@@ -129,5 +129,12 @@ export const PLOT_COLORS = {
     // Analysis markers
     markerVoc: '#00C853',
     markerIsc: '#FF6D00',
-    markerMPP: '#AA00FF'
+    markerMPP: '#AA00FF',
+
+    // Quality-based colors for current measurement points
+    // Subtle variations that convey quality without being alarming
+    qualityExcellent: '#2e7d32',  // Dark green (CV < 2%)
+    qualityGood: '#66bb6a',       // Standard green (CV < 5%)
+    qualityFair: '#f9a825',       // Amber (CV < 10%)
+    qualityPoor: '#e57373'        // Muted red (CV >= 10%)
 };

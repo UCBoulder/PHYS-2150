@@ -55,6 +55,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Expected vs Extracted value comparison for verification
   - Context-sensitive explanations that update with each processing step
   - Reference phase slider to demonstrate phase sensitivity
+- Quality-colored data points in EQE current measurement plot:
+  - Each data point colored based on its measurement quality (CV%)
+  - Excellent (<2%): dark green, Good (<5%): green, Fair (<10%): amber, Poor (≥10%): muted red
+  - Provides immediate visual feedback on measurement reliability across the spectrum
 
 ### Changed
 - Dark mode `--text-muted` color improved from #999999 to #ababab for WCAG AA contrast compliance (4.74:1 ratio)
