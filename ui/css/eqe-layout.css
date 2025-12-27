@@ -749,3 +749,221 @@ body:not(.dark-mode) .plot-panel .modebar-container {
 .analysis-status-text.error {
     color: var(--error);
 }
+
+/* ==================== LOCK-IN LAB TAB ==================== */
+
+#tab-lockinlab.active {
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Top Row: Controls | Steps | Explanation */
+.lockinlab-top-row {
+    display: grid;
+    grid-template-columns: 200px 280px 1fr;
+    gap: 12px;
+    flex: 0 0 auto;
+}
+
+/* Signal Controls Panel */
+.lockinlab-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.lockinlab-controls .param-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.lockinlab-controls .param-field label {
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.lockinlab-controls input[type="range"] {
+    width: 100%;
+    accent-color: var(--ucb-gold);
+}
+
+.slider-value {
+    font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+    font-size: 12px;
+    color: var(--text);
+    text-align: right;
+}
+
+/* Processing Steps Panel */
+.lockinlab-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Toggle Switch */
+.toggle-switch {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    user-select: none;
+}
+
+/* Hide the actual checkbox */
+.toggle-switch input[type="checkbox"] {
+    display: none;
+}
+
+/* Toggle slider - styled via JS class */
+.toggle-slider {
+    position: relative;
+    width: 40px;
+    height: 22px;
+    background: #aaa;
+    border-radius: 11px;
+    border: 1px solid #999;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.toggle-slider::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    background: #666;
+    border-radius: 50%;
+    transition: transform 0.2s, background 0.2s;
+}
+
+/* Active state - controlled by JS adding .active class */
+.toggle-slider.active {
+    background: var(--ucb-gold);
+    border-color: var(--ucb-gold-dark);
+}
+
+.toggle-slider.active::after {
+    transform: translateX(18px);
+    background: #1a1a1a;
+}
+
+/* Dark theme adjustments */
+[data-theme="dark"] .toggle-slider {
+    background: #555;
+    border-color: #666;
+}
+
+[data-theme="dark"] .toggle-slider::after {
+    background: #888;
+}
+
+.toggle-label {
+    font-size: 12px;
+    color: var(--text);
+}
+
+/* Result Display */
+.lockinlab-result {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 12px;
+    margin-top: 8px;
+    border-top: 1px solid var(--border);
+}
+
+.result-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.result-value {
+    font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--primary);
+}
+
+/* Explanation Panel */
+.lockinlab-explanation {
+    display: flex;
+    flex-direction: column;
+}
+
+.lockinlab-explanation .explanation-content {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.lockinlab-explanation .explanation-content p {
+    margin: 0 0 10px 0;
+}
+
+.lockinlab-explanation .explanation-content p:last-child {
+    margin-bottom: 0;
+}
+
+.lockinlab-explanation .explanation-content strong {
+    color: var(--text);
+}
+
+/* Plot Row */
+.lockinlab-plot-row {
+    flex: 1;
+    min-height: 0;
+}
+
+.lockinlab-waveform-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.waveform-container {
+    flex: 1;
+    min-height: 250px;
+}
+
+.waveform-legend {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    padding: 8px;
+    font-size: 12px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.legend-item::before {
+    content: '';
+    display: inline-block;
+    width: 16px;
+    height: 3px;
+    border-radius: 2px;
+}
+
+.legend-item.signal::before {
+    background: #2196F3;
+}
+
+.legend-item.reference::before {
+    background: #FF9800;
+}
+
+.legend-item.product::before {
+    background: #4CAF50;
+}
+
+.legend-item.average::before {
+    background: #9C27B0;
+}

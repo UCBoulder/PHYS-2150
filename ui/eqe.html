@@ -30,6 +30,7 @@
         <div class="tab-bar" role="tablist" aria-label="Application views">
             <button class="tab-btn active" role="tab" id="tab-measurement-btn" aria-selected="true" aria-controls="tab-measurement" onclick="switchTab('measurement')">Measurement</button>
             <button class="tab-btn" role="tab" id="tab-stability-btn" aria-selected="false" aria-controls="tab-stability" onclick="switchTab('stability')">Stability Test</button>
+            <button class="tab-btn" role="tab" id="tab-lockinlab-btn" aria-selected="false" aria-controls="tab-lockinlab" onclick="switchTab('lockinlab')">Lock-in Lab</button>
             <button class="tab-btn staff-tab" role="tab" id="analysis-tab-btn" aria-selected="false" aria-controls="tab-analysis" onclick="switchTab('analysis')" style="display: none;">
                 EQE Analysis
                 <span class="staff-badge-small">STAFF</span>
@@ -286,6 +287,99 @@
         </div>
 
         </div><!-- End Stability Tab -->
+
+        <!-- ==================== LOCK-IN LAB TAB ==================== -->
+        <div id="tab-lockinlab" class="tab-content" role="tabpanel" aria-labelledby="tab-lockinlab-btn">
+
+        <!-- Top Row: Controls | Processing Steps | Result -->
+        <div class="lockinlab-top-row">
+            <!-- Left: Signal Controls -->
+            <div class="params-panel lockinlab-controls-panel">
+                <div class="panel-title">Signal Controls</div>
+                <div class="lockinlab-controls">
+                    <button class="btn btn-primary" id="lockinlab-capture-btn" onclick="captureLockinData()">
+                        Capture New Data
+                    </button>
+
+                    <div class="param-field">
+                        <label for="lockinlab-noise">Noise Level</label>
+                        <input type="range" id="lockinlab-noise" min="0" max="100" value="30" oninput="onLockinParamChange()">
+                        <span class="slider-value" id="lockinlab-noise-value">30%</span>
+                    </div>
+
+                    <div class="param-field">
+                        <label for="lockinlab-phase">Reference Phase</label>
+                        <input type="range" id="lockinlab-phase" min="-180" max="180" value="0" oninput="onLockinParamChange()">
+                        <span class="slider-value" id="lockinlab-phase-value">0°</span>
+                    </div>
+
+                    <div class="param-field">
+                        <label for="lockinlab-cycles">Integration Cycles</label>
+                        <input type="range" id="lockinlab-cycles" min="10" max="200" value="50" oninput="onLockinParamChange()">
+                        <span class="slider-value" id="lockinlab-cycles-value">50</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Center: Processing Steps -->
+            <div class="params-panel lockinlab-steps-panel">
+                <div class="panel-title">Processing Steps</div>
+                <div class="lockinlab-steps">
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="step-raw" checked onchange="onLockinStepChange()">
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label">Step 1: Show raw signals</span>
+                    </label>
+
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="step-removedc" onchange="onLockinStepChange()">
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label">Step 2: Remove DC offset</span>
+                    </label>
+
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="step-multiply" onchange="onLockinStepChange()">
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label">Step 3: Multiply signal × reference</span>
+                    </label>
+
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="step-average" onchange="onLockinStepChange()">
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label">Step 4: Average over time</span>
+                    </label>
+                </div>
+
+                <div class="lockinlab-result">
+                    <span class="result-label">Extracted Signal:</span>
+                    <span class="result-value" id="lockinlab-result">-- mV</span>
+                </div>
+            </div>
+
+            <!-- Right: Explanation -->
+            <div class="params-panel lockinlab-explanation">
+                <div class="panel-title">What's Happening</div>
+                <div class="explanation-content" id="lockinlab-explanation-text">
+                    <p>Click <strong>Capture New Data</strong> to start, then enable each processing step to see how lock-in detection extracts your signal from noise.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom: Waveform Plot -->
+        <div class="lockinlab-plot-row">
+            <div class="plot-panel lockinlab-waveform-panel">
+                <div class="plot-title">Lock-in Algorithm Visualization</div>
+                <div class="plot-container waveform-container">
+                    <div id="lockinlab-plot" class="plot"></div>
+                </div>
+                <div class="waveform-legend" id="lockinlab-legend">
+                    <span class="legend-item signal">Signal</span>
+                    <span class="legend-item reference">Reference (81 Hz)</span>
+                </div>
+            </div>
+        </div>
+
+        </div><!-- End Lock-in Lab Tab -->
 
         <!-- EQE Analysis Tab (Staff Mode - Ctrl+Shift+E) -->
         <div id="tab-analysis" class="tab-content" role="tabpanel" aria-labelledby="analysis-tab-btn">

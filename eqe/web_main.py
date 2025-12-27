@@ -293,6 +293,137 @@ class EQEApi(BaseWebApi):
             self._experiment.stop_live_signal_monitor()
         return json.dumps({"success": True})
 
+    # ==================== Lock-in Lab ====================
+
+    @Slot(int, result=str)
+    def lockinlab_measure(self, num_cycles: int) -> str:
+        """
+        Perform a Lock-in Lab measurement returning full data for visualization.
+
+        Returns waveforms, FFT, and phasor data for educational display.
+        """
+        if not self._experiment or not self._experiment.lockin:
+            return json.dumps({"success": False, "message": "Lock-in not available"})
+
+        try:
+            # Get full measurement data including waveforms
+            result = self._experiment.lockin.perform_lockin_measurement_full(num_cycles)
+
+            if result is None:
+                return json.dumps({"success": False, "message": "Measurement failed"})
+
+            # Process data for web display
+            processed = self._process_lockinlab_data(result)
+            processed["success"] = True
+
+            return json.dumps(processed)
+
+        except Exception as e:
+            _logger.error(f"Lock-in Lab measurement failed: {e}")
+            return json.dumps({"success": False, "message": str(e)})
+
+    def _process_lockinlab_data(self, result: Dict) -> Dict:
+        """
+        Process raw lock-in data for web display.
+
+        Decimates waveforms, computes FFT, and formats for Plotly.
+        """
+        import numpy as np
+
+        # Extract raw data
+        signal_data = result.get('signal_data')
+        reference_data = result.get('reference_data')
+        sample_rate = result.get('sample_rate', 8000)  # Default fallback
+
+        # Phasor data (already computed by driver)
+        X = result['X']
+        Y = result['Y']
+        R = result['R']
+        theta = result['theta']
+
+        # Initialize output
+        output = {
+            # Phasor diagram data
+            'X': X,
+            'Y': Y,
+            'R': R,
+            'theta': theta,
+            'freq': result.get('freq', 81),
+            'num_cycles': result.get('num_cycles', 100),
+
+            # Verification: students can check R² = X² + Y²
+            'R_squared': R * R,
+            'X_squared_plus_Y_squared': X * X + Y * Y,
+        }
+
+        # Process waveforms if available
+        if signal_data is not None and reference_data is not None:
+            signal_data = np.array(signal_data)
+            reference_data = np.array(reference_data)
+
+            # Decimate to 500 points for web display
+            signal_dec = self._decimate_waveform(signal_data, 500)
+            reference_dec = self._decimate_waveform(reference_data, 500)
+
+            # Compute product waveform (signal × reference)
+            # Normalize reference for product display
+            ref_normalized = reference_data - np.mean(reference_data)
+            ref_normalized = ref_normalized / (np.std(ref_normalized) + 1e-10)
+            signal_normalized = signal_data - np.mean(signal_data)
+            product = signal_normalized * ref_normalized
+            product_dec = self._decimate_waveform(product, 500)
+
+            # Time axis in milliseconds
+            duration_ms = len(signal_data) / sample_rate * 1000
+            time_axis = [i * duration_ms / len(signal_dec) for i in range(len(signal_dec))]
+
+            output['signal_waveform'] = signal_dec
+            output['reference_waveform'] = reference_dec
+            output['product_waveform'] = product_dec
+            output['time_axis'] = time_axis
+            output['sample_rate'] = sample_rate
+
+            # Compute FFT for frequency display
+            fft_freqs, fft_mag = self._compute_fft(signal_data, sample_rate)
+            output['fft_frequencies'] = fft_freqs
+            output['fft_magnitude'] = fft_mag
+
+        return output
+
+    def _decimate_waveform(self, data: 'np.ndarray', target_points: int = 500) -> list:
+        """Reduce waveform to web-friendly size."""
+        import numpy as np
+
+        if len(data) <= target_points:
+            return data.tolist()
+
+        # Use linear interpolation indices for even sampling
+        indices = np.linspace(0, len(data) - 1, target_points, dtype=int)
+        return data[indices].tolist()
+
+    def _compute_fft(self, signal: 'np.ndarray', sample_rate: float) -> tuple:
+        """
+        Compute magnitude spectrum for display.
+
+        Returns frequencies up to 200 Hz (chopper is at ~81 Hz).
+        """
+        import numpy as np
+
+        # Remove DC offset
+        signal = signal - np.mean(signal)
+
+        # Compute FFT
+        fft = np.fft.rfft(signal)
+        freqs = np.fft.rfftfreq(len(signal), 1 / sample_rate)
+        magnitude = np.abs(fft)
+
+        # Normalize for display
+        magnitude = magnitude / len(signal)
+
+        # Return only up to 200 Hz (captures chopper frequency and some harmonics)
+        mask = freqs <= 200
+        return freqs[mask].tolist(), magnitude[mask].tolist()
+
     # ==================== Data Export ====================
 
     @Slot(str, str, result=str)

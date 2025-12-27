@@ -39,6 +39,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Coverage configuration in pyproject.toml with pytest-cov
 - Standard Error (SE) display in EQE measurement stats row (SE = σ/√n, uncertainty in the mean)
 - SE column added to EQE current measurement CSV export for complete uncertainty data
+- Lock-in Lab tab for educational exploration of lock-in amplifier concepts:
+  - X-Y phasor diagram showing in-phase and quadrature components
+  - R² = X² + Y² verification display for quantitative understanding
+  - Time-domain waveforms (signal, reference, product)
+  - FFT spectrum showing frequency selectivity at chopper frequency
+  - Adjustable integration cycles slider (10-200 cycles)
+  - Collapsible explanation panel for conceptual learning
 
 ### Changed
 - Dark mode `--text-muted` color improved from #999999 to #ababab for WCAG AA contrast compliance (4.74:1 ratio)

@@ -194,6 +194,65 @@ class PicoScopeController:
         except Exception as e:
             raise PicoScopeError(f"Failed to perform lock-in measurement: {e}")
     
+    def perform_lockin_measurement_full(self, num_cycles: int = None) -> Optional[Dict]:
+        """
+        Perform a lock-in measurement returning full data including waveforms.
+
+        This is used by the Lock-in Lab tab to display raw waveforms, FFT,
+        and phasor diagram for educational purposes.
+
+        Args:
+            num_cycles: Number of cycles to integrate (uses config default if None)
+
+        Returns:
+            Optional[Dict]: Dictionary containing:
+                - 'X': In-phase component (V)
+                - 'Y': Quadrature component (V)
+                - 'R': Magnitude (V)
+                - 'theta': Phase in degrees
+                - 'freq': Measured reference frequency (Hz)
+                - 'ref_amplitude': Reference signal amplitude (Vpp)
+                - 'signal_data': Raw signal waveform (np.array)
+                - 'reference_data': Raw reference waveform (np.array)
+                - 'sample_rate': Sample rate in Hz
+                Or None if measurement fails
+
+        Raises:
+            PicoScopeError: If not connected or measurement fails
+        """
+        if not self._is_connected:
+            raise PicoScopeError("Device not connected")
+
+        # Use specified cycles or default
+        cycles_to_use = num_cycles if num_cycles is not None else self._num_cycles
+
+        try:
+            result = self._driver.software_lockin(
+                self._reference_freq,
+                num_cycles=cycles_to_use,
+                correction_factor=self._correction_factor
+            )
+
+            if result is None:
+                raise PicoScopeError("Lock-in measurement returned None")
+
+            # Return everything including raw waveforms
+            return {
+                'X': result['X'],
+                'Y': result['Y'],
+                'R': result['R'],
+                'theta': result['theta'],
+                'freq': result['freq'],
+                'ref_amplitude': result['ref_amplitude'],
+                'signal_data': result.get('signal_data'),
+                'reference_data': result.get('reference_data'),
+                'sample_rate': result.get('sample_rate', self._reference_freq * cycles_to_use * 10),
+                'num_cycles': cycles_to_use
+            }
+
+        except Exception as e:
+            raise PicoScopeError(f"Failed to perform full lock-in measurement: {e}")
+
     def read_lockin_current(self, num_measurements: int = 1) -> Optional[float]:
         """
         Read a single photocurrent measurement using software lock-in.
