@@ -1484,6 +1484,9 @@ function initLockinLabPlots() {
 
     // Initialize toggle switches with click handlers
     initLockinToggles();
+
+    // Initialize synthetic slider states (disabled by default since simulated is off)
+    updateSyntheticSliderStates(state.lockinlab.useSimulated);
 }
 
 function initLockinToggles() {
@@ -1691,7 +1694,8 @@ async function fetchRealLockinData() {
     }
 
     try {
-        const response = await api.lockinlab_measure(50);
+        // Capture enough cycles to support full slider range (max 200)
+        const response = await api.lockinlab_measure(200);
         const result = JSON.parse(response);
         if (result.success && result.signal_waveform) {
             state.lockinlab.rawSignal = result.signal_waveform;
@@ -1797,10 +1801,29 @@ function onLockinDataSourceChange() {
         toggle.classList.toggle('active', useSimulated);
     }
 
+    // Enable/disable synthetic-only sliders (modulation, DC offset, noise)
+    // These only apply to simulated data - real data shows what we captured
+    updateSyntheticSliderStates(useSimulated);
+
     // If we have data, recapture with new source
     if (state.lockinlab.hasData) {
         captureLockinData();
     }
+}
+
+function updateSyntheticSliderStates(enabled) {
+    const syntheticSliders = ['lockinlab-amplitude', 'lockinlab-dcoffset', 'lockinlab-noise'];
+    syntheticSliders.forEach(id => {
+        const slider = document.getElementById(id);
+        if (slider) {
+            slider.disabled = !enabled;
+            // Also dim the label
+            const field = slider.closest('.param-field');
+            if (field) {
+                field.classList.toggle('disabled', !enabled);
+            }
+        }
+    });
 }
 
 function onLockinStepChange() {

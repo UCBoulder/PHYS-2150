@@ -860,6 +860,16 @@ body:not(.dark-mode) .plot-panel .modebar-container {
     color: var(--text);
 }
 
+/* Disabled slider state (for live data mode) */
+.lockinlab-controls .param-field.disabled {
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+.lockinlab-controls .param-field.disabled input[type="range"] {
+    cursor: not-allowed;
+}
+
 /* Toggle Switch */
 .toggle-switch {
     display: flex;
