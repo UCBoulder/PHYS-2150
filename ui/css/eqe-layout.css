@@ -754,33 +754,99 @@ body:not(.dark-mode) .plot-panel .modebar-container {
 
 #tab-lockinlab.active {
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
 }
 
-/* Top Row: Controls | Steps | Explanation */
-.lockinlab-top-row {
-    display: grid;
-    grid-template-columns: 200px 280px 1fr;
-    gap: 12px;
-    flex: 0 0 auto;
+/* Main Layout: Sidebar | Content */
+.lockinlab-main {
+    display: flex;
+    gap: 8px;
+    flex: 1;
+    min-height: 0;
 }
 
-/* Signal Controls Panel */
-.lockinlab-controls {
+/* Left Sidebar */
+.lockinlab-sidebar {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
+    width: 240px;
+    flex-shrink: 0;
+    overflow-y: auto;  /* Allow scroll if content doesn't fit */
+}
+
+/* Right Content Area */
+.lockinlab-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+}
+
+/* Capture Section (compact, no panel styling) */
+.lockinlab-capture-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.lockinlab-capture-section .btn-primary {
+    width: 100%;
+}
+
+/* Data Source Toggle */
+.data-source-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.data-source-toggle .toggle-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+/* Disabled state for offline mode */
+.data-source-toggle input:disabled + .toggle-slider {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.data-source-toggle input:disabled ~ .toggle-label {
+    opacity: 0.6;
+}
+
+/* Processing Steps Panel */
+.lockinlab-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Signal Parameters Panel */
+.lockinlab-params-panel {
+    flex-shrink: 0;  /* Don't shrink - size to content */
+}
+
+.lockinlab-params-panel .lockinlab-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .lockinlab-controls .param-field {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 2px;
 }
 
 .lockinlab-controls .param-field label {
-    font-size: 11px;
+    font-size: 12px;
     color: var(--text-secondary);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .lockinlab-controls input[type="range"] {
@@ -788,18 +854,10 @@ body:not(.dark-mode) .plot-panel .modebar-container {
     accent-color: var(--ucb-gold);
 }
 
-.slider-value {
+.lockinlab-controls .slider-value {
     font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
     font-size: 12px;
     color: var(--text);
-    text-align: right;
-}
-
-/* Processing Steps Panel */
-.lockinlab-steps {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
 }
 
 /* Toggle Switch */
@@ -873,7 +931,7 @@ body:not(.dark-mode) .plot-panel .modebar-container {
     justify-content: space-between;
     align-items: center;
     padding-top: 12px;
-    margin-top: 8px;
+    margin-top: 4px;
     border-top: 1px solid var(--border);
 }
 
@@ -884,25 +942,60 @@ body:not(.dark-mode) .plot-panel .modebar-container {
 
 .result-value {
     font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 600;
-    color: var(--primary);
+    color: var(--text-secondary);
 }
 
-/* Explanation Panel */
+/* Extracted result - second row, no top border */
+.lockinlab-result.extracted {
+    border-top: none;
+    padding-top: 4px;
+    margin-top: 0;
+}
+
+.lockinlab-result.extracted .result-value {
+    color: var(--ucb-gold);
+    font-size: 16px;
+}
+
+/* Explanation Panel - fixed height to fit all text */
 .lockinlab-explanation {
     display: flex;
     flex-direction: column;
+    flex: 0 0 auto;  /* Override params-panel flex: 1 */
+    height: 150px;  /* Fixed height to fit longest explanation (4 lines + title + padding) */
+    overflow: hidden;
+}
+
+.lockinlab-explanation .explanation-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.lockinlab-explanation .explanation-header .panel-title {
+    margin-bottom: 0;  /* Remove default margin since we use flex */
+}
+
+.lockinlab-explanation .data-source-toggle {
+    gap: 6px;
+}
+
+.lockinlab-explanation .data-source-toggle .toggle-label {
+    font-size: 11px;
 }
 
 .lockinlab-explanation .explanation-content {
     font-size: 12px;
     color: var(--text-secondary);
-    line-height: 1.6;
+    line-height: 1.5;
+    overflow: hidden;  /* No scrolling - fixed size */
 }
 
 .lockinlab-explanation .explanation-content p {
-    margin: 0 0 10px 0;
+    margin: 0 0 8px 0;
 }
 
 .lockinlab-explanation .explanation-content p:last-child {
@@ -913,21 +1006,17 @@ body:not(.dark-mode) .plot-panel .modebar-container {
     color: var(--text);
 }
 
-/* Plot Row */
-.lockinlab-plot-row {
+/* Plot Panel - takes remaining space */
+.lockinlab-waveform-panel {
+    display: flex;
+    flex-direction: column;
     flex: 1;
     min-height: 0;
 }
 
-.lockinlab-waveform-panel {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-}
-
 .waveform-container {
     flex: 1;
-    min-height: 250px;
+    min-height: 200px;
 }
 
 .waveform-legend {

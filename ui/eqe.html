@@ -291,90 +291,116 @@
         <!-- ==================== LOCK-IN LAB TAB ==================== -->
         <div id="tab-lockinlab" class="tab-content" role="tabpanel" aria-labelledby="tab-lockinlab-btn">
 
-        <!-- Top Row: Controls | Processing Steps | Result -->
-        <div class="lockinlab-top-row">
-            <!-- Left: Signal Controls -->
-            <div class="params-panel lockinlab-controls-panel">
-                <div class="panel-title">Signal Controls</div>
-                <div class="lockinlab-controls">
+        <!-- Main Layout: Sidebar | Plot Area -->
+        <div class="lockinlab-main">
+            <!-- Left Sidebar: Controls + Steps -->
+            <div class="lockinlab-sidebar">
+                <!-- Capture Button -->
+                <div class="lockinlab-capture-section">
                     <button class="btn btn-primary" id="lockinlab-capture-btn" onclick="captureLockinData()">
                         Capture New Data
                     </button>
+                </div>
 
-                    <div class="param-field">
-                        <label for="lockinlab-noise">Noise Level</label>
-                        <input type="range" id="lockinlab-noise" min="0" max="100" value="30" oninput="onLockinParamChange()">
-                        <span class="slider-value" id="lockinlab-noise-value">30%</span>
+                <!-- Processing Steps -->
+                <div class="params-panel lockinlab-steps-panel">
+                    <div class="panel-title">Processing Steps</div>
+                    <div class="lockinlab-steps">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="step-raw" checked onchange="onLockinStepChange()">
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Step 1: Show raw signals</span>
+                        </label>
+
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="step-removedc" onchange="onLockinStepChange()">
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Step 2: Remove DC offset</span>
+                        </label>
+
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="step-multiply" onchange="onLockinStepChange()">
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Step 3: Multiply signal × reference</span>
+                        </label>
+
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="step-average" onchange="onLockinStepChange()">
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Step 4: Average over time</span>
+                        </label>
                     </div>
 
-                    <div class="param-field">
-                        <label for="lockinlab-phase">Reference Phase</label>
-                        <input type="range" id="lockinlab-phase" min="-180" max="180" value="0" oninput="onLockinParamChange()">
-                        <span class="slider-value" id="lockinlab-phase-value">0°</span>
+                    <div class="lockinlab-result">
+                        <span class="result-label">Expected:</span>
+                        <span class="result-value" id="lockinlab-expected">-- mV</span>
                     </div>
+                    <div class="lockinlab-result extracted">
+                        <span class="result-label">Extracted:</span>
+                        <span class="result-value" id="lockinlab-result">-- mV</span>
+                    </div>
+                </div>
 
-                    <div class="param-field">
-                        <label for="lockinlab-cycles">Integration Cycles</label>
-                        <input type="range" id="lockinlab-cycles" min="10" max="200" value="50" oninput="onLockinParamChange()">
-                        <span class="slider-value" id="lockinlab-cycles-value">50</span>
+                <!-- Signal Parameters -->
+                <div class="params-panel lockinlab-params-panel">
+                    <div class="panel-title">Signal Parameters</div>
+                    <div class="lockinlab-controls">
+                        <div class="param-field">
+                            <label for="lockinlab-amplitude">Pk-Pk Modulation <span class="slider-value" id="lockinlab-amplitude-value">150 mV</span></label>
+                            <input type="range" id="lockinlab-amplitude" min="10" max="500" value="150" oninput="onLockinSignalParamChange()">
+                        </div>
+
+                        <div class="param-field">
+                            <label for="lockinlab-dcoffset">DC Offset <span class="slider-value" id="lockinlab-dcoffset-value">100 mV</span></label>
+                            <input type="range" id="lockinlab-dcoffset" min="0" max="300" value="100" oninput="onLockinSignalParamChange()">
+                        </div>
+
+                        <div class="param-field">
+                            <label for="lockinlab-noise">Noise Level <span class="slider-value" id="lockinlab-noise-value">30%</span></label>
+                            <input type="range" id="lockinlab-noise" min="0" max="100" value="30" oninput="onLockinParamChange()">
+                        </div>
+
+                        <div class="param-field">
+                            <label for="lockinlab-phase">Reference Phase <span class="slider-value" id="lockinlab-phase-value">0°</span></label>
+                            <input type="range" id="lockinlab-phase" min="-180" max="180" value="0" oninput="onLockinParamChange()">
+                        </div>
+
+                        <div class="param-field">
+                            <label for="lockinlab-cycles">Integration Cycles <span class="slider-value" id="lockinlab-cycles-value">50</span></label>
+                            <input type="range" id="lockinlab-cycles" min="1" max="200" value="50" oninput="onLockinParamChange()">
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Center: Processing Steps -->
-            <div class="params-panel lockinlab-steps-panel">
-                <div class="panel-title">Processing Steps</div>
-                <div class="lockinlab-steps">
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="step-raw" checked onchange="onLockinStepChange()">
-                        <span class="toggle-slider"></span>
-                        <span class="toggle-label">Step 1: Show raw signals</span>
-                    </label>
-
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="step-removedc" onchange="onLockinStepChange()">
-                        <span class="toggle-slider"></span>
-                        <span class="toggle-label">Step 2: Remove DC offset</span>
-                    </label>
-
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="step-multiply" onchange="onLockinStepChange()">
-                        <span class="toggle-slider"></span>
-                        <span class="toggle-label">Step 3: Multiply signal × reference</span>
-                    </label>
-
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="step-average" onchange="onLockinStepChange()">
-                        <span class="toggle-slider"></span>
-                        <span class="toggle-label">Step 4: Average over time</span>
-                    </label>
+            <!-- Right: Explanation + Plot -->
+            <div class="lockinlab-content">
+                <!-- Explanation Panel (compact) -->
+                <div class="params-panel lockinlab-explanation">
+                    <div class="explanation-header">
+                        <div class="panel-title">What's Happening</div>
+                        <label class="toggle-switch data-source-toggle">
+                            <input type="checkbox" id="lockinlab-simulated" onchange="onLockinDataSourceChange()">
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Simulated Data</span>
+                        </label>
+                    </div>
+                    <div class="explanation-content" id="lockinlab-explanation-text">
+                        <p>Click <strong>Capture New Data</strong> to start, then enable each processing step to see how <strong>phase-sensitive detection</strong> (PSD) extracts your signal from noise.</p>
+                        <p>This is the technique used in lock-in amplifiers: multiply by a reference, then average.</p>
+                    </div>
                 </div>
 
-                <div class="lockinlab-result">
-                    <span class="result-label">Extracted Signal:</span>
-                    <span class="result-value" id="lockinlab-result">-- mV</span>
-                </div>
-            </div>
-
-            <!-- Right: Explanation -->
-            <div class="params-panel lockinlab-explanation">
-                <div class="panel-title">What's Happening</div>
-                <div class="explanation-content" id="lockinlab-explanation-text">
-                    <p>Click <strong>Capture New Data</strong> to start, then enable each processing step to see how lock-in detection extracts your signal from noise.</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Bottom: Waveform Plot -->
-        <div class="lockinlab-plot-row">
-            <div class="plot-panel lockinlab-waveform-panel">
-                <div class="plot-title">Lock-in Algorithm Visualization</div>
-                <div class="plot-container waveform-container">
-                    <div id="lockinlab-plot" class="plot"></div>
-                </div>
-                <div class="waveform-legend" id="lockinlab-legend">
-                    <span class="legend-item signal">Signal</span>
-                    <span class="legend-item reference">Reference (81 Hz)</span>
+                <!-- Plot Area -->
+                <div class="plot-panel lockinlab-waveform-panel">
+                    <div class="plot-title">Phase-Sensitive Detection Visualization</div>
+                    <div class="plot-container waveform-container">
+                        <div id="lockinlab-plot" class="plot"></div>
+                    </div>
+                    <div class="waveform-legend" id="lockinlab-legend">
+                        <span class="legend-item signal">Signal</span>
+                        <span class="legend-item reference">Reference (81 Hz)</span>
+                    </div>
                 </div>
             </div>
         </div>

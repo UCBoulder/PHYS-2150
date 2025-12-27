@@ -176,10 +176,12 @@ input[type="number"] {
 .btn-primary {
     background-color: var(--ucb-gold);
     color: #1a1a1a;
+    border: 1px solid var(--ucb-gold-dark);
 }
 
 .btn-primary:hover:not(:disabled) {
     background-color: var(--ucb-gold-dark);
+    border-color: var(--ucb-gold-darker);
 }
 
 .btn-primary:active:not(:disabled) {
@@ -190,10 +192,12 @@ input[type="number"] {
 .btn-danger {
     background-color: var(--error);
     color: white;
+    border: 1px solid var(--error-hover);
 }
 
 .btn-danger:hover:not(:disabled) {
     background-color: var(--error-hover);
+    border-color: #8b0000;
 }
 
 /* Secondary button */

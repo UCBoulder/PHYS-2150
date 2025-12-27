@@ -60,14 +60,20 @@ const state = {
         numCycles: 50,
         noiseLevel: 30,
         phaseOffset: 0,
+        // User-controlled signal parameters (for synthetic data)
+        userAmplitude: 150,   // mV - what students set
+        userDcOffset: 100,    // mV - what students set
+        // Actual data properties
         rawSignal: [],
         rawReference: [],
         timeAxis: [],
-        signalAmplitude: 0,
-        dcOffset: 0,
+        signalAmplitude: 0,   // Actual amplitude in data (V)
+        dcOffset: 0,          // Actual DC offset in data (V)
         samplesPerCycle: 50,
-        displayCycles: 15,  // Only show first 15 cycles in waveform (clearer)
+        displayCycles: 15,
         hasData: false,
+        useSimulated: false,
+        isSynthetic: true,
         steps: {
             showRaw: true,
             removeDC: false,
@@ -329,9 +335,15 @@ function initPlots() {
 
 window.addEventListener('resize', () => {
     if (typeof Plotly !== 'undefined') {
-        Plotly.Plots.resize('power-plot');
-        Plotly.Plots.resize('current-plot');
-        Plotly.Plots.resize('phase-plot');
+        const plotIds = [
+            'power-plot', 'current-plot', 'phase-plot',
+            'stability-time-plot', 'stability-hist-plot',
+            'eqe-plot', 'lockinlab-plot'
+        ];
+        plotIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el && el.data) Plotly.Plots.resize(el);
+        });
     }
 });
 
@@ -1411,39 +1423,64 @@ function mockStabilityTest(params) {
 // ============================================
 
 const LOCKINLAB_EXPLANATIONS = {
-    initial: '<p>Click <strong>Capture New Data</strong> to start, then enable each processing step to see how lock-in detection extracts your signal from noise.</p>',
+    initial: '<p>Click <strong>Capture New Data</strong> to start, then enable each processing step to see how <strong>phase-sensitive detection</strong> (PSD) extracts your signal from noise.</p>' +
+             '<p>This is the technique used in lock-in amplifiers: multiply by a reference, then average.</p>',
 
     raw: '<p>The <span style="color:#2196F3"><strong>blue trace</strong></span> is your photocurrent - it goes up when light hits the cell (chopper open) and down when blocked.</p>' +
-         '<p>The <span style="color:#FF9800"><strong>orange trace</strong></span> is the reference from the chopper wheel at 81 Hz.</p>' +
+         '<p>The <span style="color:#FF9800"><strong>orange trace</strong></span> is the reference from the chopper wheel at 81 Hz. It\'s a square wave that switches between <strong>+1</strong> and <strong>-1</strong> (see right axis).</p>' +
          '<p>Notice the signal has a <strong>DC offset</strong> (not centered at zero) - we need to remove this first.</p>',
 
     removeDC: '<p>We <strong>subtract the mean</strong> to remove the DC offset.</p>' +
-              '<p>Now the signal oscillates around zero, which is essential for the next step to work correctly.</p>' +
+              '<p>Now the signal oscillates around zero, which is essential for phase-sensitive detection to work correctly.</p>' +
               '<p><strong>Why?</strong> Without DC removal, the product would have a large offset unrelated to our signal.</p>',
 
-    multiply: '<p>Now we <strong>multiply</strong> signal x reference.</p>' +
-              '<p>Look at the <span style="color:#4CAF50"><strong>green product trace</strong></span> - when signal and reference are both positive (or both negative), the product is <strong>positive</strong>.</p>' +
-              '<p>Since they are at the same frequency, the product stays mostly positive!</p>' +
+    multiply: '<p>Now we <strong>multiply</strong> signal × reference (±1). This is the heart of <strong>phase-sensitive detection</strong>.</p>' +
+              '<p>Since the reference is <strong>+1</strong> or <strong>-1</strong>, multiplying <em>preserves</em> the signal when ref=+1 and <em>inverts</em> it when ref=-1.</p>' +
+              '<p>Look at the <span style="color:#4CAF50"><strong>green product trace</strong></span> - when signal and reference have the same sign, the product is <strong>positive</strong>. When in phase, the product stays mostly positive!</p>' +
               '<p><strong>Try it:</strong> Adjust the phase slider to see what happens when they are out of sync.</p>',
 
-    average: '<p>Finally, we <strong>average over time</strong>.</p>' +
+    average: '<p>Finally, we <strong>average over time</strong> to complete the phase-sensitive detection.</p>' +
              '<p>The <span style="color:#9C27B0"><strong>purple line</strong></span> shows the running average converging to your signal.</p>' +
-             '<p>Noise at other frequencies produces positive and negative products that <strong>cancel out</strong>.</p>' +
+             '<p>Noise at other frequencies produces positive and negative products that <strong>cancel out</strong>. Only signal at the reference frequency accumulates!</p>' +
              '<p><strong>Try it:</strong> Increase integration cycles to average longer and watch the result stabilize.</p>'
 };
 
 function initLockinLabPlots() {
     const isDark = LabTheme.isDark();
 
+    // Initial empty plot with clean axes - no dual y-axis until data is captured
     const layout = {
         ...getBaseLayout(isDark),
-        xaxis: { title: 'Time (ms)', gridcolor: isDark ? '#333' : '#eee' },
-        yaxis: { title: 'Amplitude', gridcolor: isDark ? '#333' : '#eee' },
+        xaxis: {
+            title: 'Cycles',
+            gridcolor: isDark ? '#333' : '#eee',
+            range: [0, 10]
+        },
+        yaxis: {
+            title: 'Signal (V)',
+            gridcolor: isDark ? '#333' : '#eee',
+            range: [-0.5, 0.5]
+        },
         showlegend: false,
-        margin: { l: 60, r: 20, t: 20, b: 50 }
+        margin: { l: 60, r: 50, t: 20, b: 50 },
+        annotations: [{
+            text: 'Click "Capture New Data" to begin',
+            xref: 'paper',
+            yref: 'paper',
+            x: 0.5,
+            y: 0.5,
+            showarrow: false,
+            font: {
+                size: 14,
+                color: isDark ? '#888' : '#666'
+            }
+        }]
     };
 
     Plotly.newPlot('lockinlab-plot', [], layout, plotConfig);
+
+    // Clear the legend initially
+    updateLockinLegend([]);
 
     // Initialize toggle switches with click handlers
     initLockinToggles();
@@ -1483,6 +1520,44 @@ function initLockinToggles() {
             });
         }
     });
+
+    // Initialize the data source toggle separately
+    const dataSourceToggle = document.querySelector('.data-source-toggle');
+    if (dataSourceToggle) {
+        const checkbox = dataSourceToggle.querySelector('input[type="checkbox"]');
+        const slider = dataSourceToggle.querySelector('.toggle-slider');
+        const labelText = dataSourceToggle.querySelector('.toggle-label');
+
+        if (checkbox && slider) {
+            // In offline mode, force simulated and disable toggle
+            if (state.offlineMode) {
+                checkbox.checked = true;
+                checkbox.disabled = true;
+                slider.classList.add('active');
+                state.lockinlab.useSimulated = true;
+            }
+
+            slider.addEventListener('click', function(e) {
+                if (state.offlineMode) return;  // Don't allow change in offline mode
+                e.preventDefault();
+                e.stopPropagation();
+                checkbox.checked = !checkbox.checked;
+                slider.classList.toggle('active', checkbox.checked);
+                onLockinDataSourceChange();
+            });
+
+            if (labelText) {
+                labelText.addEventListener('click', function(e) {
+                    if (state.offlineMode) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    checkbox.checked = !checkbox.checked;
+                    slider.classList.toggle('active', checkbox.checked);
+                    onLockinDataSourceChange();
+                });
+            }
+        }
+    }
 }
 
 async function captureLockinData() {
@@ -1493,7 +1568,8 @@ async function captureLockinData() {
     btn.textContent = 'Capturing...';
 
     try {
-        if (state.offlineMode) {
+        // Use simulated data if: offline mode OR user toggled "Use Simulated Data"
+        if (state.offlineMode || state.lockinlab.useSimulated) {
             generateSyntheticLockinData();
         } else {
             await fetchRealLockinData();
@@ -1501,12 +1577,48 @@ async function captureLockinData() {
 
         applyLockinProcessingSteps();
         updateLockinExplanation();
+        updateExpectedValue();
     } catch (e) {
         console.error('Failed to capture lock-in data:', e);
     } finally {
         btn.disabled = false;
         btn.textContent = 'Capture New Data';
     }
+}
+
+/**
+ * Shift a waveform by a phase offset using linear interpolation.
+ * This preserves the actual waveform shape (important for real PicoScope data).
+ *
+ * @param {number[]} waveform - The waveform to shift
+ * @param {number} phaseDegrees - Phase offset in degrees
+ * @param {number} samplesPerCycle - Number of samples per cycle
+ * @returns {number[]} - Shifted waveform
+ */
+function shiftWaveformByPhase(waveform, phaseDegrees, samplesPerCycle) {
+    const n = waveform.length;
+    if (n === 0 || phaseDegrees === 0) return [...waveform];
+
+    // Convert phase to fractional samples
+    const phaseShift = (phaseDegrees / 360) * samplesPerCycle;
+
+    // Use linear interpolation for sub-sample accuracy
+    const shifted = [];
+    for (let i = 0; i < n; i++) {
+        // Calculate source position (with wraparound)
+        let srcPos = i - phaseShift;
+        while (srcPos < 0) srcPos += n;
+        while (srcPos >= n) srcPos -= n;
+
+        // Linear interpolation between adjacent samples
+        const idx0 = Math.floor(srcPos);
+        const idx1 = (idx0 + 1) % n;
+        const frac = srcPos - idx0;
+
+        shifted.push(waveform[idx0] * (1 - frac) + waveform[idx1] * frac);
+    }
+
+    return shifted;
 }
 
 function generateSyntheticLockinData() {
@@ -1516,8 +1628,9 @@ function generateSyntheticLockinData() {
     const numSamples = maxCycles * samplesPerCycle;  // 10000 samples total
     const duration = maxCycles / chopperFreq;  // About 2.5 seconds
 
-    const signalAmplitude = 0.3;  // AC amplitude (light on vs off)
-    const dcOffset = 0.15;        // DC offset (background/dark current)
+    // Use student-controlled values (convert mV to V)
+    const signalAmplitude = state.lockinlab.userAmplitude / 1000;  // mV to V
+    const dcOffset = state.lockinlab.userDcOffset / 1000;          // mV to V
 
     const time = [];
     const signal = [];
@@ -1528,16 +1641,16 @@ function generateSyntheticLockinData() {
         time.push(t * 1000); // Convert to ms
 
         // Reference: square wave at chopper frequency (+1 when open, -1 when closed)
-        const refValue = Math.sign(Math.sin(2 * Math.PI * chopperFreq * t));
+        // Add tiny offset to avoid sampling exactly at zero crossings where Math.sign(0)=0
+        const phase = 2 * Math.PI * chopperFreq * t + 0.0001;
+        const refValue = Math.sign(Math.sin(phase));
         reference.push(refValue);
 
-        // Signal: square-like photocurrent (high when chopper open, low when closed)
-        const phase = 2 * Math.PI * chopperFreq * t;
+        // Signal: photocurrent that's LOW when chopper blocks light, HIGH when open
+        // Physically realistic: signal is always positive (dcOffset to dcOffset + amplitude)
         const squareComponent = Math.sign(Math.sin(phase));
-        // Add slight smoothing at transitions (simulate RC response)
-        const smoothed = squareComponent * (1 - 0.3 * Math.exp(-((phase % Math.PI) * 3)));
 
-        const cleanSignal = dcOffset + signalAmplitude * (smoothed + 1) / 2;
+        const cleanSignal = dcOffset + signalAmplitude * (squareComponent + 1) / 2;
         signal.push(cleanSignal);
     }
 
@@ -1547,7 +1660,27 @@ function generateSyntheticLockinData() {
     state.lockinlab.signalAmplitude = signalAmplitude;
     state.lockinlab.dcOffset = dcOffset;
     state.lockinlab.samplesPerCycle = samplesPerCycle;
+    state.lockinlab.isSynthetic = true;  // Flag for phase offset handling
     state.lockinlab.hasData = true;
+
+    // Generate and store noise array (values between -1 and 1)
+    // This is scaled by noise level slider when applied
+    const noiseArray = [];
+    for (let i = 0; i < numSamples; i++) {
+        noiseArray.push((Math.random() - 0.5) * 2);
+    }
+    state.lockinlab.noiseArray = noiseArray;
+
+    // Calculate fixed y-axis range that works for both raw and DC-removed views
+    // Raw signal formula: dcOffset + signalAmplitude * (smoothed+1)/2
+    //   → range is [dcOffset, dcOffset + signalAmplitude] = [0.15, 0.45]
+    // DC-removed: centered at 0, so roughly ±signalAmplitude/2
+    // Need symmetric range around zero that fits both
+    const rawMax = dcOffset + signalAmplitude;  // 0.45
+    const rawMin = dcOffset;                     // 0.15
+    const maxExtent = Math.max(Math.abs(rawMax), Math.abs(rawMin));
+    const yMax = maxExtent * 1.3;  // 30% padding for noise headroom
+    state.lockinlab.yAxisRange = [-yMax, yMax];
 }
 
 async function fetchRealLockinData() {
@@ -1565,7 +1698,29 @@ async function fetchRealLockinData() {
             state.lockinlab.rawReference = result.reference_waveform;
             state.lockinlab.timeAxis = result.time_axis;
             state.lockinlab.signalAmplitude = result.R;
+            state.lockinlab.isSynthetic = false;  // Real data - use interpolation for phase
             state.lockinlab.hasData = true;
+
+            // Estimate samples per cycle from time axis and chopper frequency (81 Hz)
+            const duration = result.time_axis[result.time_axis.length - 1] / 1000;  // ms to seconds
+            const numSamples = result.signal_waveform.length;
+            const chopperFreq = result.freq || 81;
+            state.lockinlab.samplesPerCycle = numSamples / (duration * chopperFreq);
+
+            // Generate and store noise array for real data too
+            const noiseArray = [];
+            for (let i = 0; i < numSamples; i++) {
+                noiseArray.push((Math.random() - 0.5) * 2);
+            }
+            state.lockinlab.noiseArray = noiseArray;
+
+            // Calculate fixed y-axis range from actual signal data
+            // Must accommodate both raw signal (with DC offset) and DC-removed signal
+            const signalMax = Math.max(...result.signal_waveform);
+            const signalMin = Math.min(...result.signal_waveform);
+            const maxExtent = Math.max(Math.abs(signalMax), Math.abs(signalMin));
+            const yMax = maxExtent * 1.3;  // 30% padding for noise headroom
+            state.lockinlab.yAxisRange = [-yMax, yMax];
         } else {
             generateSyntheticLockinData();
         }
@@ -1592,6 +1747,59 @@ function onLockinParamChange() {
     // Reapply processing if we have data
     if (state.lockinlab.hasData) {
         applyLockinProcessingSteps();
+    }
+}
+
+function onLockinSignalParamChange() {
+    // Update slider displays for signal parameters
+    const ampSlider = document.getElementById('lockinlab-amplitude');
+    const dcSlider = document.getElementById('lockinlab-dcoffset');
+
+    document.getElementById('lockinlab-amplitude-value').textContent = `${ampSlider.value} mV`;
+    document.getElementById('lockinlab-dcoffset-value').textContent = `${dcSlider.value} mV`;
+
+    state.lockinlab.userAmplitude = parseInt(ampSlider.value);
+    state.lockinlab.userDcOffset = parseInt(dcSlider.value);
+
+    // Update expected value display
+    updateExpectedValue();
+
+    // Regenerate synthetic data if using simulated mode
+    if (state.lockinlab.isSynthetic && state.lockinlab.hasData) {
+        generateSyntheticLockinData();
+        applyLockinProcessingSteps();
+    }
+}
+
+function updateExpectedValue() {
+    // Signal goes from dcOffset (blocked) to dcOffset + modulation (open)
+    // After DC removal: ±modulation/2
+    // Lock-in output = modulation/2 = AC amplitude
+    const expectedEl = document.getElementById('lockinlab-expected');
+    if (expectedEl) {
+        if (state.lockinlab.isSynthetic) {
+            const acAmplitude = state.lockinlab.userAmplitude / 2;
+            expectedEl.textContent = `${acAmplitude.toFixed(1)} mV`;
+        } else {
+            // For real data, we don't know the expected value
+            expectedEl.textContent = '-- mV';
+        }
+    }
+}
+
+function onLockinDataSourceChange() {
+    const useSimulated = document.getElementById('lockinlab-simulated').checked;
+    state.lockinlab.useSimulated = useSimulated;
+
+    // Update toggle visual state
+    const toggle = document.querySelector('.data-source-toggle .toggle-slider');
+    if (toggle) {
+        toggle.classList.toggle('active', useSimulated);
+    }
+
+    // If we have data, recapture with new source
+    if (state.lockinlab.hasData) {
+        captureLockinData();
     }
 }
 
@@ -1626,18 +1834,30 @@ function applyLockinProcessingSteps() {
         cycleAxis.push(i / samplesPerCycle);  // X-axis in cycles
     }
 
-    // Apply noise to signal
+    // Apply stored noise to signal (noise array generated once at capture time)
     const noiseLevel = state.lockinlab.noiseLevel / 100;
     const signalRange = Math.max(...rawSignal) - Math.min(...rawSignal);
-    const signalWithNoise = rawSignal.map(v => v + (Math.random() - 0.5) * 2 * noiseLevel * signalRange);
+    const noiseArray = state.lockinlab.noiseArray || [];
+    const signalWithNoise = rawSignal.map((v, i) => v + noiseArray[i] * noiseLevel * signalRange);
 
     // Apply phase offset to reference
     const phaseOffset = state.lockinlab.phaseOffset;
-    const phaseSamples = Math.round(phaseOffset / 360 * samplesPerCycle);
-    const reference = [];
-    for (let i = 0; i < rawReference.length; i++) {
-        const shiftedIdx = (i - phaseSamples + rawReference.length) % rawReference.length;
-        reference.push(rawReference[shiftedIdx]);
+    let reference;
+
+    if (state.lockinlab.isSynthetic) {
+        // For synthetic data: regenerate square wave with phase offset
+        // This gives smooth phase control instead of discrete steps
+        // Add tiny offset (0.0001) to avoid sampling at zero crossings where Math.sign(0)=0
+        const phaseRad = phaseOffset * Math.PI / 180;
+        reference = [];
+        for (let i = 0; i < rawReference.length; i++) {
+            const cyclePhase = (i / samplesPerCycle) * 2 * Math.PI + 0.0001;
+            reference.push(Math.sign(Math.sin(cyclePhase + phaseRad)));
+        }
+    } else {
+        // For real data: shift waveform using linear interpolation
+        // This preserves the actual reference shape from the PicoScope
+        reference = shiftWaveformByPhase(rawReference, phaseOffset, samplesPerCycle);
     }
 
     const traces = [];
@@ -1655,9 +1875,6 @@ function applyLockinProcessingSteps() {
         signalForDisplay = signal;
     }
 
-    // For scaling reference display
-    const signalMax = Math.max(...signalForDisplay.map(Math.abs));
-
     // Step 1: Show raw signals (or DC-removed if that step is enabled)
     if (state.lockinlab.steps.showRaw) {
         traces.push({
@@ -1665,25 +1882,25 @@ function applyLockinProcessingSteps() {
             y: signalForDisplay,
             mode: 'lines',
             name: 'Signal',
-            line: { color: '#2196F3', width: 1.5 }
+            line: { color: '#2196F3', width: 1.5 },
+            yaxis: 'y'
         });
-        const referenceDisplay = reference.slice(0, displaySamples).map(v => v * signalMax * 0.8);
+        // Reference on secondary y-axis at true ±1 scale
         traces.push({
             x: cycleAxis,
-            y: referenceDisplay,
+            y: reference.slice(0, displaySamples),
             mode: 'lines',
-            name: 'Reference',
-            line: { color: '#FF9800', width: 1.5 }
+            name: 'Reference (±1)',
+            line: { color: '#FF9800', width: 1.5 },
+            yaxis: 'y2'
         });
         legendItems.push('signal', 'reference');
     }
 
-    // Step 3: Multiply
+    // Step 3: Multiply signal × reference
     let product = [];
-    if (state.lockinlab.steps.multiply || state.lockinlab.steps.average) {
-        product = signal.map((s, i) => s * reference.slice(0, displaySamples)[i]);
-    }
     if (state.lockinlab.steps.multiply) {
+        product = signal.map((s, i) => s * reference.slice(0, displaySamples)[i]);
         traces.push({
             x: cycleAxis,
             y: product,
@@ -1694,37 +1911,65 @@ function applyLockinProcessingSteps() {
         legendItems.push('product');
     }
 
-    // Step 4: Average (running average over displayed cycles)
+    // Step 4: Average - averages whatever the current pipeline produces
+    // This is "live" - if multiply is off, it averages the signal directly
     let finalResult = 0;
-    if (state.lockinlab.steps.average && product.length > 0) {
-        // Compute running average over all displayed samples
-        const runningAvg = [];
-        let sum = 0;
+    if (state.lockinlab.steps.average) {
+        // Determine what to average based on pipeline state
+        const dataToAverage = state.lockinlab.steps.multiply ? product : signal;
 
-        for (let i = 0; i < product.length; i++) {
-            sum += product[i];
-            runningAvg.push(sum / (i + 1));
+        if (dataToAverage.length > 0) {
+            // Compute running average
+            const runningAvg = [];
+            let sum = 0;
+
+            for (let i = 0; i < dataToAverage.length; i++) {
+                sum += dataToAverage[i];
+                runningAvg.push(sum / (i + 1));
+            }
+
+            finalResult = runningAvg[runningAvg.length - 1];
+
+            traces.push({
+                x: cycleAxis,
+                y: runningAvg,
+                mode: 'lines',
+                name: 'Average',
+                line: { color: '#9C27B0', width: 2.5 }
+            });
+            legendItems.push('average');
         }
-
-        finalResult = runningAvg[runningAvg.length - 1];
-
-        traces.push({
-            x: cycleAxis,
-            y: runningAvg,
-            mode: 'lines',
-            name: 'Average',
-            line: { color: '#9C27B0', width: 2.5 }
-        });
-        legendItems.push('average');
     }
 
-    // Update plot
+    // Update plot with dual y-axes and fixed range
+    const yRange = state.lockinlab.yAxisRange || [-0.2, 0.2];
     const layout = {
         ...getBaseLayout(isDark),
-        xaxis: { title: 'Cycles', gridcolor: isDark ? '#333' : '#eee' },
-        yaxis: { title: 'Amplitude', gridcolor: isDark ? '#333' : '#eee' },
+        xaxis: {
+            title: 'Cycles',
+            gridcolor: isDark ? '#333' : '#eee'
+        },
+        yaxis: {
+            title: 'Signal (V)',
+            gridcolor: isDark ? '#333' : '#eee',
+            range: yRange,  // Fixed range based on captured data
+            fixedrange: false
+        },
+        yaxis2: {
+            title: 'Reference',
+            overlaying: 'y',
+            side: 'right',
+            range: [-1.3, 1.3],  // Fixed ±1 range with padding
+            gridcolor: 'transparent',
+            showgrid: false,
+            tickvals: [-1, 0, 1],
+            ticktext: ['-1', '0', '+1'],
+            titlefont: { color: '#FF9800' },
+            tickfont: { color: '#FF9800' }
+        },
         showlegend: false,
-        margin: { l: 60, r: 20, t: 20, b: 50 }
+        margin: { l: 60, r: 50, t: 20, b: 50 },
+        annotations: []  // Clear placeholder text
     };
 
     Plotly.react('lockinlab-plot', traces, layout, plotConfig);
@@ -2370,4 +2615,5 @@ window.clearConsole = clearConsole;
 window.copyConsole = copyConsole;
 window.captureLockinData = captureLockinData;
 window.onLockinParamChange = onLockinParamChange;
+window.onLockinSignalParamChange = onLockinSignalParamChange;
 window.onLockinStepChange = onLockinStepChange;
