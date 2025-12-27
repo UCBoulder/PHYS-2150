@@ -57,7 +57,7 @@ const state = {
     },
 
     lockinlab: {
-        numCycles: 50,
+        numCycles: 10,
         noiseLevel: 30,
         phaseOffset: 0,
         // User-controlled signal parameters (for synthetic data)
@@ -1430,9 +1430,9 @@ const LOCKINLAB_EXPLANATIONS = {
          '<p>The <span style="color:#FF9800"><strong>orange trace</strong></span> is the reference from the chopper wheel at 81 Hz. It\'s a square wave that switches between <strong>+1</strong> and <strong>-1</strong> (see right axis).</p>' +
          '<p>Notice the signal has a <strong>DC offset</strong> (not centered at zero) - we need to remove this first.</p>',
 
-    removeDC: '<p>We <strong>subtract the mean</strong> to remove the DC offset.</p>' +
-              '<p>Now the signal oscillates around zero, which is essential for phase-sensitive detection to work correctly.</p>' +
-              '<p><strong>Why?</strong> Without DC removal, the product would have a large offset unrelated to our signal.</p>',
+    removeDC: '<p>We <strong>subtract the mean</strong> to center the signal at zero.</p>' +
+              '<p>This is different from the baseline DC offset - here we\'re ensuring the AC component oscillates symmetrically around zero.</p>' +
+              '<p><strong>Why?</strong> Without centering, the product would have a large offset unrelated to our modulated signal.</p>',
 
     multiply: '<p>Now we <strong>multiply</strong> signal × reference (±1). This is the heart of <strong>phase-sensitive detection</strong>.</p>' +
               '<p>Since the reference is <strong>+1</strong> or <strong>-1</strong>, multiplying <em>preserves</em> the signal when ref=+1 and <em>inverts</em> it when ref=-1.</p>' +
@@ -1442,7 +1442,10 @@ const LOCKINLAB_EXPLANATIONS = {
     average: '<p>Finally, we <strong>average over time</strong> to complete the phase-sensitive detection.</p>' +
              '<p>The <span style="color:#9C27B0"><strong>purple line</strong></span> shows the running average converging to your signal.</p>' +
              '<p>Noise at other frequencies produces positive and negative products that <strong>cancel out</strong>. Only signal at the reference frequency accumulates!</p>' +
-             '<p><strong>Try it:</strong> Increase integration cycles to average longer and watch the result stabilize.</p>'
+             '<p><strong>Try it:</strong> Increase integration cycles to average longer and watch the result stabilize.</p>',
+
+    liveMode: '<p>Now apply what you learned to <strong>real data</strong> from your solar cell.</p>' +
+              '<p>Enable each processing step and observe how phase-sensitive detection extracts the signal from your actual measurement.</p>'
 };
 
 function initLockinLabPlots() {
@@ -1891,7 +1894,7 @@ function applyLockinProcessingSteps() {
     let signal = signalWithNoise.slice(0, displaySamples);
     let signalForDisplay = signal;
 
-    // Step 2: Remove DC offset (apply to displayed portion)
+    // Step 2: Subtract mean to center signal at zero
     if (state.lockinlab.steps.removeDC) {
         const mean = signal.reduce((a, b) => a + b, 0) / signal.length;
         signal = signal.map(v => v - mean);
@@ -2023,13 +2026,25 @@ function updateLockinLegend(items) {
 
 function updateLockinExplanation() {
     const textEl = document.getElementById('lockinlab-explanation-text');
+    const panel = document.querySelector('.lockinlab-explanation');
+
+    // In live mode, show static message and dim the panel
+    const isLiveMode = state.lockinlab.hasData && !state.lockinlab.isSynthetic;
+    if (panel) {
+        panel.classList.toggle('live-mode', isLiveMode);
+    }
+
+    if (isLiveMode) {
+        textEl.innerHTML = LOCKINLAB_EXPLANATIONS.liveMode;
+        return;
+    }
 
     if (!state.lockinlab.hasData) {
         textEl.innerHTML = LOCKINLAB_EXPLANATIONS.initial;
         return;
     }
 
-    // Show explanation for highest enabled step
+    // Show explanation for highest enabled step (simulated mode only)
     if (state.lockinlab.steps.average) {
         textEl.innerHTML = LOCKINLAB_EXPLANATIONS.average;
     } else if (state.lockinlab.steps.multiply) {

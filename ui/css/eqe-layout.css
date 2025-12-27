@@ -1016,6 +1016,15 @@ body:not(.dark-mode) .plot-panel .modebar-container {
     color: var(--text);
 }
 
+/* Live mode - dim the explanation panel */
+.lockinlab-explanation.live-mode {
+    opacity: 0.6;
+}
+
+.lockinlab-explanation.live-mode .explanation-content {
+    font-style: italic;
+}
+
 /* Plot Panel - takes remaining space */
 .lockinlab-waveform-panel {
     display: flex;
