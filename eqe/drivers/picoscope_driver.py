@@ -656,7 +656,8 @@ class PicoScopeDriver:
             _logger.error(f"Error stopping AWG: {e}")
             return False
 
-    def software_lockin(self, reference_freq, num_cycles=100, correction_factor=1.0):
+    def software_lockin(self, reference_freq, num_cycles=100, correction_factor=1.0,
+                        visualization_mode=False):
         """
         Perform software lock-in amplifier measurement using Hilbert transform.
 
@@ -669,6 +670,8 @@ class PicoScopeDriver:
             reference_freq: Frequency of chopper in Hz (e.g., 81 Hz)
             num_cycles: Number of cycles to integrate over (default 100)
             correction_factor: Scaling correction (caller should pass from settings)
+            visualization_mode: If True, use slower sample rate to capture more cycles
+                               for Lock-in Lab educational display (PS2204A only)
 
         Returns:
             dict: {
@@ -689,9 +692,18 @@ class PicoScopeDriver:
         # Calculate acquisition parameters based on device type
         if self.device_type == '2000':
             # PicoScope 2204A parameters
-            # Timebase 12 = 40960ns = ~24 kHz, gives ~300 samples/cycle at 81 Hz
-            fs = 1e9 / 40960  # Sample rate at timebase 12 (~24.4 kHz)
-            decimation = 1  # Not used for ps2000, just for compatibility
+            if visualization_mode:
+                # Visualization mode: slower sample rate to capture more cycles
+                # Timebase 15 ≈ 327680ns = ~3 kHz, gives ~38 samples/cycle at 81 Hz
+                # With 2000 samples buffer: ~53 cycles for educational display
+                timebase = 15
+                fs = 1e9 / 327680  # ~3.05 kHz
+            else:
+                # Measurement mode: fast sample rate for best SNR
+                # Timebase 12 = 40960ns = ~24 kHz, gives ~300 samples/cycle at 81 Hz
+                timebase = 12
+                fs = 1e9 / 40960  # ~24.4 kHz
+            decimation = timebase  # Pass timebase to _acquire_block for ps2000
             samples_per_cycle = fs / reference_freq
             num_samples = min(int(num_cycles * samples_per_cycle), 2000)
             if num_samples < samples_per_cycle:
@@ -728,9 +740,10 @@ class PicoScopeDriver:
         if result is None:
             return None
 
-        # Add raw data to result
+        # Add raw data and sample rate to result
         result['signal_data'] = signal_data
         result['reference_data'] = reference_data
+        result['sample_rate'] = fs
 
         return result
 
@@ -1043,16 +1056,17 @@ class PicoScopeDriver:
 
         Args:
             num_samples: Number of samples to acquire
-            decimation: Decimation factor (used to calculate timebase)
+            decimation: For PS2000, this is the timebase value (12 for measurements,
+                       15 for visualization mode with more cycles)
         """
         try:
             ps = self.ps
             from picosdk.functions import adc2mV
 
-            # Timebase 12 gives good sample rate for lock-in at 81 Hz
-            # (approx 40960ns per sample = 24.4 kHz sample rate)
-            # With 2000 samples, this gives ~6.6 cycles at 81 Hz
-            timebase = 12
+            # Use timebase passed via decimation parameter
+            # Timebase 12 = ~24 kHz (300 samples/cycle, ~6.6 cycles) - for measurements
+            # Timebase 15 = ~3 kHz (38 samples/cycle, ~53 cycles) - for visualization
+            timebase = decimation
 
             # Cap samples to 2000 for dual-channel mode on 2204A
             # The device has ~4K samples with both channels but we stay conservative

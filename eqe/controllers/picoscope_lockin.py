@@ -199,7 +199,8 @@ class PicoScopeController:
         Perform a lock-in measurement returning full data including waveforms.
 
         This is used by the Lock-in Lab tab to display raw waveforms, FFT,
-        and phasor diagram for educational purposes.
+        and phasor diagram for educational purposes. Uses visualization_mode
+        for slower sample rate to capture more cycles on PS2204A.
 
         Args:
             num_cycles: Number of cycles to integrate (uses config default if None)
@@ -227,10 +228,13 @@ class PicoScopeController:
         cycles_to_use = num_cycles if num_cycles is not None else self._num_cycles
 
         try:
+            # Use visualization_mode for Lock-in Lab to capture more cycles
+            # (slower sample rate trades resolution for duration on PS2204A)
             result = self._driver.software_lockin(
                 self._reference_freq,
                 num_cycles=cycles_to_use,
-                correction_factor=self._correction_factor
+                correction_factor=self._correction_factor,
+                visualization_mode=True
             )
 
             if result is None:
