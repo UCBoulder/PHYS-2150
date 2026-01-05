@@ -2116,7 +2116,12 @@ function onPowerFileSelected(event) {
     reader.onload = (e) => {
         try {
             const data = parseCSV(e.target.result);
-            state.analysis.powerData = data;
+            // CSV stores power in µW, but EQE calculation expects Watts (SI units)
+            // Convert µW to W to match usePowerSession behavior
+            state.analysis.powerData = {
+                wavelengths: data.wavelengths,
+                values: data.values.map(v => v * 1e-6)
+            };
             state.analysis.powerFile = file.name;
             document.getElementById('power-file-status').textContent = file.name;
             document.getElementById('power-file-status').classList.add('loaded');
@@ -2137,7 +2142,12 @@ function onCurrentFileSelected(event) {
     reader.onload = (e) => {
         try {
             const data = parseCSV(e.target.result);
-            state.analysis.currentData = data;
+            // CSV stores current in nA, but EQE calculation expects Amps (SI units)
+            // Convert nA to A to match useCurrentSession behavior
+            state.analysis.currentData = {
+                wavelengths: data.wavelengths,
+                values: data.values.map(v => v * 1e-9)
+            };
             state.analysis.currentFile = file.name;
 
             const extracted = extractCellPixelFromFilename(file.name);
