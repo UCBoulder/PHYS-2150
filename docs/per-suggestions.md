@@ -32,10 +32,10 @@ This document outlines recommendations for enhancing the EQE and J-V measurement
 | Component | J-V App | EQE App | Status |
 |-----------|---------|---------|--------|
 | **Uncertainty** | Single measurements only | ✅ 5 measurements with stats exposed | EQE done, J-V pending |
-| **Transparency** | Minimal status messages | Lock-in is "black box" | Opportunity remains |
+| **Transparency** | Minimal status messages | ✅ Lock-in Lab tab demystifies PSD | EQE done |
 | **Parameter Extraction** | None | External script only | Not implemented |
 | **Data Export** | Basic CSV | ✅ CSV with mean, std, n, CV% | EQE done, J-V pending |
-| **Quality Indicators** | None | ✅ R² for phase + CV% per point | EQE done |
+| **Quality Indicators** | None | ✅ CV% per point + quality colors | EQE done |
 
 ### What's Been Implemented (December 2025)
 
@@ -148,29 +148,23 @@ Add accessible explanations (expandable/collapsible) covering:
 - How the lock-in amplifier extracts signal from noise
 - Why phase adjustment matters
 
-### 2.2 Demystify the Lock-in Amplifier (EQE - High Priority)
+### 2.2 Demystify the Lock-in Amplifier (EQE - High Priority) ✅ IMPLEMENTED
 
-**Current state:** The software lock-in is a sophisticated phase-sensitive detection technique. Students use it but likely don't understand it.
+**Status:** ✅ Completed December 2025 via **Lock-in Lab tab**
 
-**Why this matters:** Understanding signal extraction from noise is a core experimental physics skill. The phase adjustment step is a perfect teaching moment.
+**What was built:**
 
-**Recommendations:**
+1. ✅ **Context-sensitive explanations** that update with each processing step
+2. ✅ **Raw waveform display** showing signal buried in noise
+3. ✅ **X-Y phasor diagram** showing R and θ in real-time
+4. ✅ **FFT spectrum** showing frequency selectivity
+5. ✅ **Deconstructed algorithm** - toggle processing steps to build up PSD incrementally
+6. ✅ **Simulated data mode** with adjustable signal parameters (modulation, DC offset, noise)
+7. ✅ **Live data mode** to apply learned concepts to real PicoScope measurements
+8. ✅ **Reference phase slider** to demonstrate phase sensitivity
+9. ✅ **Expected vs Extracted value comparison** for verification
 
-1. **Add "What's Happening?" info panel** explaining:
-   - Why we chop the light (81 Hz)
-   - What "lock-in" means (phase-sensitive detection)
-   - Why phase adjustment maximizes signal
-   - How this differs from simple averaging
-
-2. **During phase adjustment**, show:
-   - Real-time X and Y (in-phase and quadrature) components
-   - Vector diagram showing R and θ
-   - Explain why R = √(X² + Y²) is phase-independent
-
-3. **Consider adding an "educational mode"** that:
-   - Shows raw signal with noise
-   - Shows reference waveform
-   - Demonstrates how multiplication + filtering extracts signal
+**Note:** Phase adjustment step was removed from the measurement workflow (Hilbert transform provides phase-independent magnitude R = √(X² + Y²)), but the Lock-in Lab tab teaches the concepts.
 
 ### 2.3 Real-Time Status Messages (Both Apps)
 
@@ -258,24 +252,16 @@ Predicted Jsc from your EQE data: 18.3 mA/cm²
 
 This creates a powerful cross-check between the two measurement techniques - a key validation step in solar cell research.
 
-### 3.3 Enhanced Phase Plot Educational Value
+### 3.3 Enhanced Phase Plot Educational Value - SUPERSEDED
 
-**Current state:** Phase plot shows data points and sine fit with R² value. This is good!
+**Status:** ⚠️ Phase plot removed from Measurement tab (December 2025)
 
-**Recommendations to enhance:**
+**Reason:** The Hilbert transform algorithm computes magnitude R = √(X² + Y²) which is phase-independent. Phase adjustment is no longer needed in the measurement workflow.
 
-1. **Add annotations explaining the fit:**
-   - Mark the optimal phase angle on the plot
-   - Show signal magnitude at optimal vs. 90° off
-   - Explain why signal goes to zero at wrong phase
-
-2. **Add quality feedback:**
-   - If R² < 0.90: "Signal may be weak or noisy. Is the probe making good contact?"
-   - If R² > 0.99: "Excellent signal quality!"
-
-3. **Store phase data for debugging:**
-   - Currently optional via config flag (`prompt_phase_data_save`)
-   - Make it easy to enable for troubleshooting
+**Educational replacement:** The **Lock-in Lab tab** now teaches phase concepts interactively:
+- Reference phase slider demonstrates how phase affects X and Y components
+- Phasor diagram shows R remains constant regardless of phase
+- Students can explore phase sensitivity without it affecting actual measurements
 
 ### 3.4 Power Measurement Context
 
@@ -534,15 +520,15 @@ Standalone utility that:
 | Enhanced CSV export with stats | EQE | Medium | Low | ✅ **Done** |
 | Live statistics display | EQE | High | Low | ✅ **Done** |
 | CV% quality indicator | EQE | Medium | Low | ✅ **Done** |
+| Lock-in amplifier explanation | EQE | High | Medium | ✅ **Done** (Lock-in Lab tab) |
 | Physics-informed error messages | Both | Medium | Low | Pending |
 | Automatic parameter extraction (Voc, Jsc, FF) | J-V | High | Low | Pending |
-| Lock-in amplifier explanation | EQE | High | Medium | Pending |
 | EQE calculation integration | EQE | High | Medium | Pending |
 | Pre-measurement checklist | Both | Medium | Medium | Pending |
 | Info/About panels | Both | Medium | Low | Pending |
 | Real-time status messages | Both | Medium | Low | Partial |
 | AM1.5G Jsc prediction | EQE | Medium | Medium | Pending |
-| Enhanced phase plot annotations | EQE | Medium | Low | Pending |
+| ~~Enhanced phase plot annotations~~ | EQE | - | - | Superseded (phase plot removed) |
 | J-V repeat measurements option | J-V | High | Medium | Pending (consider hysteresis) |
 | J-V enhanced CSV export | J-V | Medium | Low | Pending |
 | Session logging | Both | Low | Low | Pending |
@@ -626,5 +612,5 @@ These are modular additions that don't require architectural changes:
 ---
 
 *Document created: November 2025*
-*Last updated: December 2025*
+*Last updated: January 2026*
 *To be reviewed and updated based on instructor and student feedback each semester*
