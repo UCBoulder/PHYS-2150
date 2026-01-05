@@ -720,6 +720,9 @@ class EQEApi(BaseWebApi):
 class EQEWebWindow(BaseWebWindow):
     """Main window for EQE measurement with web UI."""
 
+    # Signal for thread-safe forwarding of measurement stats to JS
+    _stats_signal = Signal(str)  # JSON string of stats
+
     def __init__(self):
         super().__init__(
             title="EQE Measurement - PHYS 2150",
@@ -735,10 +738,17 @@ class EQEWebWindow(BaseWebWindow):
         # Experiment model (initialized later)
         self._experiment: Optional[EQEExperimentModel] = None
 
+        # Connect stats signal to handler (for thread-safe JS calls)
+        self._stats_signal.connect(self._on_stats_signal)
+
     def set_experiment(self, experiment: EQEExperimentModel) -> None:
         """Set the experiment model."""
         self._experiment = experiment
         self.api.set_experiment(experiment)
+
+    def _on_stats_signal(self, stats_json: str) -> None:
+        """Handle stats signal (runs on main thread for thread-safe JS calls)."""
+        self.run_js(f"onMeasurementStats({stats_json})")
 
     def closeEvent(self, event) -> None:
         """Handle window close."""
@@ -793,7 +803,12 @@ class EQEWebApplication:
         eqe_logger.addHandler(handler)
 
     def _on_measurement_stats(self, stats) -> None:
-        """Forward measurement statistics to web UI."""
+        """Forward measurement statistics to web UI.
+
+        This is called from background measurement threads, so we must use
+        a Qt signal to marshal the call to the main thread for thread-safe
+        JavaScript execution.
+        """
         # Convert MeasurementStats object to dict for JSON serialization
         stats_dict = {
             'mean': stats.mean,
@@ -806,7 +821,8 @@ class EQEWebApplication:
             'quality': stats.quality
         }
         stats_json = json.dumps(stats_dict)
-        self.window.run_js(f"onMeasurementStats({stats_json})")
+        # Emit signal to marshal to main thread (thread-safe)
+        self.window._stats_signal.emit(stats_json)
 
     def run(self) -> int:
         """Run the application."""
