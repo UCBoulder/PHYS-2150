@@ -116,10 +116,7 @@ PHYS 2150/
 │   ├── phys2150.spec       # PyInstaller spec
 │   └── installer.iss       # Windows installer script (Inno Setup)
 │
-├── docs/                    # Documentation
-│   ├── hardware-setup.md   # Driver installation guide
-│   ├── developer-setup.md  # Development environment
-│   └── per-suggestions.md  # Physics education recommendations
+├── docs/                    # Documentation (see table below)
 │
 └── tests/                   # Test Suite (201 tests)
     ├── unit/               # Pure function tests
