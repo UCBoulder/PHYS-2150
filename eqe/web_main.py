@@ -360,9 +360,12 @@ class EQEApi(BaseWebApi):
             signal_data = np.array(signal_data)
             reference_data = np.array(reference_data)
 
-            # Decimate to 500 points for web display
-            signal_dec = self._decimate_waveform(signal_data, 500)
-            reference_dec = self._decimate_waveform(reference_data, 500)
+            # Decimate to 10000 points for web display
+            # This preserves enough samples per cycle for the Integration Cycles
+            # slider to actually slice the data (200 cycles * 50 samples/cycle = 10000)
+            target_points = 10000
+            signal_dec = self._decimate_waveform(signal_data, target_points)
+            reference_dec = self._decimate_waveform(reference_data, target_points)
 
             # Compute product waveform (signal × reference)
             # Normalize reference for product display
@@ -370,7 +373,7 @@ class EQEApi(BaseWebApi):
             ref_normalized = ref_normalized / (np.std(ref_normalized) + 1e-10)
             signal_normalized = signal_data - np.mean(signal_data)
             product = signal_normalized * ref_normalized
-            product_dec = self._decimate_waveform(product, 500)
+            product_dec = self._decimate_waveform(product, target_points)
 
             # Time axis in milliseconds
             duration_ms = len(signal_data) / sample_rate * 1000
