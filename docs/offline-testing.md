@@ -1,16 +1,22 @@
-# Testing PHYS 2150 Measurement Suite App on Mac (Offline Mode)
+# Testing PHYS 2150 Measurement Suite (Offline Mode)
 
-This guide is for UI testing on Mac. In the lab, students will use the installed launcher application—no command line needed.
+This guide is for UI testing without lab hardware. In the lab, students use the installed launcher application—no command line needed.
 
 ## Prerequisites
 
-Install the `uv` package manager by opening Terminal and running:
+Install the `uv` package manager:
 
+**Windows (PowerShell):**
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+**Mac/Linux (Terminal):**
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-Close and reopen Terminal after installation.
+Close and reopen your terminal after installation.
 
 ## Setup
 
@@ -18,24 +24,30 @@ Close and reopen Terminal after installation.
 
 2. Unzip the downloaded file
 
-3. Open Terminal and navigate to the unzipped folder:
+3. Open a terminal and navigate to the unzipped folder:
+
+   **Windows (PowerShell):**
+   ```powershell
+   cd ~\Downloads\PHYS-2150-X.Y.Z   # adjust path as needed
+   ```
+
+   **Mac/Linux:**
    ```bash
    cd ~/Downloads/PHYS-2150-X.Y.Z   # adjust path as needed
    ```
 
-4. Install dependencies and activate the environment:
+4. Install dependencies:
    ```bash
    uv sync
-   source .venv/bin/activate
    ```
 
 ## Running the Launcher
 
 ```bash
-python launcher.py
+uv run python launcher.py
 ```
 
-This opens the same launcher interface students will use in the lab.
+This opens the same launcher interface students use in the lab.
 
 **Important:** Before clicking EQE or I-V, press **Ctrl+Shift+D** (or **Cmd+Shift+D** on Mac) to enable offline mode. You'll see a confirmation that offline mode is enabled. Then click the app button to launch.
 
@@ -44,13 +56,13 @@ This opens the same launcher interface students will use in the lab.
 You can also run apps directly from the command line with offline mode:
 
 ```bash
-python -m eqe --offline    # EQE Measurement
-python -m jv --offline     # I-V Measurement
+uv run python -m eqe --offline    # EQE Measurement
+uv run python -m jv --offline     # I-V Measurement
 ```
 
 ## Keyboard Shortcuts
 
-All shortcuts work with either **Ctrl+Shift** or **Cmd+Shift** on Mac.
+All shortcuts use **Ctrl+Shift** on Windows/Linux or **Cmd+Shift** on Mac.
 
 ### Launcher Shortcuts
 
@@ -74,5 +86,4 @@ All shortcuts work with either **Ctrl+Shift** or **Cmd+Shift** on Mac.
 
 ## Notes
 
-- If you close Terminal and return later, navigate to the folder and run `source .venv/bin/activate` again
 - Use `--theme light` flag for light mode when running apps directly
