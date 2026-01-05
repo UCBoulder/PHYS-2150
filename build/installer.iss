@@ -20,7 +20,7 @@
 
 ; NOTE: Keep MyAppVersion in sync with pyproject.toml [project].version
 #define MyAppName "PHYS 2150 Measurement Suite"
-#define MyAppVersion "3.1.0"
+#define MyAppVersion "3.2.0"
 #define MyAppPublisher "CU Boulder Physics Undergraduate Labs"
 #define MyAppURL "https://github.com/UCBoulder/PHYS-2150"
 #define MyAppExeName "PHYS2150.exe"
