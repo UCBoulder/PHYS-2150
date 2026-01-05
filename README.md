@@ -13,15 +13,15 @@ A comprehensive solar cell characterization system for the CU Boulder PHYS 2150 
 
 **Requires Python 3.10 or later.**
 
-```bash
-pip install uv
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 git clone https://github.com/UCBoulder/PHYS-2150.git
 cd PHYS-2150
 uv sync
 uv run python launcher.py
 ```
 
-> **Windows Note:** If `uv` is not recognized, use `python -m uv` instead.
+> **Note:** Restart your terminal after installing uv for it to be available in PATH.
 
 ### Running the Applications
 
