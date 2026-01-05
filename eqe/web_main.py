@@ -48,9 +48,6 @@ class EQEApi(BaseWebApi):
         self._experiment: Optional[EQEExperimentModel] = None
         self._stability_model: Optional[StabilityTestModel] = None
 
-        # Pending stability test (waiting for phase adjustment)
-        self._pending_stability_params: Optional[Dict[str, Any]] = None
-
         # Connect signals to slots for thread-safe callbacks
         self._stability_progress_signal.connect(self._emit_stability_progress)
         self._stability_complete_signal.connect(self._emit_stability_complete)
@@ -506,37 +503,18 @@ class EQEApi(BaseWebApi):
             pixel = params.get("pixel", 1)
 
             if test_type == "power":
-                # Power tests don't need phase adjustment
                 self._stability_model.start_power_test(wavelength, duration, interval)
-                return json.dumps({"success": True})
             else:
-                # Current tests need phase adjustment first (to lock onto chopper)
-                if not self._experiment or not self._experiment.phase_model:
-                    return json.dumps({"success": False, "message": "Phase adjustment not available"})
-
-                # Store params for after phase adjustment completes
-                self._pending_stability_params = {
-                    "wavelength": wavelength,
-                    "duration": duration,
-                    "interval": interval,
-                    "pixel": pixel
-                }
-
-                # Tell experiment model NOT to auto-start current measurement after phase
-                self._experiment._skip_auto_current_after_phase = True
-
-                # Set pixel number in experiment parameters (needed for phase adjustment)
-                self._experiment.set_measurement_parameters(pixel_number=pixel)
-
-                # Start phase adjustment (stability test will start on completion)
-                _logger.info(f"Starting phase adjustment for current stability test (pixel {pixel})")
-                self._experiment.phase_model.start_adjustment(pixel_number=pixel)
-
-                return json.dumps({"success": True, "phase": "adjusting"})
+                self._stability_model.start_current_test(
+                    wavelength=wavelength,
+                    duration_min=duration,
+                    interval_sec=interval,
+                    pixel_number=pixel
+                )
+            return json.dumps({"success": True})
 
         except Exception as e:
             _logger.error(f"Stability test start failed: {e}")
-            self._pending_stability_params = None
             return json.dumps({"success": False, "message": str(e)})
 
     @Slot(result=str)
@@ -663,18 +641,6 @@ class EQEApi(BaseWebApi):
 
     def _on_experiment_complete(self, success: bool, message: str) -> None:
         """Forward experiment completion to JS."""
-        # Check if this is a phase adjustment failure for a pending stability test
-        if not success and self._pending_stability_params:
-            # Phase adjustment failed while trying to start stability test
-            self._pending_stability_params = None
-            # Also clear the skip flag if it was set
-            if self._experiment:
-                self._experiment._skip_auto_current_after_phase = False
-
-            # Notify stability test completion with failure
-            self._stability_complete_signal.emit(False, message)
-            return  # Don't also send to measurement complete
-
         # Log to console
         if success:
             self._window.send_log('info', f"Measurement complete: {message}")
@@ -699,25 +665,6 @@ class EQEApi(BaseWebApi):
         phase_json = json.dumps(phase_data)
         js = f"onPhaseAdjustmentComplete({phase_json})"
         self._window.run_js(js)
-
-        # If we have pending stability test params, start the stability test now
-        if self._pending_stability_params:
-            params = self._pending_stability_params
-            self._pending_stability_params = None  # Clear before starting
-
-            _logger.info(f"Phase adjustment complete, starting current stability test")
-
-            # Start the stability test
-            try:
-                self._stability_model.start_current_test(
-                    wavelength=params["wavelength"],
-                    duration_min=params["duration"],
-                    interval_sec=params["interval"],
-                    pixel_number=params["pixel"]
-                )
-            except Exception as e:
-                _logger.error(f"Failed to start stability test after phase adjustment: {e}")
-                self._stability_complete_signal.emit(False, f"Failed to start: {str(e)}")
 
 
 class EQEWebWindow(BaseWebWindow):
