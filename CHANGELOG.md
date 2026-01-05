@@ -11,9 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - EQE Measurement tab simplified from three plots to two (removed Phase Response plot)
 - Current measurements now start directly without phase adjustment step (Hilbert transform provides phase-independent magnitude)
 - Chopper validation moved to start of current measurement workflow (catches "chopper not running" errors early)
+- Lock-in Lab uses visualization mode on PS2204A (slower sample rate captures ~50 cycles vs ~6 for measurements)
+- Lock-in Lab integration cycles slider limited to 50 (PS2204A buffer constraint)
 
 ### Removed
 - Phase adjustment step from EQE current measurement workflow (unnecessary with quadrature lock-in detection)
+- Phase adjustment step from current stability test (same Hilbert transform improvement)
 - Phase Response and Sine Fit visualization from Measurement tab (was artifact from analog lock-in era)
 
 ### Added
@@ -59,6 +62,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Each data point colored based on its measurement quality (CV%)
   - Excellent (<2%): dark green, Good (<5%): green, Fair (<10%): amber, Poor (≥10%): muted red
   - Provides immediate visual feedback on measurement reliability across the spectrum
+- Output format header at start of current measurement explaining statistics display
+- "Cumulative Statistics" label on stability test stats bar (clarifies stats are aggregated over test duration)
 
 ### Changed
 - Dark mode `--text-muted` color improved from #999999 to #ababab for WCAG AA contrast compliance (4.74:1 ratio)
@@ -76,6 +81,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - JS syntax errors from unescaped carriage returns in device status messages
 - Monochromator showing "Connected (S/N: None)" even when device not found (controller now checks bFound flag)
 - Device connection status messages not written to debug log file (only appeared in terminal panel)
+- Thread safety crash in measurement stats callback (Qt signal emitted from wrong thread)
+- EQE analysis CSV loading unit conversion (was treating mA as A)
+- Current stability test failing with wrong keyword arguments
+- Lock-in Lab integration cycles slider not affecting real (non-simulated) measurements
 
 ## [3.1.0] - 2025-12-25
 

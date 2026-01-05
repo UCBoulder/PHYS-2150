@@ -328,10 +328,10 @@ Add optional "educational mode" with reduced integration time:
 | Add SD to display | HIGH | LOW | ✅ **Done** |
 | Add SE to display | HIGH | LOW | ✅ **Done** |
 | CV% color-coding in UI | MEDIUM | LOW | ✅ **Done** (via quality badge) |
-| Raw waveforms tab | HIGH | MEDIUM | Pending |
-| X-Y phasor display | MEDIUM | LOW | Pending |
-| Adjustable integration time | HIGH | MEDIUM | Pending |
-| FFT spectrum display | MEDIUM | MEDIUM | Future |
+| Raw waveforms tab | HIGH | MEDIUM | ✅ **Done** (Lock-in Lab tab) |
+| X-Y phasor display | MEDIUM | LOW | ✅ **Done** (Lock-in Lab tab) |
+| Adjustable integration time | HIGH | MEDIUM | ✅ **Done** (Lock-in Lab, 1-50 cycles) |
+| FFT spectrum display | MEDIUM | MEDIUM | ✅ **Done** (Lock-in Lab tab) |
 | Hilbert visualization | LOW | MEDIUM | Future |
 
 ---
@@ -361,9 +361,9 @@ Add optional "educational mode" with reduced integration time:
 3. ~~**Action:** Add statistics display to measurement UI~~ ✅ Done
 4. ~~**Pending:** Add Standard Error (SE) calculation and display~~ ✅ Done (Dec 2025)
 5. ~~**Pending:** Add CV% color-coding (green/yellow/red) in UI~~ ✅ Done (via quality badge)
-6. **Decision needed:** Implement "educational mode" with visible variation?
-7. **Future:** Raw waveform visualization tab
-8. **Future:** X-Y phasor diagram
+6. ~~**Decision needed:** Implement "educational mode" with visible variation?~~ ✅ Done (Lock-in Lab tab)
+7. ~~**Future:** Raw waveform visualization tab~~ ✅ Done (Lock-in Lab tab)
+8. ~~**Future:** X-Y phasor diagram~~ ✅ Done (Lock-in Lab tab)
 
 ---
 
