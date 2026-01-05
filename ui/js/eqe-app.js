@@ -1621,8 +1621,8 @@ async function fetchRealLockinData() {
     }
 
     try {
-        // Capture enough cycles to support full slider range (max 200)
-        const response = await api.lockinlab_measure(200);
+        // Capture enough cycles to support full slider range (max 50)
+        const response = await api.lockinlab_measure(50);
         const result = JSON.parse(response);
         if (result.success && result.signal_waveform) {
             state.lockinlab.rawSignal = result.signal_waveform;
