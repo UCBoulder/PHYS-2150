@@ -711,8 +711,8 @@ class EQEApi(BaseWebApi):
             try:
                 self._stability_model.start_current_test(
                     wavelength=params["wavelength"],
-                    duration=params["duration"],
-                    interval=params["interval"],
+                    duration_min=params["duration"],
+                    interval_sec=params["interval"],
                     pixel_number=params["pixel"]
                 )
             except Exception as e:
