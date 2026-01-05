@@ -258,6 +258,7 @@ class CurrentMeasurementModel:
         """
         try:
             self.logger.log(f"Starting current measurement for pixel {pixel_number}")
+            _logger.info("Output format: wavelength: mean ± std_dev (n=measurements_used/total, CV=coefficient_of_variation%)")
             self.wavelengths.clear()
             self.currents.clear()
             self.measurement_stats.clear()
