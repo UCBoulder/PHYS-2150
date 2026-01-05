@@ -179,6 +179,19 @@ The driver automatically optimizes parameters based on the PicoScope model:
 - The EQE controller compensates by taking multiple acquisitions
 - CV is slightly higher than 5242D but still adequate for measurements
 
+**2204A Visualization Mode (Lock-in Lab):**
+
+The Lock-in Lab tab uses a different timebase to capture more cycles for educational visualization:
+
+| Parameter | Measurement Mode | Visualization Mode |
+|-----------|------------------|-------------------|
+| Timebase | 12 | 15 |
+| Sample rate | ~24.4 kHz | ~3.05 kHz |
+| Samples/cycle | ~301 | ~38 |
+| Cycles captured | ~6 | ~50 |
+
+Visualization mode trades samples-per-cycle for more cycles, allowing students to see the averaging effect across many periods. This mode is only used by the Lock-in Lab tab; actual EQE measurements use the standard timebase 12 for best signal resolution.
+
 ### Common Parameters
 
 **Cycles Integration:**
@@ -366,15 +379,15 @@ The lock-in algorithm was validated using known test signals from function gener
 | Expected | 1.000 MΩ |
 | Error | 0.4% |
 
-### Phase Sensitivity Note
+### Phase Independence
 
-The Hilbert algorithm's R value depends on phase alignment between signal and reference:
+The quadrature detection ensures R = √(X² + Y²) is **phase-independent**. Regardless of the phase relationship between signal and reference:
 
-- **0° offset**: Correct amplitude
-- **90° offset**: ~29% low
-- **180° offset**: Correct amplitude (but negative X)
+- X and Y components will vary with phase
+- R (magnitude) remains constant
+- No phase adjustment needed in the measurement workflow
 
-This is not an issue when signal and reference both come from the same physical chopper, as they maintain constant phase relationship.
+This is a key advantage over single-phase detection, which would require precise phase alignment.
 
 ## Troubleshooting
 
@@ -403,13 +416,17 @@ This is not an issue when signal and reference both come from the same physical 
 ```
 eqe/
 ├── drivers/
-│   └── picoscope_driver.py    # Low-level SDK interface
-│       └── software_lockin()  # Main lock-in function
-│       └── _acquire_block()   # Data acquisition
+│   └── picoscope_driver.py           # Low-level SDK interface
+│       └── software_lockin()         # Main lock-in algorithm
+│       └── _acquire_block_5000()     # PS5242D acquisition
+│       └── _acquire_block_2000()     # PS2204A acquisition
 │
 └── controllers/
-    └── picoscope_lockin.py    # High-level controller
-        └── measure()          # User-facing measurement
+    └── picoscope_lockin.py           # High-level controller
+        └── perform_lockin_measurement()      # Single lock-in reading
+        └── perform_lockin_measurement_full() # With waveforms (Lock-in Lab)
+        └── read_current()                    # Averaged current measurement
+        └── read_current_fast()               # Quick monitoring mode
 ```
 
 ## References
