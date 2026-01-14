@@ -291,8 +291,8 @@ class JVWebWindow(BaseWebWindow):
         super().__init__(
             title="I-V Measurement - PHYS 2150",
             html_filename="jv.html",
-            size=(1200, 800),
-            min_size=(800, 600)
+            size=GUI_CONFIG["window_size"],
+            min_size=GUI_CONFIG["window_min_size"]
         )
 
         # Set up app-specific API

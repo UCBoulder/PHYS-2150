@@ -126,11 +126,19 @@ FILE_NAMING = {
     "phase_file_template": "{date}_phase_cell{cell_number}.csv",           # Phase adjustment results
 }
 
+# Lock-in Lab visualization settings
+# Controls waveform display in the Lock-in Lab educational tab
+LOCKINLAB_CONFIG = {
+    "waveform_display_points": 10000,  # Target points for decimated waveform display
+    "fft_max_frequency": 200,          # Hz - max frequency shown in FFT plot
+}
+
 # GUI configuration
 # Controls appearance and behavior of the PySide6 application window
 GUI_CONFIG = {
     "window_title": "PHYS 2150 EQE Measurement - MVC Architecture",
-    "window_size": (1400, 950),       # pixels (width, height) - initial window dimensions
+    "window_size": (1400, 750),       # pixels (width, height) - initial window dimensions
+    "window_min_size": (1000, 600),   # pixels - minimum window dimensions
     "plot_size": (300, 300),          # pixels - minimum size for plot widgets
     "plot_max_size": (400, 400),      # pixels - maximum size for plot widgets
     "live_monitor_interval_ms": 500,  # ms - how often to update live signal display

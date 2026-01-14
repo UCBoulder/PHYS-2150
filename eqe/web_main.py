@@ -22,7 +22,7 @@ from .models.stability_test import StabilityTestModel
 from .config.settings import (
     GUI_CONFIG, DEFAULT_MEASUREMENT_PARAMS, VALIDATION_PATTERNS,
     DEVICE_CONFIGS, STABILITY_TEST_CONFIG, PHASE_ADJUSTMENT_CONFIG, DeviceType,
-    DATA_EXPORT_CONFIG
+    DATA_EXPORT_CONFIG, LOCKINLAB_CONFIG
 )
 from .config import settings
 from common.utils import get_logger, TieredLogger, WebConsoleHandler
@@ -359,10 +359,9 @@ class EQEApi(BaseWebApi):
             signal_data = np.array(signal_data)
             reference_data = np.array(reference_data)
 
-            # Decimate to 10000 points for web display
-            # This preserves enough samples per cycle for the Integration Cycles
-            # slider to actually slice the data (200 cycles * 50 samples/cycle = 10000)
-            target_points = 10000
+            # Decimate for web display - preserves enough samples per cycle
+            # for the Integration Cycles slider to slice the data
+            target_points = LOCKINLAB_CONFIG["waveform_display_points"]
             signal_dec = self._decimate_waveform(signal_data, target_points)
             reference_dec = self._decimate_waveform(reference_data, target_points)
 
@@ -421,8 +420,9 @@ class EQEApi(BaseWebApi):
         # Normalize for display
         magnitude = magnitude / len(signal)
 
-        # Return only up to 200 Hz (captures chopper frequency and some harmonics)
-        mask = freqs <= 200
+        # Return frequencies up to configured limit (captures chopper and harmonics)
+        max_freq = LOCKINLAB_CONFIG["fft_max_frequency"]
+        mask = freqs <= max_freq
         return freqs[mask].tolist(), magnitude[mask].tolist()
 
     # ==================== Data Export ====================
@@ -683,8 +683,8 @@ class EQEWebWindow(BaseWebWindow):
         super().__init__(
             title="EQE Measurement - PHYS 2150",
             html_filename="eqe.html",
-            size=(1400, 750),
-            min_size=(1000, 600)
+            size=GUI_CONFIG["window_size"],
+            min_size=GUI_CONFIG["window_min_size"]
         )
 
         # Set up app-specific API

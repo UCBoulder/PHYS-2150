@@ -23,6 +23,7 @@ from ..config.settings import (
     DEFAULT_MEASUREMENT_PARAMS,
     JV_MEASUREMENT_CONFIG,
     VALIDATION_PATTERNS,
+    ERROR_MESSAGES,
 )
 from ..config import settings
 from common.utils import get_logger
@@ -171,16 +172,14 @@ class JVExperimentModel(QObject):
         cell_number = self.params.get("cell_number", "")
         cell_pattern = VALIDATION_PATTERNS["cell_number"]
         if not cell_number or not re.match(cell_pattern, str(cell_number)):
-            raise JVExperimentError(
-                "Cell number must be a 3-digit number (e.g., 195)."
-            )
+            raise JVExperimentError(ERROR_MESSAGES["invalid_cell_number"])
 
         # Validate pixel number
         pixel_number = self.params.get("pixel_number", 0)
         pixel_min, pixel_max = VALIDATION_PATTERNS["pixel_range"]
         if not (pixel_min <= pixel_number <= pixel_max):
             raise JVExperimentError(
-                f"Pixel number must be between {pixel_min} and {pixel_max}."
+                ERROR_MESSAGES["invalid_pixel_number"].format(min=pixel_min, max=pixel_max)
             )
 
         # Validate voltage parameters
@@ -193,9 +192,7 @@ class JVExperimentModel(QObject):
             stop_v = float(stop_v)
             step_v = float(step_v)
         except (TypeError, ValueError):
-            raise JVExperimentError(
-                "Please enter valid numerical values for voltages."
-            )
+            raise JVExperimentError(ERROR_MESSAGES["invalid_voltages"])
 
         if step_v <= 0:
             raise JVExperimentError("Step voltage must be positive.")

@@ -21,6 +21,12 @@ class DataValidationError(Exception):
     pass
 
 
+def _get_pixel_list() -> List[int]:
+    """Get list of valid pixel numbers from settings."""
+    pixel_range = VALIDATION_PATTERNS["pixel_range"]
+    return list(range(pixel_range[0], pixel_range[1] + 1))
+
+
 class DataHandler:
     """Handles data saving, loading, and validation operations."""
     
@@ -184,11 +190,12 @@ class DataHandler:
                     if "Pixel #" not in df.columns:
                         # Convert from legacy format (6 pixels)
                         legacy_data = df[["set angle", "signal", "r-value"]].values
+                        pixels = _get_pixel_list()
                         df = pd.DataFrame({
-                            "Pixel #": [1, 2, 3, 4, 5, 6, 7, 8],
-                            "Set Angle": [None] * 8,
-                            "Signal": [None] * 8,
-                            "R^2 Value": [None] * 8
+                            "Pixel #": pixels,
+                            "Set Angle": [None] * len(pixels),
+                            "Signal": [None] * len(pixels),
+                            "R^2 Value": [None] * len(pixels)
                         })
                         # Fill in legacy data (only first 6 pixels)
                         for i, row in enumerate(legacy_data[:6]):
@@ -196,9 +203,10 @@ class DataHandler:
                             df.at[i, "Signal"] = row[1]
                             df.at[i, "R^2 Value"] = row[2]
                     else:
-                        # Ensure all 8 pixels are present
+                        # Ensure all pixels from settings are present
+                        pixels = _get_pixel_list()
                         existing_pixels = df["Pixel #"].tolist()
-                        for i in range(1, 9):
+                        for i in pixels:
                             if i not in existing_pixels:
                                 df = pd.concat([df, pd.DataFrame({
                                     "Pixel #": [i],
@@ -206,22 +214,24 @@ class DataHandler:
                                     "Signal": [None],
                                     "R^2 Value": [None]
                                 })], ignore_index=True)
-                        df = df[df["Pixel #"].isin([1, 2, 3, 4, 5, 6, 7, 8])].sort_values("Pixel #").reset_index(drop=True)
+                        df = df[df["Pixel #"].isin(pixels)].sort_values("Pixel #").reset_index(drop=True)
                 except Exception:
                     # Create new dataframe if reading fails
+                    pixels = _get_pixel_list()
                     df = pd.DataFrame({
-                        "Pixel #": [1, 2, 3, 4, 5, 6, 7, 8],
-                        "Set Angle": [None] * 8,
-                        "Signal": [None] * 8,
-                        "R^2 Value": [None] * 8
+                        "Pixel #": pixels,
+                        "Set Angle": [None] * len(pixels),
+                        "Signal": [None] * len(pixels),
+                        "R^2 Value": [None] * len(pixels)
                     })
             else:
                 # Create new dataframe
+                pixels = _get_pixel_list()
                 df = pd.DataFrame({
-                    "Pixel #": [1, 2, 3, 4, 5, 6, 7, 8],
-                    "Set Angle": [None] * 8,
-                    "Signal": [None] * 8,
-                    "R^2 Value": [None] * 8
+                    "Pixel #": pixels,
+                    "Set Angle": [None] * len(pixels),
+                    "Signal": [None] * len(pixels),
+                    "R^2 Value": [None] * len(pixels)
                 })
             
             # Update data for the specific pixel

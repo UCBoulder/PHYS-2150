@@ -50,6 +50,10 @@ JV_MEASUREMENT_CONFIG: Dict[str, Any] = {
 
     # Enable 4-wire (remote) sensing for accurate measurements
     "remote_sensing": True,
+
+    # Precision settings for data rounding
+    "voltage_decimals": 2,              # Decimal places for voltage array rounding
+    "current_precision": "0.00001",     # Decimal precision string for current (mA)
 }
 
 
@@ -70,7 +74,8 @@ DEVICE_CONFIG: Dict[str, Any] = {
 # GUI configuration
 GUI_CONFIG: Dict[str, Any] = {
     "window_title": "PHYS 2150 J-V Characterization",
-    "window_geometry": (100, 100, 800, 600),
+    "window_size": (1200, 800),        # pixels (width, height) - initial window dimensions
+    "window_min_size": (800, 600),     # pixels - minimum window dimensions
 
     # Input panel width as fraction of screen
     "input_panel_width_fraction": 0.1,
@@ -155,7 +160,7 @@ ERROR_MESSAGES: Dict[str, str] = {
         "Cell number must be a 3-digit number (e.g., 195)."
     ),
     "invalid_pixel_number": (
-        "Pixel number must be between 1 and 8."
+        "Pixel number must be between {min} and {max}."
     ),
     "measurement_failed": (
         "Measurement failed. Please check device connections."

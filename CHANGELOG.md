@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - EQE offline mode CSV export now uses headers from `DATA_EXPORT_CONFIG` in settings.py (single source of truth)
+- EQE and J-V window sizes now read from `GUI_CONFIG` in their respective settings.py files
+- EQE pixel range now uses `VALIDATION_PATTERNS["pixel_range"]` instead of hardcoded values
+- EQE Lock-in Lab waveform display points and FFT frequency limit now configurable via `LOCKINLAB_CONFIG`
+- J-V voltage decimals and current precision now configurable via `JV_MEASUREMENT_CONFIG`
+- J-V validation error messages now use `ERROR_MESSAGES` from settings.py
 
 ### Removed
 - SE (Standard Error) and CV% (Coefficient of Variation) from EQE measurement statistics display

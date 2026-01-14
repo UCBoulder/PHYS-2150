@@ -171,7 +171,8 @@ class JVMeasurementModel:
 
         # Generate array with half-step tolerance for endpoint inclusion
         voltages = np.arange(start, stop + (step / 2), step)
-        return np.round(voltages, decimals=2)
+        decimals = JV_MEASUREMENT_CONFIG.get("voltage_decimals", 2)
+        return np.round(voltages, decimals=decimals)
 
     def start_measurement(
         self,
@@ -351,8 +352,9 @@ class JVMeasurementModel:
                 current_reading = self.controller.measure_current_precise()
 
                 # Convert to mA with proper rounding
+                precision = JV_MEASUREMENT_CONFIG.get("current_precision", "0.00001")
                 current_mA = (current_reading * Decimal(10**3)).quantize(
-                    Decimal('0.00001'), rounding=ROUND_HALF_UP
+                    Decimal(precision), rounding=ROUND_HALF_UP
                 )
                 current_mA = float(current_mA)
 
