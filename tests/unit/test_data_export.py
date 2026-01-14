@@ -319,7 +319,7 @@ class TestEQEDataHandlerSave:
         assert len(rows) == 3
 
     def test_save_current_with_stats(self, temp_dir):
-        """Should save current measurement with statistics including SE."""
+        """Should save current measurement with statistics (n, std_dev)."""
         from eqe.utils.data_handling import DataHandler
         from unittest.mock import patch
 
@@ -327,17 +327,17 @@ class TestEQEDataHandlerSave:
         wavelengths = [400.0, 500.0]
         currents = [1e-7, 5e-7]
         stats = [
-            {'std_dev': 1e-9, 'n': 10, 'cv_percent': 1.0},
-            {'std_dev': 2e-9, 'n': 10, 'cv_percent': 0.4},
+            {'std_dev': 1e-9, 'n': 10},
+            {'std_dev': 2e-9, 'n': 10},
         ]
 
-        # Enable stats export with SE column
+        # Enable stats export
         with patch.dict('eqe.utils.data_handling.DATA_EXPORT_CONFIG', {
             'include_measurement_stats': True,
             'headers': {
                 'current_with_stats': [
                     "Wavelength (nm)", "Current_mean (nA)",
-                    "Current_std (nA)", "Current_SE (nA)", "n", "CV_percent"
+                    "Current_std (nA)", "n"
                 ]
             },
             'csv_delimiter': ',',
@@ -358,18 +358,17 @@ class TestEQEDataHandlerSave:
             header = next(reader)
             rows = list(reader)
 
-        # Should have stats columns including SE
-        assert len(header) == 6
+        # Should have stats columns: wavelength, current, std, n
+        assert len(header) == 4
         assert header == ["Wavelength (nm)", "Current_mean (nA)",
-                          "Current_std (nA)", "Current_SE (nA)", "n", "CV_percent"]
+                          "Current_std (nA)", "n"]
         assert len(rows) == 2
 
-        # Verify SE is calculated correctly: SE = std / sqrt(n)
-        # First row: std=1e-9 A = 1 nA, n=10, SE = 1/sqrt(10) ≈ 0.32 nA
+        # Verify std_dev is correctly converted to nA
+        # First row: std=1e-9 A = 1 nA
         row1 = rows[0]
-        se_value = float(row1[3])
-        expected_se = 1.0 / (10 ** 0.5)  # 1 nA / sqrt(10)
-        assert abs(se_value - expected_se) < 0.01
+        std_value = float(row1[2])
+        assert abs(std_value - 1.0) < 0.01  # 1 nA
 
 
 class TestDataExportRobustness:
