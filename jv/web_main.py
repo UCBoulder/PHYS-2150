@@ -22,7 +22,7 @@ from .models.jv_measurement import JVMeasurementResult
 from .utils.data_export import JVDataExporter
 from .config.settings import (
     GUI_CONFIG, VALIDATION_PATTERNS, DEFAULT_MEASUREMENT_PARAMS,
-    JV_MEASUREMENT_CONFIG
+    JV_MEASUREMENT_CONFIG, DATA_EXPORT_CONFIG
 )
 from common.utils import get_logger, TieredLogger, WebConsoleHandler
 from common.utils.remote_config import get_remote_config, deep_merge
@@ -96,6 +96,7 @@ class JVApi(BaseWebApi):
             "defaults": dict(DEFAULT_MEASUREMENT_PARAMS),
             "validation": dict(VALIDATION_PATTERNS),
             "measurement": dict(JV_MEASUREMENT_CONFIG),
+            "export": dict(DATA_EXPORT_CONFIG),
         }
 
         # Merge remote config (overrides built-in)

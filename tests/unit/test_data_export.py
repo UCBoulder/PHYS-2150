@@ -242,10 +242,11 @@ class TestJVDataExporter:
         expected_rows = len(sample_result.forward.voltages) + len(sample_result.reverse.voltages)
         assert len(rows) == expected_rows
 
-        # Check direction values
-        directions = [row[-1] for row in rows]
-        assert "forward" in directions
-        assert "reverse" in directions
+        # Check direction values (Direction is first column, values are capitalized)
+        dir_idx = header.index("Direction")
+        directions = [row[dir_idx] for row in rows]
+        assert "Forward" in directions
+        assert "Reverse" in directions
 
     def test_result_to_dataframe(self, exporter, sample_result):
         """Should convert result to DataFrame."""

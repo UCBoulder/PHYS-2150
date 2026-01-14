@@ -378,7 +378,13 @@ function saveData() {
     const cellNumber = document.getElementById('cell-number').value || '000';
     const pixel = currentPixel || 1;
 
-    let csv = 'Direction,Voltage (V),Current (mA)\n';
+    // Get headers from config (raw format with Direction column)
+    const headersRaw = LabConfig.get('export.headers_raw', {
+        direction: 'Direction',
+        voltage: 'Voltage (V)',
+        current: 'Current (mA)'
+    });
+    let csv = `${headersRaw.direction},${headersRaw.voltage},${headersRaw.current}\n`;
 
     for (let i = 0; i < forwardData.x.length; i++) {
         csv += `Forward,${forwardData.x[i].toFixed(4)},${forwardData.y[i].toFixed(6)}\n`;
@@ -899,7 +905,12 @@ function saveAnalysisResults() {
     csv += '#\n';
 
     const data = m.sweepType === 'forward' ? analysisState.forwardData : analysisState.reverseData;
-    csv += 'Voltage (V),Current (mA)\n';
+    // Get headers from config (use raw format headers for simple V-I export)
+    const headersRaw = LabConfig.get('export.headers_raw', {
+        voltage: 'Voltage (V)',
+        current: 'Current (mA)'
+    });
+    csv += `${headersRaw.voltage},${headersRaw.current}\n`;
     for (let i = 0; i < data.voltages.length; i++) {
         csv += `${data.voltages[i].toFixed(4)},${data.currents[i].toFixed(6)}\n`;
     }

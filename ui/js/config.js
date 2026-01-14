@@ -37,6 +37,18 @@ const FALLBACK_DEFAULTS = {
             min_step: 0.001,
             max_step: 0.5,
         },
+        export: {
+            headers: {
+                voltage: 'Voltage (V)',
+                forward_current: 'Forward Scan (mA)',
+                reverse_current: 'Reverse Scan (mA)',
+            },
+            headers_raw: {
+                direction: 'Direction',
+                voltage: 'Voltage (V)',
+                current: 'Current (mA)',
+            },
+        },
     },
 
     // EQE-specific defaults
@@ -90,6 +102,7 @@ function getAppFallback() {
             defaults: FALLBACK_DEFAULTS.jv.defaults,
             validation: FALLBACK_DEFAULTS.validation,
             measurement: FALLBACK_DEFAULTS.jv.voltage_bounds,
+            export: FALLBACK_DEFAULTS.jv.export,
         };
     } else if (isEQE) {
         return {

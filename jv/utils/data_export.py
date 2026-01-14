@@ -118,25 +118,27 @@ class JVDataExporter:
             result: Measurement result
             file_path: Path to save the CSV file
         """
-        headers = self.config.get("headers", {})
-        voltage_header = headers.get("voltage", "Voltage (V)")
+        headers_raw = self.config.get("headers_raw", {})
+        voltage_header = headers_raw.get("voltage", "Voltage (V)")
+        current_header = headers_raw.get("current", "Current (mA)")
+        direction_header = headers_raw.get("direction", "Direction")
 
         rows = []
 
         # Add forward sweep data
         for v, i in zip(result.forward.voltages, result.forward.currents):
             rows.append({
+                direction_header: "Forward",
                 voltage_header: v,
-                "Current (mA)": i,
-                "Direction": "forward",
+                current_header: i,
             })
 
         # Add reverse sweep data
         for v, i in zip(result.reverse.voltages, result.reverse.currents):
             rows.append({
+                direction_header: "Reverse",
                 voltage_header: v,
-                "Current (mA)": i,
-                "Direction": "reverse",
+                current_header: i,
             })
 
         df = pd.DataFrame(rows)

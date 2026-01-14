@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - J-V voltage decimals and current precision now configurable via `JV_MEASUREMENT_CONFIG`
 - J-V `current_precision` renamed to `current_quantize_precision` in `JV_MEASUREMENT_CONFIG` (avoids confusion with `DATA_EXPORT_CONFIG["current_precision"]`)
 - J-V validation error messages now use `ERROR_MESSAGES` from settings.py
+- J-V now passes `DATA_EXPORT_CONFIG` to JavaScript via `get_ui_config()` (consistent with EQE)
+- J-V offline mode CSV export now uses headers from `DATA_EXPORT_CONFIG` (single source of truth)
+- J-V raw export format headers now configurable via `DATA_EXPORT_CONFIG["headers_raw"]`
 
 ### Removed
 - SE (Standard Error) and CV% (Coefficient of Variation) from EQE measurement statistics display
