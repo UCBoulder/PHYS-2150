@@ -30,6 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - EQE data export filenames now follow documented convention (`YYYY_MM_DD_power_cell{N}.csv`, `YYYY_MM_DD_current_cell{N}_pixel{P}.csv`) using templates from settings.py
 - J-V data export filename in offline mode now uses settings.py template (`YYYY_MM_DD_IV_cell{N}_pixel{P}.csv`)
 - EQE pixel validation now shows inline error message instead of browser alert (consistent with cell number validation)
+- J-V measurement progress bar and data points not updating during real hardware measurements (thread-safe signal marshaling now used for Python-to-JavaScript callbacks)
+- J-V measurement completion callback not reaching JavaScript (save dialog not appearing after measurement)
 
 ## [3.2.0] - 2026-01-05
 

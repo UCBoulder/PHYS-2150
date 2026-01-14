@@ -13,7 +13,7 @@ import logging
 import ctypes
 from typing import Optional
 
-from PySide6.QtCore import Qt, QObject, Slot, QUrl, QThread, Signal
+from PySide6.QtCore import Qt, QObject, Slot, QUrl, QThread, Signal, Slot as QtSlot
 from PySide6.QtWidgets import QApplication, QFileDialog
 from PySide6.QtWebChannel import QWebChannel
 
@@ -38,11 +38,25 @@ class JVApi(BaseWebApi):
     Handles device communication, measurement control, and data export.
     """
 
+    # Internal signals for thread-safe marshaling of callbacks from worker thread
+    # When measurement callbacks emit signals from the worker thread, Qt needs to
+    # marshal them to the main thread before calling run_js()
+    _measurement_point_signal = Signal(str, float, float)  # direction, voltage, current
+    _measurement_progress_signal = Signal(str, int, int, float, float)  # direction, current, total, V, I
+    _measurement_complete_signal = Signal(bool, object)  # success, result
+    _device_status_signal = Signal(bool, str)  # connected, message
+
     def __init__(self, window: 'JVWebWindow'):
         super().__init__(window)
         self._experiment: Optional[JVExperimentModel] = None
         self._exporter = JVDataExporter()
         self._current_result: Optional[JVMeasurementResult] = None
+
+        # Connect internal signals to slots for thread-safe JavaScript calls
+        self._measurement_point_signal.connect(self._emit_measurement_point)
+        self._measurement_progress_signal.connect(self._emit_measurement_progress)
+        self._measurement_complete_signal.connect(self._emit_measurement_complete)
+        self._device_status_signal.connect(self._emit_device_status)
 
     def set_experiment(self, experiment: JVExperimentModel) -> None:
         """Set the experiment model and connect signals."""
@@ -50,6 +64,7 @@ class JVApi(BaseWebApi):
 
         # Connect model signals to push data to JS
         self._experiment.measurement_point.connect(self._on_measurement_point)
+        self._experiment.measurement_progress.connect(self._on_measurement_progress)
         self._experiment.measurement_complete.connect(self._on_measurement_complete)
         self._experiment.device_status_changed.connect(self._on_device_status_changed)
 
@@ -260,22 +275,61 @@ class JVApi(BaseWebApi):
         return json.dumps({"success": False, "message": "Cancelled"})
 
     def _on_measurement_point(self, direction: str, voltage: float, current: float) -> None:
-        """Forward measurement point to JS."""
+        """Forward measurement point to JS (called from worker thread via Qt signal)."""
+        # Emit internal signal to marshal to main thread
+        self._measurement_point_signal.emit(direction, voltage, current)
+
+    def _on_measurement_progress(
+        self, direction: str, current_point: int, total_points: int, voltage: float, current: float
+    ) -> None:
+        """Forward measurement progress to JS (called from worker thread via Qt signal)."""
+        # Emit internal signal to marshal to main thread
+        self._measurement_progress_signal.emit(direction, current_point, total_points, voltage, current)
+
+    def _on_measurement_complete(self, success: bool, result: JVMeasurementResult) -> None:
+        """Forward measurement completion to JS (called from worker thread via Qt signal)."""
+        # Store result before emitting signal (thread-safe since Python GIL)
+        self._current_result = result if success else None
+        # Emit internal signal to marshal to main thread
+        self._measurement_complete_signal.emit(success, result)
+
+    def _on_device_status_changed(self, connected: bool, message: str) -> None:
+        """Forward device status change to JS (may be called from worker thread)."""
+        # Emit internal signal to marshal to main thread
+        self._device_status_signal.emit(connected, message)
+
+    @QtSlot(str, float, float)
+    def _emit_measurement_point(self, direction: str, voltage: float, current: float) -> None:
+        """Emit measurement point to JS (runs on main thread)."""
         js = f"onMeasurementPoint({json.dumps(direction)}, {voltage}, {current})"
         self._window.run_js(js)
 
-    def _on_measurement_complete(self, success: bool, result: JVMeasurementResult) -> None:
-        """Forward measurement completion to JS."""
-        self._current_result = result if success else None
-        if success:
-            self._window.send_log('info', f"Measurement complete: {result.num_points} data points collected")
+    @QtSlot(str, int, int, float, float)
+    def _emit_measurement_progress(
+        self, direction: str, current_point: int, total_points: int, voltage: float, current: float
+    ) -> None:
+        """Emit measurement progress to JS (runs on main thread)."""
+        # Calculate percentage and format status message
+        percent = (current_point / total_points * 100) if total_points > 0 else 0
+        direction_label = "Forward" if direction == "forward" else "Reverse"
+        message = f"{direction_label}: {voltage:.2f} V"
+        js = f"onMeasurementProgress({percent}, {json.dumps(message)})"
+        self._window.run_js(js)
+
+    @QtSlot(bool, object)
+    def _emit_measurement_complete(self, success: bool, result: JVMeasurementResult) -> None:
+        """Emit measurement completion to JS (runs on main thread)."""
+        if success and result:
+            num_points = len(result.forward) + len(result.reverse)
+            self._window.send_log('info', f"Measurement complete: {num_points} data points collected")
         else:
             self._window.send_log('warn', "Measurement stopped or failed")
         js = f"onMeasurementComplete({str(success).lower()})"
         self._window.run_js(js)
 
-    def _on_device_status_changed(self, connected: bool, message: str) -> None:
-        """Forward device status change to JS."""
+    @QtSlot(bool, str)
+    def _emit_device_status(self, connected: bool, message: str) -> None:
+        """Emit device status to JS (runs on main thread)."""
         # Log via Python logger (WebConsoleHandler forwards to terminal panel)
         if connected:
             _logger.info(f"Device: {message}")
