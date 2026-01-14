@@ -220,6 +220,7 @@ function closePixelModal() {
  */
 function confirmPixel() {
     const input = document.getElementById('pixel-input');
+    const error = document.getElementById('pixel-input-error');
     const pixel = parseInt(input.value);
 
     // Get pixel range from config, fallback to [1, 8]
@@ -228,10 +229,15 @@ function confirmPixel() {
     const maxPixel = pixelRange[1];
 
     if (isNaN(pixel) || pixel < minPixel || pixel > maxPixel) {
-        alert(`Pixel must be between ${minPixel} and ${maxPixel}`);
+        input.classList.add('error');
+        if (error) error.classList.add('visible');
         input.focus();
         return;
     }
+
+    // Clear error state
+    input.classList.remove('error');
+    if (error) error.classList.remove('visible');
 
     // Call the callback with the pixel number
     if (_pixelCallback) {
@@ -247,6 +253,7 @@ function confirmPixel() {
  */
 function initPixelModal() {
     const input = document.getElementById('pixel-input');
+    const error = document.getElementById('pixel-input-error');
 
     if (input) {
         // Enter key to confirm
@@ -255,6 +262,12 @@ function initPixelModal() {
                 e.preventDefault();
                 confirmPixel();
             }
+        });
+
+        // Clear error on typing
+        input.addEventListener('input', () => {
+            input.classList.remove('error');
+            if (error) error.classList.remove('visible');
         });
     }
 }
@@ -621,6 +634,7 @@ function getPixelModalHTML(options = {}) {
                 <div class="input-group mb-0">
                     <label for="pixel-input">Pixel Number (${min}-${max})</label>
                     <input type="number" id="pixel-input" min="${min}" max="${max}" value="1">
+                    <span class="input-error" id="pixel-input-error">Pixel must be between ${min} and ${max}</span>
                 </div>
             </div>
             <div class="modal-footer">
