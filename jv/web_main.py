@@ -202,11 +202,8 @@ class JVApi(BaseWebApi):
         Returns:
             JSON string with success status and file path
         """
-        from datetime import datetime
-
-        # Generate default filename
-        timestamp = datetime.now().strftime("%Y%m%d")
-        default_filename = f"IV_Cell{cell_number}_Pixel{pixel}_{timestamp}.csv"
+        # Generate default filename using settings template
+        default_filename = self._exporter.generate_filename(cell_number, pixel)
 
         # Show save dialog
         file_path, _ = QFileDialog.getSaveFileName(
