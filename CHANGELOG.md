@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- SE (Standard Error) and CV% (Coefficient of Variation) from EQE measurement statistics display
+- SE and CV% columns from EQE current measurement CSV export (now: Wavelength, Current_mean, Current_std, n)
+
 ### Fixed
 - EQE data export filenames now follow documented convention (`YYYY_MM_DD_power_cell{N}.csv`, `YYYY_MM_DD_current_cell{N}_pixel{P}.csv`) using templates from settings.py
 - J-V data export filename in offline mode now uses settings.py template (`YYYY_MM_DD_IV_cell{N}_pixel{P}.csv`)

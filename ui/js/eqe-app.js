@@ -730,20 +730,15 @@ function onMeasurementStats(stats) {
     state.currentData.stats.push({
         mean: stats.mean,
         std_dev: stats.std_dev,
-        std_error: stats.std_error,
-        n: stats.n,
-        cv_percent: stats.cv_percent
+        n: stats.n
     });
     document.getElementById('stats-n').textContent = `${stats.n}/${stats.total}`;
 
-    // Format SD and SE in nanoamps for readability (current is in Amps)
-    // SD = spread of measurements, SE = uncertainty in the mean
+    // Format SD in nanoamps for readability (current is in Amps)
     const sdNanoamps = stats.std_dev * 1e9;
-    const seNanoamps = stats.std_error * 1e9;
     document.getElementById('stats-sd').textContent = sdNanoamps.toFixed(2) + ' nA';
-    document.getElementById('stats-se').textContent = seNanoamps.toFixed(2) + ' nA';
 
-    document.getElementById('stats-cv').textContent = stats.cv_percent.toFixed(1) + '%';
+    // Quality badge based on CV% (calculated internally, not displayed)
     const badge = document.getElementById('stats-quality');
     badge.textContent = stats.quality;
     badge.className = 'quality-badge quality-' + stats.quality.toLowerCase();
@@ -870,16 +865,14 @@ function savePowerData() {
 }
 
 function saveCurrentData() {
-    let csv = 'Wavelength (nm),Current_mean (nA),Current_std (nA),Current_SE (nA),n,CV_percent\n';
+    let csv = 'Wavelength (nm),Current_mean (nA),Current_std (nA),n\n';
     for (let i = 0; i < state.currentData.x.length; i++) {
         const wavelength = state.currentData.x[i];
         const current = state.currentData.y[i];
         const stats = state.currentData.stats[i] || {};
         const std_dev = stats.std_dev !== undefined ? (stats.std_dev * 1e9).toFixed(6) : '0';
-        const std_error = stats.std_error !== undefined ? (stats.std_error * 1e9).toFixed(6) : '0';
         const n = stats.n || 0;
-        const cv = stats.cv_percent !== undefined ? stats.cv_percent.toFixed(2) : '0';
-        csv += `${wavelength.toFixed(1)},${current.toFixed(6)},${std_dev},${std_error},${n},${cv}\n`;
+        csv += `${wavelength.toFixed(1)},${current.toFixed(6)},${std_dev},${n}\n`;
     }
     const api = LabAPI.get();
     if (api && api.save_current_data) {
@@ -1233,13 +1226,6 @@ function updateStabilityStatsDisplay(stats) {
     document.getElementById('stability-std').textContent =
         (stats.std * multiplier).toFixed(3) + unit;
 
-    const cvEl = document.getElementById('stability-cv');
-    cvEl.textContent = stats.cv_percent.toFixed(2) + '%';
-    cvEl.className = 'stability-stat-value cv';
-    if (stats.cv_percent < 1.0) cvEl.classList.add('excellent');
-    else if (stats.cv_percent < 3.0) cvEl.classList.add('good');
-    else cvEl.classList.add('poor');
-
     document.getElementById('stability-count').textContent = stats.count;
     document.getElementById('stability-range').textContent =
         (stats.min * multiplier).toFixed(3) + ' - ' + (stats.max * multiplier).toFixed(3) + unit;
@@ -1248,8 +1234,6 @@ function updateStabilityStatsDisplay(stats) {
 function clearStabilityStats() {
     document.getElementById('stability-mean').textContent = '--';
     document.getElementById('stability-std').textContent = '--';
-    document.getElementById('stability-cv').textContent = '--%';
-    document.getElementById('stability-cv').className = 'stability-stat-value cv';
     document.getElementById('stability-count').textContent = '0';
     document.getElementById('stability-range').textContent = '--';
 

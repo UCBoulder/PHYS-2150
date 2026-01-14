@@ -158,15 +158,15 @@ DATA_EXPORT_CONFIG = {
     "default_format": "csv",   # File format for saved data
     "csv_delimiter": ",",      # Column separator character
     "precision": 6,            # Decimal places for floating-point values
-    # Include measurement statistics (std dev, SE, n, CV%) in exported CSV files
-    # When True: exports mean, std_dev, SE, n, CV% - teaches that uncertainty is part of measurement
+    # Include measurement statistics (std dev, n) in exported CSV files
+    # When True: exports mean, std_dev, n - teaches that uncertainty is part of measurement
     # When False: exports only mean value (legacy format, backwards compatible)
     "include_measurement_stats": True,
     # Column headers for each measurement type's CSV output
     "headers": {
         "power": ["Wavelength (nm)", "Power (W)"],
         "current": ["Wavelength (nm)", "Current (nA)"],
-        "current_with_stats": ["Wavelength (nm)", "Current_mean (nA)", "Current_std (nA)", "Current_SE (nA)", "n", "CV_percent"],
+        "current_with_stats": ["Wavelength (nm)", "Current_mean (nA)", "Current_std (nA)", "n"],
         "phase": ["Pixel #", "Set Angle", "Signal", "R^2 Value"],
     }
 }
