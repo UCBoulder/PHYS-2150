@@ -207,12 +207,16 @@ function populateFormDefaults() {
     // Pixel modal defaults
     const pixelInput = document.getElementById('pixel-input');
     const pixelLabel = document.querySelector('label[for="pixel-input"]');
+    const pixelError = document.getElementById('pixel-input-error');
     if (pixelInput && validation.pixel_range) {
         pixelInput.min = validation.pixel_range[0];
         pixelInput.max = validation.pixel_range[1];
         pixelInput.value = validation.pixel_range[0];
         if (pixelLabel) {
             pixelLabel.textContent = `Pixel Number (${validation.pixel_range[0]}-${validation.pixel_range[1]})`;
+        }
+        if (pixelError) {
+            pixelError.textContent = `Pixel must be between ${validation.pixel_range[0]} and ${validation.pixel_range[1]}`;
         }
     }
 }

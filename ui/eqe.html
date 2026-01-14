@@ -490,8 +490,9 @@
             <h2 class="modal-title" id="pixel-modal-title">Select Pixel</h2>
             <div class="modal-body">
                 <div class="input-group mb-0">
-                    <label for="pixel-input">Pixel Number</label>
-                    <input type="number" id="pixel-input">
+                    <label for="pixel-input" id="pixel-input-label">Pixel Number</label>
+                    <input type="number" id="pixel-input" aria-describedby="pixel-input-error">
+                    <span class="input-error" id="pixel-input-error">Pixel must be between 1 and 8</span>
                 </div>
             </div>
             <div class="modal-footer">
