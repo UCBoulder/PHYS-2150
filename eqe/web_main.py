@@ -21,7 +21,8 @@ from .models.eqe_experiment import EQEExperimentModel, EQEExperimentError
 from .models.stability_test import StabilityTestModel
 from .config.settings import (
     GUI_CONFIG, DEFAULT_MEASUREMENT_PARAMS, VALIDATION_PATTERNS,
-    DEVICE_CONFIGS, STABILITY_TEST_CONFIG, PHASE_ADJUSTMENT_CONFIG, DeviceType
+    DEVICE_CONFIGS, STABILITY_TEST_CONFIG, PHASE_ADJUSTMENT_CONFIG, DeviceType,
+    DATA_EXPORT_CONFIG
 )
 from .config import settings
 from common.utils import get_logger, TieredLogger, WebConsoleHandler
@@ -135,6 +136,7 @@ class EQEApi(BaseWebApi):
             "devices": devices_config,
             "stability": dict(STABILITY_TEST_CONFIG),
             "phase": dict(PHASE_ADJUSTMENT_CONFIG),
+            "export": dict(DATA_EXPORT_CONFIG),
         }
 
         # Merge remote config (overrides built-in)

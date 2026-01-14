@@ -850,9 +850,11 @@ function saveData() {
 }
 
 function savePowerData() {
-    let csv = 'Wavelength (nm),Power (uW)\n';
+    // Get headers from config (single source of truth)
+    const headers = LabConfig.get('export.headers.power', ['Wavelength (nm)', 'Power (W)']);
+    let csv = headers.join(',') + '\n';
     for (let i = 0; i < state.powerData.x.length; i++) {
-        csv += `${state.powerData.x[i].toFixed(1)},${state.powerData.y[i].toFixed(6)}\n`;
+        csv += `${state.powerData.x[i].toFixed(1)},${state.powerData.y[i].toExponential(6)}\n`;
     }
     const api = LabAPI.get();
     if (api && api.save_power_data) {
@@ -865,14 +867,17 @@ function savePowerData() {
 }
 
 function saveCurrentData() {
-    let csv = 'Wavelength (nm),Current_mean (nA),Current_std (nA),n\n';
+    // Get headers from config (single source of truth)
+    // Use current_with_stats since offline mode generates mock stats
+    const headers = LabConfig.get('export.headers.current_with_stats', ['Wavelength (nm)', 'Current_mean (nA)', 'Current_std (nA)', 'n']);
+    let csv = headers.join(',') + '\n';
     for (let i = 0; i < state.currentData.x.length; i++) {
         const wavelength = state.currentData.x[i];
         const current = state.currentData.y[i];
         const stats = state.currentData.stats[i] || {};
-        const std_dev = stats.std_dev !== undefined ? (stats.std_dev * 1e9).toFixed(6) : '0';
+        const std_dev = stats.std_dev !== undefined ? (stats.std_dev * 1e9).toFixed(2) : '0';
         const n = stats.n || 0;
-        csv += `${wavelength.toFixed(1)},${current.toFixed(6)},${std_dev},${n}\n`;
+        csv += `${wavelength.toFixed(1)},${current.toFixed(2)},${std_dev},${n}\n`;
     }
     const api = LabAPI.get();
     if (api && api.save_current_data) {

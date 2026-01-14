@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- EQE offline mode CSV export now uses headers from `DATA_EXPORT_CONFIG` in settings.py (single source of truth)
+
 ### Removed
 - SE (Standard Error) and CV% (Coefficient of Variation) from EQE measurement statistics display
 - SE and CV% columns from EQE current measurement CSV export (now: Wavelength, Current_mean, Current_std, n)

@@ -66,6 +66,14 @@ const FALLBACK_DEFAULTS = {
         phase: {
             alignment_wavelength: 532,
         },
+        export: {
+            headers: {
+                power: ['Wavelength (nm)', 'Power (W)'],
+                current: ['Wavelength (nm)', 'Current (nA)'],
+                current_with_stats: ['Wavelength (nm)', 'Current_mean (nA)', 'Current_std (nA)', 'n'],
+            },
+            include_measurement_stats: true,
+        },
     },
 };
 
@@ -90,6 +98,7 @@ function getAppFallback() {
             devices: FALLBACK_DEFAULTS.eqe.devices,
             stability: FALLBACK_DEFAULTS.eqe.stability,
             phase: FALLBACK_DEFAULTS.eqe.phase,
+            export: FALLBACK_DEFAULTS.eqe.export,
         };
     }
     // Default: return full structure for unknown pages
