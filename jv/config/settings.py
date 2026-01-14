@@ -37,7 +37,7 @@ JV_MEASUREMENT_CONFIG: Dict[str, Any] = {
     "inter_sweep_delay_s": 2.0,
 
     # Plot update frequency (update every N points)
-    "plot_update_interval": 10,
+    "plot_update_interval": 1,
 
     # Current measurement range (Amps)
     "current_range": 10,  # mA scale for typical solar cells

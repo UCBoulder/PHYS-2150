@@ -774,7 +774,8 @@ class EQEWebApplication:
             'total': stats.n_total,
             'outliers': stats.n_outliers,
             'cv_percent': stats.cv_percent,
-            'quality': stats.quality
+            'quality': stats.quality,
+            'wavelength_nm': stats.wavelength_nm
         }
         stats_json = json.dumps(stats_dict)
         # Emit signal to marshal to main thread (thread-safe)

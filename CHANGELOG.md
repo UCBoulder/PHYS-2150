@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- J-V status bar now updates every voltage point (plot_update_interval: 1) for real-time feedback instead of every 10 points
+- EQE statistics display now shows wavelength, mean current, and standard deviation explicitly (e.g., "550nm: 227.11 nA (SD: 0.70 nA)") instead of ± notation
+- EQE statistics layout restructured: n: count on left, measurement in center, quality badge on right
 - EQE offline mode CSV export now uses headers from `DATA_EXPORT_CONFIG` in settings.py (single source of truth)
 - EQE and J-V window sizes now read from `GUI_CONFIG` in their respective settings.py files
 - EQE pixel range now uses `VALIDATION_PATTERNS["pixel_range"]` instead of hardcoded values

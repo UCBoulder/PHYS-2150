@@ -736,11 +736,16 @@ function onMeasurementStats(stats) {
         std_dev: stats.std_dev,
         n: stats.n
     });
+
+    // Update n: count display (left side)
     document.getElementById('stats-n').textContent = `${stats.n}/${stats.total}`;
 
-    // Format SD in nanoamps for readability (current is in Amps)
+    // Format measurement with average and SD explicitly shown (center)
+    const meanNanoamps = stats.mean * 1e9;
     const sdNanoamps = stats.std_dev * 1e9;
-    document.getElementById('stats-sd').textContent = sdNanoamps.toFixed(2) + ' nA';
+    const wavelength = stats.wavelength_nm || state.wavelength;
+    document.getElementById('stats-wavelength').textContent = `${wavelength.toFixed(0)}nm`;
+    document.getElementById('stats-values').textContent = `${meanNanoamps.toFixed(2)} nA (SD: ${sdNanoamps.toFixed(2)} nA)`;
 
     // Quality badge based on CV% (calculated internally, not displayed)
     const badge = document.getElementById('stats-quality');
@@ -969,7 +974,8 @@ function mockCurrentMeasurement() {
             std_dev: std_dev,
             std_error: std_error,
             n: 5, total: 5, outliers: 0,
-            cv_percent: cv, quality: quality
+            cv_percent: cv, quality: quality,
+            wavelength_nm: wavelength
         });
 
         // Then call progress (adds point with quality-based color)
