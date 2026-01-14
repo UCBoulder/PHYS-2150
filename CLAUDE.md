@@ -71,6 +71,24 @@ User clicks "Start" → JS calls Python API via QWebChannel → Model validates 
 → Hardware responds → Data flows back via Qt signals → JS callbacks update UI
 ```
 
+### Configuration Guidelines
+
+**`settings.py` is the single source of truth** for all configurable parameters. Never hardcode:
+
+- Validation patterns (cell number regex, pixel range)
+- File naming templates and date formats
+- CSV column headers
+- Window sizes and UI dimensions
+- Measurement parameters (timing, precision, ranges)
+- Error messages
+
+When adding new configurable values:
+
+1. Add the parameter to the appropriate `*/config/settings.py`
+2. Import and use it in Python code
+3. For JavaScript access, pass it via `get_ui_config()` and access via `LabConfig.get()`
+4. Add fallback defaults in `ui/js/config.js` for offline mode
+
 ## Project Structure
 
 ```
