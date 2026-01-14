@@ -53,7 +53,7 @@ JV_MEASUREMENT_CONFIG: Dict[str, Any] = {
 
     # Precision settings for data rounding
     "voltage_decimals": 2,              # Decimal places for voltage array rounding
-    "current_precision": "0.00001",     # Decimal precision string for current (mA)
+    "current_quantize_precision": "0.00001",  # Decimal precision string for Decimal quantization (mA)
 }
 
 

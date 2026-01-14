@@ -352,7 +352,7 @@ class JVMeasurementModel:
                 current_reading = self.controller.measure_current_precise()
 
                 # Convert to mA with proper rounding
-                precision = JV_MEASUREMENT_CONFIG.get("current_precision", "0.00001")
+                precision = JV_MEASUREMENT_CONFIG.get("current_quantize_precision", "0.00001")
                 current_mA = (current_reading * Decimal(10**3)).quantize(
                     Decimal(precision), rounding=ROUND_HALF_UP
                 )

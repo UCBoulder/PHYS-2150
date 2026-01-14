@@ -12,7 +12,7 @@ from pathlib import Path
 import re
 
 from ..config.settings import (
-    FILE_NAMING, DATA_EXPORT_CONFIG, VALIDATION_PATTERNS, ERROR_MESSAGES
+    DATA_EXPORT_CONFIG, VALIDATION_PATTERNS, ERROR_MESSAGES
 )
 
 
@@ -79,20 +79,23 @@ class DataHandler:
             raise DataValidationError(ERROR_MESSAGES["invalid_cell_number"])
         
         if pixel_number is not None and not DataHandler.validate_pixel_number(pixel_number):
-            raise DataValidationError(ERROR_MESSAGES["invalid_pixel_number"])
+            pixel_min, pixel_max = VALIDATION_PATTERNS["pixel_range"]
+            raise DataValidationError(
+                ERROR_MESSAGES["invalid_pixel_number"].format(min=pixel_min, max=pixel_max)
+            )
         
-        date = datetime.datetime.now().strftime(FILE_NAMING["date_format"])
-        
+        date = datetime.datetime.now().strftime(DATA_EXPORT_CONFIG["date_format"])
+
         if measurement_type == "power":
-            template = FILE_NAMING["power_file_template"]
+            template = DATA_EXPORT_CONFIG["power_file_template"]
             return template.format(date=date, cell_number=cell_number)
         elif measurement_type == "current":
             if pixel_number is None:
                 raise DataValidationError("Pixel number required for current measurements")
-            template = FILE_NAMING["current_file_template"]
+            template = DATA_EXPORT_CONFIG["current_file_template"]
             return template.format(date=date, cell_number=cell_number, pixel_number=pixel_number)
         elif measurement_type == "phase":
-            template = FILE_NAMING["phase_file_template"]
+            template = DATA_EXPORT_CONFIG["phase_file_template"]
             return template.format(date=date, cell_number=cell_number)
         else:
             raise DataValidationError(f"Unknown measurement type: {measurement_type}")

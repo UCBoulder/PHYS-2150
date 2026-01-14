@@ -432,8 +432,8 @@ class EQEApi(BaseWebApi):
         """Save power measurement data to file."""
         from datetime import datetime
 
-        date_str = datetime.now().strftime(settings.FILE_NAMING["date_format"])
-        default_filename = settings.FILE_NAMING["power_file_template"].format(
+        date_str = datetime.now().strftime(settings.DATA_EXPORT_CONFIG["date_format"])
+        default_filename = settings.DATA_EXPORT_CONFIG["power_file_template"].format(
             date=date_str, cell_number=cell_number
         )
 
@@ -459,8 +459,8 @@ class EQEApi(BaseWebApi):
         """Save current measurement data to file."""
         from datetime import datetime
 
-        date_str = datetime.now().strftime(settings.FILE_NAMING["date_format"])
-        default_filename = settings.FILE_NAMING["current_file_template"].format(
+        date_str = datetime.now().strftime(settings.DATA_EXPORT_CONFIG["date_format"])
+        default_filename = settings.DATA_EXPORT_CONFIG["current_file_template"].format(
             date=date_str, cell_number=cell_number, pixel_number=pixel
         )
 

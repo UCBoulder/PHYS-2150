@@ -117,15 +117,6 @@ FILTER_CONFIG = {
     3: {"name": "no filter", "wavelength_range": (0, FILTER_THRESHOLD_LOWER)},
 }
 
-# File naming conventions
-# Templates use Python string formatting: {variable} is replaced with actual value
-FILE_NAMING = {
-    "date_format": "%Y_%m_%d",  # strftime format for date portion of filename
-    "power_file_template": "{date}_power_cell{cell_number}.csv",           # Incident power vs wavelength
-    "current_file_template": "{date}_current_cell{cell_number}_pixel{pixel_number}.csv",  # Photocurrent vs wavelength
-    "phase_file_template": "{date}_phase_cell{cell_number}.csv",           # Phase adjustment results
-}
-
 # Lock-in Lab visualization settings
 # Controls waveform display in the Lock-in Lab educational tab
 LOCKINLAB_CONFIG = {
@@ -170,6 +161,12 @@ DATA_EXPORT_CONFIG = {
     # When True: exports mean, std_dev, n - teaches that uncertainty is part of measurement
     # When False: exports only mean value (legacy format, backwards compatible)
     "include_measurement_stats": True,
+    # File naming conventions
+    # Templates use Python string formatting: {variable} is replaced with actual value
+    "date_format": "%Y_%m_%d",  # strftime format for date portion of filename
+    "power_file_template": "{date}_power_cell{cell_number}.csv",
+    "current_file_template": "{date}_current_cell{cell_number}_pixel{pixel_number}.csv",
+    "phase_file_template": "{date}_phase_cell{cell_number}.csv",
     # Column headers for each measurement type's CSV output
     "headers": {
         "power": ["Wavelength (nm)", "Power (W)"],
@@ -191,7 +188,7 @@ VALIDATION_PATTERNS = {
 ERROR_MESSAGES = {
     "device_not_found": "Device not found. Please check the connection.",
     "invalid_cell_number": "Cell number must be a three-digit number (e.g., 167, 001, 999).",
-    "invalid_pixel_number": "Pixel number must be between 1 and 8.",
+    "invalid_pixel_number": "Pixel number must be between {min} and {max}.",
     "measurement_failed": "Measurement failed. Please check device connections.",
     "file_save_failed": "Failed to save file. Please check permissions and disk space.",
     "low_r_squared": "Is the lamp on? If it is, pixel {pixel} might be dead. Check in with a TA.",

@@ -12,12 +12,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - EQE and J-V window sizes now read from `GUI_CONFIG` in their respective settings.py files
 - EQE pixel range now uses `VALIDATION_PATTERNS["pixel_range"]` instead of hardcoded values
 - EQE Lock-in Lab waveform display points and FFT frequency limit now configurable via `LOCKINLAB_CONFIG`
+- EQE file naming templates moved from `FILE_NAMING` to `DATA_EXPORT_CONFIG` (consistent with J-V structure)
+- EQE `invalid_pixel_number` error message now uses `{min}/{max}` format string (consistent with J-V)
 - J-V voltage decimals and current precision now configurable via `JV_MEASUREMENT_CONFIG`
+- J-V `current_precision` renamed to `current_quantize_precision` in `JV_MEASUREMENT_CONFIG` (avoids confusion with `DATA_EXPORT_CONFIG["current_precision"]`)
 - J-V validation error messages now use `ERROR_MESSAGES` from settings.py
 
 ### Removed
 - SE (Standard Error) and CV% (Coefficient of Variation) from EQE measurement statistics display
 - SE and CV% columns from EQE current measurement CSV export (now: Wavelength, Current_mean, Current_std, n)
+- `FILE_NAMING` config from EQE settings.py (merged into `DATA_EXPORT_CONFIG`)
 
 ### Fixed
 - EQE data export filenames now follow documented convention (`YYYY_MM_DD_power_cell{N}.csv`, `YYYY_MM_DD_current_cell{N}_pixel{P}.csv`) using templates from settings.py
