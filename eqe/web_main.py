@@ -430,8 +430,10 @@ class EQEApi(BaseWebApi):
         """Save power measurement data to file."""
         from datetime import datetime
 
-        timestamp = datetime.now().strftime("%Y%m%d")
-        default_filename = f"power_cell{cell_number}_{timestamp}.csv"
+        date_str = datetime.now().strftime(settings.FILE_NAMING["date_format"])
+        default_filename = settings.FILE_NAMING["power_file_template"].format(
+            date=date_str, cell_number=cell_number
+        )
 
         file_path, _ = QFileDialog.getSaveFileName(
             self._window,
@@ -455,8 +457,10 @@ class EQEApi(BaseWebApi):
         """Save current measurement data to file."""
         from datetime import datetime
 
-        timestamp = datetime.now().strftime("%Y%m%d")
-        default_filename = f"current_cell{cell_number}_pixel{pixel}_{timestamp}.csv"
+        date_str = datetime.now().strftime(settings.FILE_NAMING["date_format"])
+        default_filename = settings.FILE_NAMING["current_file_template"].format(
+            date=date_str, cell_number=cell_number, pixel_number=pixel
+        )
 
         file_path, _ = QFileDialog.getSaveFileName(
             self._window,
