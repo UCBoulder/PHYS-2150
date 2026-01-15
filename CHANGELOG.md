@@ -8,8 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- J-V voltage stability test feature: monitors current stability at a fixed voltage over time with configurable duration and interval
+- Stability test tab in J-V interface with real-time plotting, statistics display (mean, std dev, CV%), and CSV export
 - Measurement statistics bar below both power and current plots showing readings count, wavelength, mean, std dev, and quality badge
 - SEM% (standard error of mean as percentage) property on MeasurementStats for quality assessment
+- Keithley 2450 measurement optimization methods: NPLC integration time, device-native source delay, trace buffer
+- J-V measurement statistics via trace buffer: takes 5 readings per voltage point, calculates mean, std_dev, SEM%
+- J-V quality thresholds in `JV_QUALITY_THRESHOLDS` config (excellent <0.1%, good <0.5%, fair <2% SEM%)
+- J-V stats callback for real-time measurement quality display
+- J-V measurement statistics bar below plot showing readings count, voltage, mean, std dev, and quality badge
 - Measurement-type-specific quality thresholds in `MEASUREMENT_QUALITY_THRESHOLDS` config
 - "Low signal" quality label for weak but valid signals below configurable threshold
 - Power measurement statistics display (previously only available for current measurements)
@@ -20,6 +27,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Toggle checkbox to show/hide error bars on EQE plot (only visible when uncertainty data available)
 
 ### Changed
+- J-V measurements now use Keithley trace buffer for multiple readings with statistics calculation
+- J-V dwell time replaced with device-native source delay (50ms default vs 500ms Python sleep)
+- J-V now takes 5 readings per point via trace buffer (returns individual readings for stats, not just mean)
 - EQE lock-in integration cycles reduced from 100 to 12 (~5x faster measurements, validated across wavelengths)
 - EQE fast measurement cycles reduced from 20 to 5 for quicker live monitoring
 - Measurement quality assessment now uses SEM% instead of CV% (better reflects uncertainty in the mean)

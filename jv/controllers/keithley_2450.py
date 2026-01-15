@@ -14,7 +14,7 @@ It does NOT contain experiment logic - that belongs in the Model layer.
 """
 
 import pyvisa as visa
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 from decimal import Decimal, ROUND_HALF_UP
 
 from ..config.settings import DEVICE_CONFIG
@@ -194,6 +194,69 @@ class Keithley2450Controller:
         else:
             self.write("SENS:CURR:RSEN OFF")
 
+    def configure_nplc(self, nplc: float = 1.0) -> None:
+        """
+        Configure integration time as Number of Power Line Cycles (NPLC).
+
+        Higher NPLC = longer integration = lower noise but slower measurements.
+        At 60 Hz power line: NPLC 1 = 16.67ms, NPLC 0.1 = 1.67ms
+
+        Args:
+            nplc: Integration time in power line cycles (0.01 to 10)
+                  - 0.01: Fastest, highest noise (~0.17ms at 60Hz)
+                  - 1.0: Default, good balance (~16.7ms at 60Hz)
+                  - 10: Slowest, lowest noise (~167ms at 60Hz)
+        """
+        # Clamp to valid range
+        nplc = max(0.01, min(10.0, nplc))
+        self.write(f"SENS:CURR:NPLC {nplc}")
+
+    def configure_averaging(
+        self,
+        count: int = 1,
+        filter_type: str = "REPEAT"
+    ) -> None:
+        """
+        Configure measurement averaging (digital filter).
+
+        When enabled, the Keithley internally averages multiple readings
+        per measurement query, reducing noise by approximately sqrt(count).
+
+        Args:
+            count: Number of readings to average (1 = disabled, 2-100 enabled)
+                   - 1: No averaging (fastest)
+                   - 10: Good noise reduction with reasonable speed
+                   - 100: Maximum averaging (slowest)
+            filter_type: "REPEAT" or "MOVING"
+                   - REPEAT: Takes N readings, averages, returns result
+                   - MOVING: Running average of last N readings
+        """
+        if count <= 1:
+            self.write("SENS:CURR:AVER:STATE OFF")
+        else:
+            count = min(100, max(2, count))  # Clamp to valid range
+            self.write("SENS:CURR:AVER:STATE ON")
+            self.write(f"SENS:CURR:AVER:COUNT {count}")
+            self.write(f"SENS:CURR:AVER:TCON {filter_type}")
+
+    def configure_source_delay(self, delay_s: float = 0.0) -> None:
+        """
+        Configure source delay (settling time after voltage change).
+
+        This is a device-native delay that occurs after setting voltage
+        but before measurement. More precise than Python time.sleep().
+
+        Args:
+            delay_s: Delay time in seconds (0 to 10000)
+                     Set to 0 for auto-delay (device determines optimal delay)
+        """
+        if delay_s <= 0:
+            # Use auto-delay - device determines optimal settling time
+            self.write("SOUR:VOLT:DEL:AUTO ON")
+        else:
+            self.write("SOUR:VOLT:DEL:AUTO OFF")
+            self.write(f"SOUR:VOLT:DEL {delay_s}")
+
     def set_voltage(self, voltage: float) -> None:
         """
         Set the source voltage.
@@ -222,6 +285,53 @@ class Keithley2450Controller:
         """
         response = self.query("MEAS:CURR?")
         return Decimal(response)
+
+    def measure_current_multiple(self, count: int = 5) -> List[float]:
+        """
+        Take multiple current measurements and return all individual readings.
+
+        Uses the Keithley's trace buffer to efficiently capture multiple
+        readings at the current voltage. This allows calculation of statistics
+        (mean, std_dev) for data quality assessment.
+
+        Args:
+            count: Number of measurements to take (1-100)
+
+        Returns:
+            List[float]: List of current readings in Amps
+        """
+        count = max(1, min(100, count))  # Clamp to valid range
+
+        # Clear buffer and configure for multiple readings
+        self.write("TRAC:CLE 'defbuffer1'")
+        self.write(f"TRAC:POIN 'defbuffer1', {count}")
+
+        # Configure trigger model for simple count-based acquisition
+        # This takes 'count' measurements as fast as possible
+        self.write("TRIG:LOAD 'SimpleLoop', " + str(count))
+
+        # Initiate measurement sequence
+        self.write("INIT")
+
+        # Wait for all measurements to complete
+        self.query("*OPC?")
+
+        # Read all current values from buffer
+        # Format: returns comma-separated values
+        response = self.query(f"TRAC:DATA? 1, {count}, 'defbuffer1', SOUR, READ")
+
+        # Parse response - format is "voltage,current,voltage,current,..."
+        values = response.split(",")
+
+        # Extract just the current readings (every other value starting at index 1)
+        currents = []
+        for i in range(1, len(values), 2):
+            try:
+                currents.append(float(values[i]))
+            except (ValueError, IndexError):
+                pass
+
+        return currents
 
     def output_on(self) -> None:
         """Enable the output."""
@@ -266,22 +376,34 @@ class Keithley2450Controller:
         current_range: float = 10,
         current_limit: float = 1,
         remote_sensing: bool = True,
+        nplc: float = 1.0,
+        averaging_count: int = 1,
+        averaging_filter: str = "REPEAT",
+        source_delay_s: float = 0.0,
     ) -> None:
         """
         Configure device for J-V characterization measurement.
 
         This is a convenience method that sets up all necessary parameters
-        for a typical solar cell J-V measurement.
+        for a typical solar cell J-V measurement, including advanced features
+        for noise reduction and measurement consistency.
 
         Args:
             voltage_range: Voltage source range in Volts
             current_range: Current measurement range in mA
             current_limit: Current compliance limit in Amps
             remote_sensing: Enable 4-wire sensing
+            nplc: Integration time in power line cycles (0.01-10, higher=lower noise)
+            averaging_count: Number of readings to average (1=disabled, 2-100)
+            averaging_filter: Averaging type ("REPEAT" or "MOVING")
+            source_delay_s: Device-native settling delay after voltage change (0=auto)
         """
         self.reset()
         self.configure_current_measurement(current_range, remote_sensing)
         self.configure_voltage_source(voltage_range, current_limit)
+        self.configure_nplc(nplc)
+        self.configure_averaging(averaging_count, averaging_filter)
+        self.configure_source_delay(source_delay_s)
         self.output_on()
 
     def __enter__(self):

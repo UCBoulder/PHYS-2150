@@ -265,6 +265,44 @@ body.jv-body {
 
 
 /* ============================================
+   Measurement Stats Bar (Below Plot)
+   ============================================ */
+
+.measurement-stats-bar {
+    display: flex;
+    gap: 20px;
+    padding: 8px 12px;
+    border-top: 1px solid var(--gray-400);
+    align-items: center;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+    min-height: 32px;
+}
+
+.measurement-stat {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.measurement-stat-label {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.measurement-stat-value {
+    font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+    font-size: 13px;
+    color: var(--text-primary);
+}
+
+/* Right-align quality badge in stats bar */
+#jv-stats-row .measurement-stat:last-child {
+    margin-left: auto;
+}
+
+
+/* ============================================
    Buttons Row
    ============================================ */
 

@@ -19,14 +19,16 @@ from PySide6.QtCore import QObject, Signal
 
 from ..controllers.keithley_2450 import Keithley2450Controller, Keithley2450Error
 from ..models.jv_measurement import JVMeasurementModel, JVMeasurementResult
+from ..models.jv_stability_test import JVStabilityTestModel
 from ..config.settings import (
     DEFAULT_MEASUREMENT_PARAMS,
     JV_MEASUREMENT_CONFIG,
+    JV_STABILITY_TEST_CONFIG,
     VALIDATION_PATTERNS,
     ERROR_MESSAGES,
 )
 from ..config import settings
-from common.utils import get_logger
+from common.utils import get_logger, MeasurementStats
 import re
 
 # Module-level logger for J-V experiment
@@ -50,7 +52,14 @@ class JVExperimentModel(QObject):
     device_status_changed = Signal(bool, str)  # is_connected, message
     measurement_progress = Signal(str, int, int, float, float)  # direction, current, total, V, I
     measurement_point = Signal(str, float, float)  # direction, voltage, current
+    measurement_stats = Signal(str, float, object)  # direction, voltage, MeasurementStats
     measurement_complete = Signal(bool, object)  # success, result
+
+    # Stability test signals
+    stability_measurement_point = Signal(float, float, float)  # timestamp, voltage, current
+    stability_complete = Signal(bool)  # success
+    stability_error = Signal(str)  # error_message
+    stability_status = Signal(str)  # status_message
 
     def __init__(self):
         """Initialize the JV experiment model."""
@@ -64,6 +73,9 @@ class JVExperimentModel(QObject):
 
         # Measurement model
         self.measurement_model: Optional[JVMeasurementModel] = None
+
+        # Stability test model
+        self.stability_model: Optional[JVStabilityTestModel] = None
 
         # Experiment state
         self._device_initialized = False
@@ -108,7 +120,20 @@ class JVExperimentModel(QObject):
             # Wire up callbacks
             self.measurement_model.set_progress_callback(self._on_measurement_progress)
             self.measurement_model.set_point_callback(self._on_measurement_point)
+            self.measurement_model.set_stats_callback(self._on_measurement_stats)
             self.measurement_model.set_completion_callback(self._on_measurement_complete)
+
+            # Create stability test model
+            self.stability_model = JVStabilityTestModel(
+                self.controller,
+                JV_STABILITY_TEST_CONFIG.copy(),
+            )
+
+            # Wire up stability test callbacks
+            self.stability_model.set_measurement_callback(self._on_stability_measurement)
+            self.stability_model.set_completion_callback(self._on_stability_complete)
+            self.stability_model.set_error_callback(self._on_stability_error)
+            self.stability_model.set_status_callback(self._on_stability_status)
 
             self._device_initialized = True
             self.device_status_changed.emit(
@@ -280,6 +305,15 @@ class JVExperimentModel(QObject):
         """Handle individual measurement point (for real-time plotting)."""
         self.measurement_point.emit(direction, voltage, current)
 
+    def _on_measurement_stats(
+        self,
+        direction: str,
+        voltage: float,
+        stats: MeasurementStats,
+    ) -> None:
+        """Handle measurement statistics for data quality display."""
+        self.measurement_stats.emit(direction, voltage, stats)
+
     def _on_measurement_complete(
         self,
         success: bool,
@@ -288,6 +322,104 @@ class JVExperimentModel(QObject):
         """Handle measurement completion."""
         self.measurement_complete.emit(success, result)
 
+    # ========================================================================
+    # Stability Test Methods
+    # ========================================================================
+
+    def start_stability_test(
+        self,
+        target_voltage: float,
+        duration_min: float,
+        interval_sec: float,
+        pixel_number: int
+    ) -> bool:
+        """
+        Start a voltage stability test.
+
+        Args:
+            target_voltage: Target voltage in V
+            duration_min: Test duration in minutes
+            interval_sec: Measurement interval in seconds
+            pixel_number: Pixel number
+
+        Returns:
+            bool: True if test started successfully
+
+        Raises:
+            JVExperimentError: If test cannot be started
+        """
+        if settings.OFFLINE_MODE:
+            raise JVExperimentError("Cannot perform stability test in OFFLINE mode")
+
+        if not self._device_initialized:
+            raise JVExperimentError("Device not initialized")
+
+        if not self.stability_model:
+            raise JVExperimentError("Stability test model not initialized")
+
+        if self.stability_model.is_running():
+            raise JVExperimentError("Stability test already in progress")
+
+        if self.is_measuring():
+            raise JVExperimentError("Cannot start stability test during measurement")
+
+        # Validate parameters
+        if not (-1.0 <= target_voltage <= 2.0):
+            raise JVExperimentError(f"Target voltage {target_voltage}V out of safe range (-1.0 to 2.0V)")
+
+        duration_range = JV_STABILITY_TEST_CONFIG.get("duration_range", (1, 60))
+        if not (duration_range[0] <= duration_min <= duration_range[1]):
+            raise JVExperimentError(
+                f"Duration {duration_min} min out of range ({duration_range[0]}-{duration_range[1]} min)"
+            )
+
+        interval_range = JV_STABILITY_TEST_CONFIG.get("interval_range", (0.5, 60))
+        if not (interval_range[0] <= interval_sec <= interval_range[1]):
+            raise JVExperimentError(
+                f"Interval {interval_sec} sec out of range ({interval_range[0]}-{interval_range[1]} sec)"
+            )
+
+        # Start test
+        _logger.info(
+            f"Starting stability test: {target_voltage}V, {duration_min} min, {interval_sec} sec interval"
+        )
+        self.stability_model.start_test(target_voltage, duration_min, interval_sec, pixel_number)
+        return True
+
+    def stop_stability_test(self) -> None:
+        """Stop the current stability test."""
+        if self.stability_model:
+            self.stability_model.stop_test()
+
+    def is_stability_test_running(self) -> bool:
+        """
+        Check if stability test is running.
+
+        Returns:
+            bool: True if test is running
+        """
+        if self.stability_model:
+            return self.stability_model.is_running()
+        return False
+
+    # Stability test callback handlers (marshal from worker thread to Qt signals)
+
+    def _on_stability_measurement(self, timestamp: float, voltage: float, current: float) -> None:
+        """Handle stability test measurement point."""
+        self.stability_measurement_point.emit(timestamp, voltage, current)
+
+    def _on_stability_complete(self, success: bool) -> None:
+        """Handle stability test completion."""
+        self.stability_complete.emit(success)
+
+    def _on_stability_error(self, error_message: str) -> None:
+        """Handle stability test error."""
+        self.stability_error.emit(error_message)
+
+    def _on_stability_status(self, status_message: str) -> None:
+        """Handle stability test status update."""
+        self.stability_status.emit(status_message)
+
     def cleanup(self) -> None:
         """Clean up resources and disconnect device."""
         try:
@@ -295,6 +427,13 @@ class JVExperimentModel(QObject):
             if self.measurement_model and self.measurement_model.is_measuring():
                 self.measurement_model.stop_measurement()
                 self.measurement_model.wait_for_completion(timeout=5)
+
+            # Stop any running stability test
+            if self.stability_model and self.stability_model.is_running():
+                self.stability_model.stop_test()
+                # Give it a moment to clean up
+                import time
+                time.sleep(0.5)
 
             # Disconnect controller
             if self.controller:

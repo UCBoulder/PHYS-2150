@@ -26,9 +26,29 @@ DEFAULT_MEASUREMENT_PARAMS: Dict[str, Any] = {
 # J-V measurement configuration
 # Timing and acquisition parameters for the voltage sweep
 JV_MEASUREMENT_CONFIG: Dict[str, Any] = {
-    # Dwell time after setting voltage before measuring current
-    # Allows cell to stabilize - important for perovskite hysteresis
-    "dwell_time_ms": 500,
+    # Number of current measurements per voltage point
+    # Multiple measurements allow calculation of statistics (mean, std_dev, SEM%)
+    # Using trace buffer for efficient multi-reading acquisition
+    "num_measurements": 5,
+
+    # Device-native source delay after setting voltage (seconds)
+    # This replaces Python time.sleep() for more precise timing
+    # Set to 0 for auto-delay (device determines optimal settling time)
+    # Typical values: 0.01-0.05s for fast scans, 0.1-0.5s for precision
+    "source_delay_s": 0.05,
+
+    # Integration time as Number of Power Line Cycles (NPLC)
+    # Higher NPLC = longer integration = lower noise but slower
+    # At 60 Hz: NPLC 1 = 16.7ms, NPLC 0.1 = 1.67ms, NPLC 10 = 167ms
+    # Recommended: 1.0 for balance, 0.1 for speed, 10 for precision
+    "nplc": 1.0,
+
+    # Device averaging is disabled (set to 1) when using trace buffer
+    # We take multiple individual readings instead to get statistics
+    "averaging_count": 1,
+
+    # Averaging filter type (unused when averaging_count=1)
+    "averaging_filter": "REPEAT",
 
     # Initial stabilization time at start voltage before sweep begins
     "initial_stabilization_s": 2.0,
@@ -54,6 +74,52 @@ JV_MEASUREMENT_CONFIG: Dict[str, Any] = {
     # Precision settings for data rounding
     "voltage_decimals": 2,              # Decimal places for voltage array rounding
     "current_quantize_precision": "0.00001",  # Decimal precision string for Decimal quantization (mA)
+}
+
+
+# J-V Stability Test configuration
+# Voltage stability testing at a fixed voltage over time
+JV_STABILITY_TEST_CONFIG: Dict[str, Any] = {
+    # UI defaults
+    "default_target_voltage": 0.5,     # V - typical operating voltage
+    "default_duration_min": 5,          # minutes - default test duration
+    "duration_range": (1, 60),          # minutes - valid range (min, max)
+    "default_interval_sec": 2,          # seconds - default measurement interval
+    "interval_range": (0.5, 60),        # seconds - valid range (min, max)
+
+    # Sweep parameters (start → target)
+    "sweep_start_voltage": -0.2,        # V - starting voltage before sweeping to target
+    "sweep_step_voltage": 0.05,         # V - step size during sweep to target
+    "sweep_delay_s": 0.1,               # seconds - delay between sweep steps
+
+    # Stabilization times
+    "initial_stabilization_s": 2.0,     # seconds - wait at start voltage before sweep
+    "target_stabilization_s": 2.0,      # seconds - wait at target voltage before measurements
+
+    # Measurement configuration (reuse from JV_MEASUREMENT_CONFIG)
+    "num_measurements": 5,              # Number of current measurements per point
+    "nplc": 1.0,                        # Integration time (NPLC)
+    "averaging_count": 1,               # Device averaging (1 = use trace buffer instead)
+    "averaging_filter": "REPEAT",       # Filter type (unused when averaging_count=1)
+    "source_delay_s": 0.05,             # Device-native source delay
+
+    # Device configuration (same as regular measurement)
+    "current_range": 10,                # mA scale
+    "voltage_range": 2,                 # V range
+    "current_compliance": 1,            # A compliance limit
+    "remote_sensing": True,             # 4-wire sensing
+}
+
+# Measurement quality thresholds based on SEM% (standard error of mean as % of mean)
+# J-V measurements have different characteristics than EQE:
+# - Continuous DC measurement (no chopping/lock-in)
+# - Very low noise floor with Keithley 2450
+# - Current varies over orders of magnitude across voltage sweep
+JV_QUALITY_THRESHOLDS: Dict[str, Any] = {
+    "excellent": 0.1,    # SEM% < 0.1% - excellent precision
+    "good": 0.5,         # SEM% < 0.5% - good for most measurements
+    "fair": 2.0,         # SEM% < 2% - acceptable for low-current regions
+    # SEM% >= 2% = "Check measurement"
 }
 
 
@@ -129,6 +195,14 @@ DATA_EXPORT_CONFIG: Dict[str, Any] = {
     # CSV column headers for raw/sequential format (direction column)
     "headers_raw": {
         "direction": "Direction",
+        "voltage": "Voltage (V)",
+        "current": "Current (mA)",
+    },
+
+    # Stability test file naming and headers
+    "stability_file_template": "{date}_stability_cell{cell_number}_pixel{pixel_number}_{voltage}V.csv",
+    "headers_stability": {
+        "timestamp": "Timestamp (s)",
         "voltage": "Voltage (V)",
         "current": "Current (mA)",
     },

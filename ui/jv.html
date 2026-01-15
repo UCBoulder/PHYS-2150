@@ -29,6 +29,7 @@
         <!-- Tab Bar -->
         <div class="tab-bar" role="tablist" aria-label="Application views">
             <button class="tab-btn active" role="tab" id="tab-measurement-btn" aria-selected="true" aria-controls="tab-measurement" onclick="switchTab('measurement')">Measurement</button>
+            <button class="tab-btn" role="tab" id="tab-stability-btn" aria-selected="false" aria-controls="tab-stability" onclick="switchTab('stability')">Stability Test</button>
             <button class="tab-btn staff-tab" role="tab" id="analysis-tab-btn" aria-selected="false" aria-controls="tab-analysis"
                     onclick="switchTab('analysis')" style="display: none;">
                 I-V Analysis
@@ -110,6 +111,27 @@
                 <div class="plot-container">
                     <div id="jv-plot" class="plot"></div>
                 </div>
+                <div class="measurement-stats-bar" id="jv-stats-row">
+                    <div class="measurement-stat">
+                        <span class="measurement-stat-label">Readings:</span>
+                        <span class="measurement-stat-value" id="jv-stats-n">--</span>
+                    </div>
+                    <div class="measurement-stat">
+                        <span class="measurement-stat-label">Voltage:</span>
+                        <span class="measurement-stat-value" id="jv-stats-voltage">--</span>
+                    </div>
+                    <div class="measurement-stat">
+                        <span class="measurement-stat-label">Mean:</span>
+                        <span class="measurement-stat-value" id="jv-stats-mean">--</span>
+                    </div>
+                    <div class="measurement-stat">
+                        <span class="measurement-stat-label">Std Dev:</span>
+                        <span class="measurement-stat-value" id="jv-stats-std">--</span>
+                    </div>
+                    <div class="measurement-stat">
+                        <span class="quality-badge" id="jv-stats-quality">--</span>
+                    </div>
+                </div>
             </div>
 
             <!-- Action Buttons -->
@@ -122,6 +144,87 @@
                 </button>
             </div>
         </div>
+
+        <!-- ============================================
+             STABILITY TEST TAB
+             ============================================ -->
+        <div id="tab-stability" class="tab-content" role="tabpanel" aria-labelledby="tab-stability-btn">
+
+            <!-- Stability Test Configuration -->
+            <div class="params-panel">
+                <div class="panel-title">Test Parameters</div>
+                <div class="params-grid">
+                    <div class="param-field">
+                        <label for="stability-target-voltage">Target Voltage (V)</label>
+                        <input type="number" id="stability-target-voltage" step="0.1" value="0.5"
+                               aria-label="Target voltage in volts">
+                    </div>
+                    <div class="param-field">
+                        <label for="stability-duration">Duration (min)</label>
+                        <input type="number" id="stability-duration" step="1" value="5" min="1" max="60"
+                               aria-label="Test duration in minutes">
+                    </div>
+                    <div class="param-field">
+                        <label for="stability-interval">Interval (sec)</label>
+                        <input type="number" id="stability-interval" step="0.5" value="2" min="0.5" max="60"
+                               aria-label="Measurement interval in seconds">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress Panel -->
+            <div class="progress-panel">
+                <div class="panel-title">Status</div>
+                <div class="progress-content">
+                    <div class="progress-status" id="stability-status" role="status" aria-live="polite">Ready</div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar">
+                            <div class="progress-bar-fill" id="stability-progress-fill" style="width: 0%"></div>
+                        </div>
+                        <span class="progress-percent" id="stability-progress-percent">0%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stability Test Plot -->
+            <div class="plot-panel">
+                <div class="plot-container">
+                    <div id="stability-plot" class="plot" role="img" aria-label="Stability test plot"></div>
+                </div>
+                <div class="measurement-stats-bar" id="stability-stats-row">
+                    <div class="measurement-stat">
+                        <span class="measurement-stat-label">Mean:</span>
+                        <span class="measurement-stat-value" id="stability-mean">--</span>
+                    </div>
+                    <div class="measurement-stat">
+                        <span class="measurement-stat-label">Std Dev:</span>
+                        <span class="measurement-stat-value" id="stability-std">--</span>
+                    </div>
+                    <div class="measurement-stat">
+                        <span class="measurement-stat-label">CV%:</span>
+                        <span class="measurement-stat-value" id="stability-cv">--</span>
+                    </div>
+                    <div class="measurement-stat">
+                        <span class="measurement-stat-label">Count:</span>
+                        <span class="measurement-stat-value" id="stability-count">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="buttons-row">
+                <button class="btn btn-primary" id="stability-start-btn" onclick="startStabilityTest()">
+                    Start Test
+                </button>
+                <button class="btn btn-danger" id="stability-stop-btn" onclick="stopStabilityTest()" disabled>
+                    Stop Test
+                </button>
+                <button class="btn btn-secondary" id="stability-save-btn" onclick="saveStabilityData()" disabled>
+                    Save Data
+                </button>
+            </div>
+
+        </div><!-- End Stability Tab -->
 
         <!-- ============================================
              ANALYSIS TAB (Staff Mode)

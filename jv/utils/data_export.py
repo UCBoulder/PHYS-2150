@@ -185,3 +185,69 @@ class JVDataExporter:
         }
 
         return pd.DataFrame(data)
+
+    def save_stability_test(
+        self,
+        timestamps: list,
+        voltages: list,
+        currents: list,
+        file_path: str,
+    ) -> None:
+        """
+        Save stability test data to CSV file.
+
+        Args:
+            timestamps: List of timestamps (seconds since start)
+            voltages: List of voltages (V)
+            currents: List of currents (mA)
+            file_path: Path to save the CSV file
+        """
+        headers = self.config.get("headers_stability", {})
+        timestamp_header = headers.get("timestamp", "Timestamp (s)")
+        voltage_header = headers.get("voltage", "Voltage (V)")
+        current_header = headers.get("current", "Current (mA)")
+
+        # Create DataFrame
+        df = pd.DataFrame({
+            timestamp_header: timestamps,
+            voltage_header: voltages,
+            current_header: currents,
+        })
+
+        # Save to CSV
+        df.to_csv(file_path, index=False)
+
+    def generate_stability_filename(
+        self,
+        cell_number: str,
+        pixel_number: int,
+        voltage: float,
+    ) -> str:
+        """
+        Generate a filename for stability test data.
+
+        Args:
+            cell_number: Cell identifier
+            pixel_number: Pixel number
+            voltage: Test voltage
+
+        Returns:
+            str: Generated filename
+        """
+        date_format = self.config.get("date_format", "%Y_%m_%d")
+        date_str = datetime.datetime.now().strftime(date_format)
+
+        template = self.config.get(
+            "stability_file_template",
+            "{date}_stability_cell{cell_number}_pixel{pixel_number}_{voltage}V.csv"
+        )
+
+        # Format voltage for filename (replace decimal point with underscore)
+        voltage_str = f"{voltage:.2f}".replace('.', '_')
+
+        return template.format(
+            date=date_str,
+            cell_number=cell_number,
+            pixel_number=pixel_number,
+            voltage=voltage_str
+        )

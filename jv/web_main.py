@@ -43,8 +43,15 @@ class JVApi(BaseWebApi):
     # marshal them to the main thread before calling run_js()
     _measurement_point_signal = Signal(str, float, float)  # direction, voltage, current
     _measurement_progress_signal = Signal(str, int, int, float, float)  # direction, current, total, V, I
+    _measurement_stats_signal = Signal(str, float, object)  # direction, voltage, stats
     _measurement_complete_signal = Signal(bool, object)  # success, result
     _device_status_signal = Signal(bool, str)  # connected, message
+
+    # Stability test signals
+    _stability_measurement_signal = Signal(float, float, float)  # timestamp, voltage, current
+    _stability_complete_signal = Signal(bool)  # success
+    _stability_error_signal = Signal(str)  # error_message
+    _stability_status_signal = Signal(str)  # status_message
 
     def __init__(self, window: 'JVWebWindow'):
         super().__init__(window)
@@ -55,8 +62,15 @@ class JVApi(BaseWebApi):
         # Connect internal signals to slots for thread-safe JavaScript calls
         self._measurement_point_signal.connect(self._emit_measurement_point)
         self._measurement_progress_signal.connect(self._emit_measurement_progress)
+        self._measurement_stats_signal.connect(self._emit_measurement_stats)
         self._measurement_complete_signal.connect(self._emit_measurement_complete)
         self._device_status_signal.connect(self._emit_device_status)
+
+        # Connect stability test signals
+        self._stability_measurement_signal.connect(self._emit_stability_measurement)
+        self._stability_complete_signal.connect(self._emit_stability_complete)
+        self._stability_error_signal.connect(self._emit_stability_error)
+        self._stability_status_signal.connect(self._emit_stability_status)
 
     def set_experiment(self, experiment: JVExperimentModel) -> None:
         """Set the experiment model and connect signals."""
@@ -65,8 +79,15 @@ class JVApi(BaseWebApi):
         # Connect model signals to push data to JS
         self._experiment.measurement_point.connect(self._on_measurement_point)
         self._experiment.measurement_progress.connect(self._on_measurement_progress)
+        self._experiment.measurement_stats.connect(self._on_measurement_stats)
         self._experiment.measurement_complete.connect(self._on_measurement_complete)
         self._experiment.device_status_changed.connect(self._on_device_status_changed)
+
+        # Connect stability test signals
+        self._experiment.stability_measurement_point.connect(self._on_stability_measurement)
+        self._experiment.stability_complete.connect(self._on_stability_complete)
+        self._experiment.stability_error.connect(self._on_stability_error)
+        self._experiment.stability_status.connect(self._on_stability_status)
 
     @Slot(result=str)
     def get_device_status(self) -> str:
@@ -274,6 +295,96 @@ class JVApi(BaseWebApi):
 
         return json.dumps({"success": False, "message": "Cancelled"})
 
+    # ========================================================================
+    # Stability Test API Methods
+    # ========================================================================
+
+    @Slot(str, result=str)
+    def start_stability_test(self, params_json: str) -> str:
+        """
+        Start a voltage stability test.
+
+        Args:
+            params_json: JSON with {target_voltage, duration, interval, pixel, cell_number}
+
+        Returns:
+            JSON string with success status
+        """
+        if not self._experiment:
+            return json.dumps({"success": False, "message": "No experiment model"})
+
+        try:
+            params = json.loads(params_json)
+
+            # Log to console
+            self._window.send_log(
+                'info',
+                f"Starting stability test at {params['target_voltage']}V for {params['duration']} min"
+            )
+
+            # Start test
+            self._experiment.start_stability_test(
+                target_voltage=params["target_voltage"],
+                duration_min=params["duration"],
+                interval_sec=params["interval"],
+                pixel_number=params["pixel"]
+            )
+            return json.dumps({"success": True})
+
+        except JVExperimentError as e:
+            self._window.send_log('error', f"Stability test failed: {e}")
+            return json.dumps({"success": False, "message": str(e)})
+        except Exception as e:
+            _logger.error(f"Stability test start failed: {e}")
+            self._window.send_log('error', f"Stability test failed: {e}")
+            return json.dumps({"success": False, "message": str(e)})
+
+    @Slot(result=str)
+    def stop_stability_test(self) -> str:
+        """Stop the running stability test."""
+        if self._experiment:
+            self._experiment.stop_stability_test()
+        return json.dumps({"success": True})
+
+    @Slot(str, result=str)
+    def save_stability_data(self, csv_content: str) -> str:
+        """
+        Save stability test data to file.
+
+        Args:
+            csv_content: CSV string to save
+
+        Returns:
+            JSON string with success status and file path
+        """
+        from datetime import datetime
+
+        # Generate default filename
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        default_filename = f"stability_{timestamp}.csv"
+
+        # Show save dialog
+        file_path, _ = QFileDialog.getSaveFileName(
+            self._window,
+            "Save Stability Test Data",
+            default_filename,
+            "CSV files (*.csv)"
+        )
+
+        if file_path:
+            try:
+                with open(file_path, 'w', newline='') as f:
+                    f.write(csv_content)
+                return json.dumps({"success": True, "path": file_path})
+            except Exception as e:
+                return json.dumps({"success": False, "message": str(e)})
+
+        return json.dumps({"success": False, "message": "Cancelled"})
+
+    # ========================================================================
+    # Measurement Forwarder Methods (worker thread → main thread marshaling)
+    # ========================================================================
+
     def _on_measurement_point(self, direction: str, voltage: float, current: float) -> None:
         """Forward measurement point to JS (called from worker thread via Qt signal)."""
         # Emit internal signal to marshal to main thread
@@ -286,6 +397,11 @@ class JVApi(BaseWebApi):
         # Emit internal signal to marshal to main thread
         self._measurement_progress_signal.emit(direction, current_point, total_points, voltage, current)
 
+    def _on_measurement_stats(self, direction: str, voltage: float, stats) -> None:
+        """Forward measurement statistics to JS (called from worker thread via Qt signal)."""
+        # Emit internal signal to marshal to main thread
+        self._measurement_stats_signal.emit(direction, voltage, stats)
+
     def _on_measurement_complete(self, success: bool, result: JVMeasurementResult) -> None:
         """Forward measurement completion to JS (called from worker thread via Qt signal)."""
         # Store result before emitting signal (thread-safe since Python GIL)
@@ -297,6 +413,28 @@ class JVApi(BaseWebApi):
         """Forward device status change to JS (may be called from worker thread)."""
         # Emit internal signal to marshal to main thread
         self._device_status_signal.emit(connected, message)
+
+    # Stability test forwarder methods
+
+    def _on_stability_measurement(self, timestamp: float, voltage: float, current: float) -> None:
+        """Forward stability measurement to JS (called from worker thread via Qt signal)."""
+        self._stability_measurement_signal.emit(timestamp, voltage, current)
+
+    def _on_stability_complete(self, success: bool) -> None:
+        """Forward stability completion to JS (called from worker thread via Qt signal)."""
+        self._stability_complete_signal.emit(success)
+
+    def _on_stability_error(self, error_message: str) -> None:
+        """Forward stability error to JS (called from worker thread via Qt signal)."""
+        self._stability_error_signal.emit(error_message)
+
+    def _on_stability_status(self, status_message: str) -> None:
+        """Forward stability status to JS (called from worker thread via Qt signal)."""
+        self._stability_status_signal.emit(status_message)
+
+    # ========================================================================
+    # Emitter Methods (main thread → JavaScript)
+    # ========================================================================
 
     @QtSlot(str, float, float)
     def _emit_measurement_point(self, direction: str, voltage: float, current: float) -> None:
@@ -314,6 +452,24 @@ class JVApi(BaseWebApi):
         direction_label = "Forward" if direction == "forward" else "Reverse"
         message = f"{direction_label}: {voltage:.2f} V"
         js = f"onMeasurementProgress({percent}, {json.dumps(message)})"
+        self._window.run_js(js)
+
+    @QtSlot(str, float, object)
+    def _emit_measurement_stats(self, direction: str, voltage: float, stats) -> None:
+        """Emit measurement statistics to JS (runs on main thread)."""
+        # Convert MeasurementStats to dict for JSON serialization
+        stats_dict = {
+            'direction': direction,
+            'voltage': voltage,
+            'mean': stats.mean,
+            'std_dev': stats.std_dev,
+            'std_error': stats.std_error,
+            'sem_percent': stats.sem_percent,
+            'n': stats.n_measurements,
+            'quality': stats.quality,
+            'unit': stats.unit
+        }
+        js = f"onMeasurementStats({json.dumps(stats_dict)})"
         self._window.run_js(js)
 
     @QtSlot(bool, object)
@@ -336,6 +492,35 @@ class JVApi(BaseWebApi):
         else:
             _logger.warning(f"Device: {message}")
         js = f"updateDeviceStatus({str(connected).lower()}, {json.dumps(message)})"
+        self._window.run_js(js)
+
+    # Stability test emitter methods
+
+    @QtSlot(float, float, float)
+    def _emit_stability_measurement(self, timestamp: float, voltage: float, current: float) -> None:
+        """Emit stability measurement to JS (runs on main thread)."""
+        js = f"onStabilityMeasurement({timestamp}, {voltage}, {current})"
+        self._window.run_js(js)
+
+    @QtSlot(bool)
+    def _emit_stability_complete(self, success: bool) -> None:
+        """Emit stability completion to JS (runs on main thread)."""
+        js = f"onStabilityComplete({str(success).lower()})"
+        self._window.run_js(js)
+
+    @QtSlot(str)
+    def _emit_stability_error(self, error_message: str) -> None:
+        """Emit stability error to JS (runs on main thread)."""
+        # Escape for JSON
+        error_escaped = error_message.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
+        js = f'onStabilityError("{error_escaped}")'
+        self._window.run_js(js)
+
+    @QtSlot(str)
+    def _emit_stability_status(self, status_message: str) -> None:
+        """Emit stability status to JS (runs on main thread)."""
+        status_escaped = status_message.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
+        js = f'onStabilityStatus("{status_escaped}")'
         self._window.run_js(js)
 
 

@@ -18,11 +18,21 @@ import {
 
 let isMeasuring = false;
 let currentPixel = null;
-let forwardData = { x: [], y: [] };
-let reverseData = { x: [], y: [] };
+let forwardData = { x: [], y: [], stats: [] };
+let reverseData = { x: [], y: [], stats: [] };
 let isOfflineMode = false;
 let isDeviceConnected = false;
 let activeTab = 'measurement';
+
+// Stability test state
+let stabilityTestRunning = false;
+let stabilityData = {
+    timestamps: [],
+    voltages: [],
+    currents: []
+};
+let stabilityStartTime = null;
+let stabilityDuration = 0; // minutes
 
 // Analysis state
 const analysisState = {
@@ -111,6 +121,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Small delay to ensure Plotly is ready
     setTimeout(() => {
         initPlot();
+        initStabilityPlot();
         // Ensure plots match current theme (handles theme passed from launcher)
         const isDark = LabTheme.isDark();
         window.dispatchEvent(new CustomEvent('themechange', { detail: { dark: isDark } }));
@@ -191,6 +202,8 @@ window.addEventListener('resize', () => {
     if (typeof Plotly !== 'undefined') {
         if (activeTab === 'measurement') {
             Plotly.Plots.resize('jv-plot');
+        } else if (activeTab === 'stability') {
+            Plotly.Plots.resize('stability-plot');
         } else if (activeTab === 'analysis') {
             Plotly.Plots.resize('iv-analysis-plot');
         }
@@ -201,6 +214,10 @@ window.addEventListener('themechange', (e) => {
     const plotDiv = document.getElementById('jv-plot');
     if (typeof Plotly !== 'undefined' && plotDiv && plotDiv.data) {
         updatePlotTheme('jv-plot', e.detail.dark, { transparentBg: true });
+    }
+    const stabilityPlot = document.getElementById('stability-plot');
+    if (typeof Plotly !== 'undefined' && stabilityPlot && stabilityPlot.data) {
+        updatePlotTheme('stability-plot', e.detail.dark, { transparentBg: true });
     }
     const analysisPlot = document.getElementById('iv-analysis-plot');
     if (typeof Plotly !== 'undefined' && analysisPlot && analysisPlot.data) {
@@ -273,10 +290,11 @@ async function startMeasurement(pixel) {
     updateMeasuringState(true);
     updateProgress(0, 'Starting forward sweep...');
 
-    forwardData = { x: [], y: [] };
-    reverseData = { x: [], y: [] };
+    forwardData = { x: [], y: [], stats: [] };
+    reverseData = { x: [], y: [], stats: [] };
     document.getElementById('save-btn').disabled = true;
     clearPlot();
+    resetStatsBar();
     updatePixelLabel(pixel);
 
     const params = {
@@ -374,6 +392,229 @@ function onMeasurementComplete(success) {
     }
 }
 
+// ============================================
+// Stability Test Functions
+// ============================================
+
+function initStabilityPlot() {
+    const plotDiv = document.getElementById('stability-plot');
+    const isDark = LabTheme.isDark();
+
+    const trace = {
+        x: [],
+        y: [],
+        mode: 'lines+markers',
+        type: 'scatter',
+        name: 'Current',
+        line: { color: '#0077BB', width: 2 },
+        marker: { size: 4 }
+    };
+
+    const layout = {
+        title: 'Current Stability vs Time',
+        xaxis: { title: 'Time (s)' },
+        yaxis: { title: 'Current (mA)' },
+        paper_bgcolor: isDark ? '#1e1e1e' : '#ffffff',
+        plot_bgcolor: isDark ? '#2d2d2d' : '#f5f5f5',
+        font: { color: isDark ? '#e0e0e0' : '#333333' },
+        showlegend: false
+    };
+
+    const config = { responsive: true };
+
+    Plotly.newPlot(plotDiv, [trace], layout, config);
+}
+
+function startStabilityTest() {
+    const targetVoltage = parseFloat(document.getElementById('stability-target-voltage').value);
+    const duration = parseFloat(document.getElementById('stability-duration').value);
+    const interval = parseFloat(document.getElementById('stability-interval').value);
+    const cellNumber = document.getElementById('cell-number').value;
+    const pixel = currentPixel || 1;
+
+    // Validate inputs
+    if (isNaN(targetVoltage) || isNaN(duration) || isNaN(interval)) {
+        LabModals.showError('Invalid Input', 'Please enter valid test parameters');
+        return;
+    }
+
+    if (!cellNumber || cellNumber.length !== 3) {
+        LabModals.showError('Cell Number Required', 'Please enter a valid 3-digit cell number');
+        return;
+    }
+
+    // Clear previous data
+    stabilityData.timestamps = [];
+    stabilityData.voltages = [];
+    stabilityData.currents = [];
+    stabilityStartTime = null;
+    stabilityDuration = duration;
+
+    // Reset plot
+    Plotly.deleteTraces('stability-plot', 0);
+    Plotly.addTraces('stability-plot', {
+        x: [],
+        y: [],
+        mode: 'lines+markers',
+        type: 'scatter',
+        line: { color: '#0077BB', width: 2 },
+        marker: { size: 4 }
+    });
+
+    // Reset stats
+    updateStabilityStats();
+
+    // Update UI
+    stabilityTestRunning = true;
+    document.getElementById('stability-start-btn').disabled = true;
+    document.getElementById('stability-stop-btn').disabled = false;
+    document.getElementById('stability-save-btn').disabled = true;
+
+    // Call API
+    const params = {
+        target_voltage: targetVoltage,
+        duration: duration,
+        interval: interval,
+        pixel: pixel,
+        cell_number: cellNumber
+    };
+
+    const api = LabAPI.get();
+    api.start_stability_test(JSON.stringify(params), (result) => {
+        const response = JSON.parse(result);
+        if (!response.success) {
+            LabModals.showError('Stability Test Failed', response.message);
+            resetStabilityUI();
+        } else {
+            stabilityStartTime = Date.now() / 1000;
+        }
+    });
+}
+
+function stopStabilityTest() {
+    const api = LabAPI.get();
+    api.stop_stability_test((result) => {
+        // UI will be reset in onStabilityComplete callback
+    });
+}
+
+function saveStabilityData() {
+    if (stabilityData.timestamps.length === 0) {
+        LabModals.showError('No Data', 'No data to save');
+        return;
+    }
+
+    // Generate CSV
+    const headers = ['Timestamp (s)', 'Voltage (V)', 'Current (mA)'];
+    let csv = headers.join(',') + '\n';
+
+    for (let i = 0; i < stabilityData.timestamps.length; i++) {
+        csv += `${stabilityData.timestamps[i].toFixed(2)},`;
+        csv += `${stabilityData.voltages[i].toFixed(2)},`;
+        csv += `${stabilityData.currents[i].toFixed(5)}\n`;
+    }
+
+    // Call save API
+    const api = LabAPI.get();
+    api.save_stability_data(csv, (result) => {
+        const response = JSON.parse(result);
+        if (response.success) {
+            console.log('Stability data saved to:', response.path);
+        } else {
+            console.error('Save failed:', response.message);
+        }
+    });
+}
+
+function resetStabilityUI() {
+    stabilityTestRunning = false;
+    document.getElementById('stability-start-btn').disabled = false;
+    document.getElementById('stability-stop-btn').disabled = true;
+    document.getElementById('stability-save-btn').disabled = false;
+    document.getElementById('stability-progress-fill').style.width = '0%';
+    document.getElementById('stability-progress-percent').textContent = '0%';
+}
+
+// Callback from Python: new measurement point
+function onStabilityMeasurement(timestamp, voltage, current) {
+    stabilityData.timestamps.push(timestamp);
+    stabilityData.voltages.push(voltage);
+    stabilityData.currents.push(current);
+
+    // Update plot
+    Plotly.extendTraces('stability-plot', {
+        x: [[timestamp]],
+        y: [[current]]
+    }, [0]);
+
+    // Update stats
+    updateStabilityStats();
+
+    // Update progress bar
+    if (stabilityDuration > 0) {
+        const progress = Math.min(100, (timestamp / (stabilityDuration * 60)) * 100);
+        document.getElementById('stability-progress-fill').style.width = progress + '%';
+        document.getElementById('stability-progress-percent').textContent = Math.round(progress) + '%';
+    }
+}
+
+// Callback from Python: test complete
+function onStabilityComplete(success) {
+    resetStabilityUI();
+
+    if (success) {
+        document.getElementById('stability-status').textContent = 'Test complete';
+    } else {
+        document.getElementById('stability-status').textContent = 'Test stopped';
+    }
+}
+
+// Callback from Python: error
+function onStabilityError(errorMessage) {
+    console.error('Stability test error:', errorMessage);
+    LabModals.showError('Stability Test Error', errorMessage);
+    resetStabilityUI();
+    document.getElementById('stability-status').textContent = 'Error: ' + errorMessage;
+}
+
+// Callback from Python: status update
+function onStabilityStatus(statusMessage) {
+    document.getElementById('stability-status').textContent = statusMessage;
+}
+
+function updateStabilityStats() {
+    if (stabilityData.currents.length === 0) {
+        document.getElementById('stability-mean').textContent = '--';
+        document.getElementById('stability-std').textContent = '--';
+        document.getElementById('stability-cv').textContent = '--';
+        document.getElementById('stability-count').textContent = '0';
+        return;
+    }
+
+    // Calculate statistics
+    const currents = stabilityData.currents;
+    const n = currents.length;
+    const mean = currents.reduce((a, b) => a + b, 0) / n;
+
+    let std = 0;
+    if (n > 1) {
+        const variance = currents.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / (n - 1);
+        std = Math.sqrt(variance);
+    }
+
+    const cv = mean !== 0 ? (std / Math.abs(mean)) * 100 : 0;
+
+    // Update display
+    document.getElementById('stability-mean').textContent = mean.toFixed(5) + ' mA';
+    document.getElementById('stability-std').textContent = std.toFixed(5) + ' mA';
+    document.getElementById('stability-cv').textContent = cv.toFixed(2) + '%';
+    document.getElementById('stability-count').textContent = n.toString();
+}
+
+// ============================================
+// Measurement Data Export
+// ============================================
+
 function saveData() {
     const cellNumber = document.getElementById('cell-number').value || '000';
     const pixel = currentPixel || 1;
@@ -416,7 +657,7 @@ function clearPlot() {
         { x: [], y: [], mode: 'markers', type: 'scatter', name: 'Forward', marker: { color: PLOT_COLORS.jvForward, size: 8 } },
         { x: [], y: [], mode: 'markers', type: 'scatter', name: 'Reverse', marker: { color: PLOT_COLORS.jvReverse, size: 8 } }
     ];
-    Plotly.newPlot(plotDiv, traces, layout, plotConfig);
+    Plotly.newPlot(plotDiv, traces, layout, plotConfig).then(() => attachJVPlotHover());
 }
 
 function updatePlot() {
@@ -426,7 +667,7 @@ function updatePlot() {
         { x: forwardData.x, y: forwardData.y, mode: 'markers', type: 'scatter', name: 'Forward', marker: { color: PLOT_COLORS.jvForward, size: 8 } },
         { x: reverseData.x, y: reverseData.y, mode: 'markers', type: 'scatter', name: 'Reverse', marker: { color: PLOT_COLORS.jvReverse, size: 8 } }
     ];
-    Plotly.newPlot(plotDiv, traces, layout, plotConfig);
+    Plotly.newPlot(plotDiv, traces, layout, plotConfig).then(() => attachJVPlotHover());
 }
 
 // Mock measurement for offline mode
@@ -478,6 +719,75 @@ function mockReverseSweep(start, stop, step, totalSteps) {
 
 function onMeasurementProgress(percent, message) {
     updateProgress(percent, message);
+}
+
+/**
+ * Handle measurement statistics from Python.
+ * Updates the stats bar with current measurement quality info.
+ */
+function onMeasurementStats(stats) {
+    // Store stats for hover interaction
+    const statsData = {
+        voltage: stats.voltage,
+        mean: stats.mean,
+        std_dev: stats.std_dev,
+        n: stats.n,
+        quality: stats.quality,
+        unit: stats.unit
+    };
+
+    if (stats.direction === 'forward') {
+        forwardData.stats.push(statsData);
+    } else {
+        reverseData.stats.push(statsData);
+    }
+
+    // Update stats bar display
+    displayStats(statsData);
+}
+
+/**
+ * Display stats in the stats bar.
+ */
+function displayStats(stats) {
+    document.getElementById('jv-stats-n').textContent = stats.n;
+    document.getElementById('jv-stats-voltage').textContent = stats.voltage.toFixed(2) + ' V';
+    document.getElementById('jv-stats-mean').textContent = stats.mean.toFixed(4) + ' ' + stats.unit;
+    document.getElementById('jv-stats-std').textContent = stats.std_dev.toFixed(4) + ' ' + stats.unit;
+
+    // Update quality badge
+    // Note: "Check measurement" becomes "quality-check measurement" which matches ".quality-check"
+    const qualityEl = document.getElementById('jv-stats-quality');
+    qualityEl.textContent = stats.quality;
+    qualityEl.className = 'quality-badge quality-' + stats.quality.toLowerCase();
+}
+
+/**
+ * Reset stats bar to initial state.
+ */
+function resetStatsBar() {
+    document.getElementById('jv-stats-n').textContent = '--';
+    document.getElementById('jv-stats-voltage').textContent = '--';
+    document.getElementById('jv-stats-mean').textContent = '--';
+    document.getElementById('jv-stats-std').textContent = '--';
+    const qualityEl = document.getElementById('jv-stats-quality');
+    qualityEl.textContent = '--';
+    qualityEl.className = 'quality-badge';
+}
+
+/**
+ * Attach hover event listener to the JV plot for interactive stats display.
+ */
+function attachJVPlotHover() {
+    const jvPlot = document.getElementById('jv-plot');
+    jvPlot.on('plotly_hover', function(data) {
+        const traceIndex = data.points[0].curveNumber;  // 0=forward, 1=reverse
+        const pointIndex = data.points[0].pointIndex;
+        const statsArray = traceIndex === 0 ? forwardData.stats : reverseData.stats;
+        if (statsArray && statsArray[pointIndex]) {
+            displayStats(statsArray[pointIndex]);
+        }
+    });
 }
 
 // ============================================
@@ -1114,6 +1424,7 @@ document.addEventListener('keydown', (e) => {
 window.onMeasurementPoint = onMeasurementPoint;
 window.onMeasurementComplete = onMeasurementComplete;
 window.onMeasurementProgress = onMeasurementProgress;
+window.onMeasurementStats = onMeasurementStats;
 window.updateDeviceStatus = updateDeviceStatus;
 window.onLogMessage = onLogMessage;
 

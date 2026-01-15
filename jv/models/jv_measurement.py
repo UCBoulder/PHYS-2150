@@ -19,8 +19,8 @@ from typing import Optional, Callable, List, Tuple, Dict, Any
 from dataclasses import dataclass, field
 
 from ..controllers.keithley_2450 import Keithley2450Controller, Keithley2450Error
-from ..config.settings import JV_MEASUREMENT_CONFIG
-from common.utils import get_logger, get_error
+from ..config.settings import JV_MEASUREMENT_CONFIG, JV_QUALITY_THRESHOLDS
+from common.utils import get_logger, get_error, MeasurementStats
 
 # Module-level logger for J-V measurement
 _logger = get_logger("jv")
@@ -104,6 +104,7 @@ class JVMeasurementModel:
         self._progress_callback: Optional[Callable] = None
         self._completion_callback: Optional[Callable] = None
         self._point_callback: Optional[Callable] = None
+        self._stats_callback: Optional[Callable] = None
 
     def set_progress_callback(
         self,
@@ -140,6 +141,18 @@ class JVMeasurementModel:
             callback: Function(direction, voltage, current)
         """
         self._point_callback = callback
+
+    def set_stats_callback(
+        self,
+        callback: Callable[[str, float, MeasurementStats], None]
+    ) -> None:
+        """
+        Set callback for measurement statistics (for data quality display).
+
+        Args:
+            callback: Function(direction, voltage, stats) where stats is MeasurementStats
+        """
+        self._stats_callback = callback
 
     def is_measuring(self) -> bool:
         """Check if measurement is in progress."""
@@ -254,12 +267,17 @@ class JVMeasurementModel:
                 stop_voltage, start_voltage, -step_voltage
             )
 
-            # Configure device for measurement
+            # Configure device for measurement with optimized settings
+            # Device-native delays and averaging provide faster, more consistent results
             self.controller.configure_for_jv_measurement(
                 voltage_range=self.config.get("voltage_range", 2),
                 current_range=self.config.get("current_range", 10),
                 current_limit=self.config.get("current_compliance", 1),
                 remote_sensing=self.config.get("remote_sensing", True),
+                nplc=self.config.get("nplc", 1.0),
+                averaging_count=self.config.get("averaging_count", 10),
+                averaging_filter=self.config.get("averaging_filter", "REPEAT"),
+                source_delay_s=self.config.get("source_delay_s", 0.05),
             )
 
             # Initial stabilization at start voltage
@@ -335,7 +353,6 @@ class JVMeasurementModel:
             bool: True if sweep completed, False if stopped or error
         """
         sweep_data = self.result.forward if direction == "forward" else self.result.reverse
-        dwell_time_s = self.config.get("dwell_time_ms", 500) / 1000.0
         update_interval = self.config.get("plot_update_interval", 10)
 
         for i, voltage in enumerate(voltages):
@@ -344,22 +361,47 @@ class JVMeasurementModel:
                 return False
 
             try:
-                # Set voltage and wait for stabilization
+                # Set voltage - device handles settling delay via source_delay_s
                 self.controller.set_voltage(float(voltage))
-                time.sleep(dwell_time_s)
 
-                # Measure current with high precision
-                current_reading = self.controller.measure_current_precise()
+                # Get number of measurements from config
+                num_measurements = self.config.get("num_measurements", 5)
 
-                # Convert to mA with proper rounding
+                # Take multiple readings using trace buffer for statistics
+                current_readings_A = self.controller.measure_current_multiple(num_measurements)
+
+                # Convert readings to mA
+                current_readings_mA = [reading * 1e3 for reading in current_readings_A]
+
+                # Calculate statistics
+                mean_mA = float(np.mean(current_readings_mA))
+                std_mA = float(np.std(current_readings_mA, ddof=1)) if len(current_readings_mA) > 1 else 0.0
+                n = len(current_readings_mA)
+
+                # Round mean for storage
                 precision = JV_MEASUREMENT_CONFIG.get("current_quantize_precision", "0.00001")
-                current_mA = (current_reading * Decimal(10**3)).quantize(
+                current_mA = float(Decimal(str(mean_mA)).quantize(
                     Decimal(precision), rounding=ROUND_HALF_UP
-                )
-                current_mA = float(current_mA)
+                ))
 
-                # Store data
+                # Store data (mean value)
                 sweep_data.add_point(float(voltage), current_mA)
+
+                # Create MeasurementStats and notify callback
+                if self._stats_callback:
+                    # Calculate CV% for legacy display
+                    cv_percent = (std_mA / abs(mean_mA) * 100) if mean_mA != 0 else 0.0
+                    stats = MeasurementStats(
+                        mean=mean_mA,
+                        std_dev=std_mA,
+                        n_measurements=n,
+                        n_total=n,
+                        cv_percent=cv_percent,
+                        unit="mA",
+                        measurement_type="current",
+                        quality_thresholds=JV_QUALITY_THRESHOLDS
+                    )
+                    self._stats_callback(direction, float(voltage), stats)
 
                 # Notify point callback (for real-time plotting)
                 if self._point_callback:
