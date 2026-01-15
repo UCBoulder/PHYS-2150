@@ -122,14 +122,15 @@ class DataHandler:
             # Check if stats export is enabled and we have stats data
             include_stats = (
                 DATA_EXPORT_CONFIG.get("include_measurement_stats", False)
-                and measurement_type == "current"
+                and measurement_type in ("current", "power")
                 and measurement_stats is not None
                 and len(measurement_stats) == len(measurements)
             )
 
             if include_stats:
-                headers = DATA_EXPORT_CONFIG["headers"].get("current_with_stats",
-                    ["Wavelength (nm)", "Current_mean (nA)", "Current_std (nA)", "n"])
+                stats_header_key = f"{measurement_type}_with_stats"
+                headers = DATA_EXPORT_CONFIG["headers"].get(stats_header_key,
+                    ["Wavelength (nm)", "Mean", "Std", "n"])
             else:
                 headers = DATA_EXPORT_CONFIG["headers"].get(measurement_type,
                     ["Wavelength (nm)", "Measurement"])
@@ -142,15 +143,19 @@ class DataHandler:
 
                 for i, (wavelength, measurement) in enumerate(zip(wavelengths, measurements)):
                     if include_stats:
-                        # Convert from Amps to nanoamps for readability
-                        # Students can immediately interpret "4.24 nA" vs "4.24E-09 A"
-                        current_nA = measurement * 1e9
                         stats = measurement_stats[i]
-                        std_nA = stats['std_dev'] * 1e9
+                        if measurement_type == "current":
+                            # Convert from Amps to nanoamps for readability
+                            value = measurement * 1e9
+                            std = stats['std_dev'] * 1e9
+                        else:  # power
+                            # Convert from Watts to microwatts for readability
+                            value = measurement * 1e6
+                            std = stats['std_dev'] * 1e6
                         row = [
                             wavelength,
-                            f"{current_nA:.2f}",
-                            f"{std_nA:.2f}",
+                            f"{value:.3f}",
+                            f"{std:.3f}",
                             stats['n']
                         ]
                     else:
@@ -158,10 +163,10 @@ class DataHandler:
                             # Convert to nanoamps for readability
                             current_nA = measurement * 1e9
                             row = [wavelength, f"{current_nA:.2f}"]
-                        else:
-                            # Power stays in Watts with scientific notation
-                            formatted_measurement = f"{measurement:.{precision}e}"
-                            row = [wavelength, formatted_measurement]
+                        else:  # power
+                            # Convert to microwatts for readability
+                            power_uW = measurement * 1e6
+                            row = [wavelength, f"{power_uW:.3f}"]
 
                     writer.writerow(row)
 

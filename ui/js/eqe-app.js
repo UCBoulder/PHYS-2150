@@ -975,10 +975,17 @@ function saveData() {
 
 function savePowerData() {
     // Get headers from config (single source of truth)
-    const headers = LabConfig.get('export.headers.power', ['Wavelength (nm)', 'Power (W)']);
+    // Use power_with_stats since we collect stats for each measurement
+    const headers = LabConfig.get('export.headers.power_with_stats', ['Wavelength (nm)', 'Power_mean (uW)', 'Power_std (uW)', 'n']);
     let csv = headers.join(',') + '\n';
     for (let i = 0; i < state.powerData.x.length; i++) {
-        csv += `${state.powerData.x[i].toFixed(1)},${state.powerData.y[i].toExponential(6)}\n`;
+        const wavelength = state.powerData.x[i];
+        const power = state.powerData.y[i];  // Already in µW
+        const stats = state.powerData.stats[i] || {};
+        // stats.std_dev is in Watts, convert to µW
+        const std_dev = stats.std_dev !== undefined ? (stats.std_dev * 1e6).toFixed(3) : '0';
+        const n = stats.n || 0;
+        csv += `${wavelength.toFixed(1)},${power.toFixed(3)},${std_dev},${n}\n`;
     }
     const api = LabAPI.get();
     if (api && api.save_power_data) {

@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hover interaction on EQE plots to show statistics for individual data points
 
 ### Changed
+- EQE power CSV export now includes statistics: Power_mean (uW), Power_std (uW), n (matches current format)
+- EQE power CSV units changed from Watts to microwatts (uW) for readability
 - EQE statistics bar now always visible (was only appearing during measurement)
 - EQE statistics persist after measurement completion (was resetting to placeholder text)
 - EQE readings display simplified from "n/total" to just "n" (no outlier rejection occurs)

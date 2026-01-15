@@ -371,6 +371,62 @@ class TestEQEDataHandlerSave:
         std_value = float(row1[2])
         assert abs(std_value - 1.0) < 0.01  # 1 nA
 
+    def test_save_power_with_stats(self, temp_dir):
+        """Should save power measurement with statistics (n, std_dev) in uW."""
+        from eqe.utils.data_handling import DataHandler
+        from unittest.mock import patch
+
+        file_path = os.path.join(temp_dir, "power_stats.csv")
+        wavelengths = [400.0, 500.0]
+        powers = [1e-6, 2e-6]  # 1 µW, 2 µW (in Watts)
+        stats = [
+            {'std_dev': 1e-8, 'n': 200},  # 0.01 µW std_dev (in Watts)
+            {'std_dev': 2e-8, 'n': 200},  # 0.02 µW std_dev
+        ]
+
+        # Enable stats export
+        with patch.dict('eqe.utils.data_handling.DATA_EXPORT_CONFIG', {
+            'include_measurement_stats': True,
+            'headers': {
+                'power_with_stats': [
+                    "Wavelength (nm)", "Power_mean (uW)",
+                    "Power_std (uW)", "n"
+                ]
+            },
+            'csv_delimiter': ',',
+            'precision': 6
+        }):
+            DataHandler.save_measurement_data(
+                file_path=file_path,
+                wavelengths=wavelengths,
+                measurements=powers,
+                measurement_type="power",
+                measurement_stats=stats
+            )
+
+        assert os.path.exists(file_path)
+
+        with open(file_path, 'r') as f:
+            reader = csv.reader(f)
+            header = next(reader)
+            rows = list(reader)
+
+        # Should have stats columns: wavelength, power, std, n
+        assert len(header) == 4
+        assert header == ["Wavelength (nm)", "Power_mean (uW)",
+                          "Power_std (uW)", "n"]
+        assert len(rows) == 2
+
+        # Verify values are correctly converted to µW
+        # First row: power=1e-6 W = 1 µW, std=1e-8 W = 0.01 µW
+        row1 = rows[0]
+        power_value = float(row1[1])
+        std_value = float(row1[2])
+        n_value = int(row1[3])
+        assert abs(power_value - 1.0) < 0.01  # 1 µW
+        assert abs(std_value - 0.01) < 0.001  # 0.01 µW
+        assert n_value == 200
+
 
 class TestDataExportRobustness:
     """Tests for edge cases and robustness."""

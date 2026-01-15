@@ -169,7 +169,8 @@ DATA_EXPORT_CONFIG = {
     "phase_file_template": "{date}_phase_cell{cell_number}.csv",
     # Column headers for each measurement type's CSV output
     "headers": {
-        "power": ["Wavelength (nm)", "Power (W)"],
+        "power": ["Wavelength (nm)", "Power (uW)"],
+        "power_with_stats": ["Wavelength (nm)", "Power_mean (uW)", "Power_std (uW)", "n"],
         "current": ["Wavelength (nm)", "Current (nA)"],
         "current_with_stats": ["Wavelength (nm)", "Current_mean (nA)", "Current_std (nA)", "n"],
         "phase": ["Pixel #", "Set Angle", "Signal", "R^2 Value"],
