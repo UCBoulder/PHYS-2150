@@ -789,12 +789,6 @@ function displayStats(stats) {
     document.getElementById('jv-stats-voltage').textContent = stats.voltage.toFixed(2) + ' V';
     document.getElementById('jv-stats-mean').textContent = stats.mean.toFixed(4) + ' ' + stats.unit;
     document.getElementById('jv-stats-std').textContent = stats.std_dev.toFixed(4) + ' ' + stats.unit;
-
-    // Update quality badge
-    // Note: "Check measurement" becomes "quality-check measurement" which matches ".quality-check"
-    const qualityEl = document.getElementById('jv-stats-quality');
-    qualityEl.textContent = stats.quality;
-    qualityEl.className = 'quality-badge quality-' + stats.quality.toLowerCase();
 }
 
 /**
@@ -805,9 +799,6 @@ function resetStatsBar() {
     document.getElementById('jv-stats-voltage').textContent = '--';
     document.getElementById('jv-stats-mean').textContent = '--';
     document.getElementById('jv-stats-std').textContent = '--';
-    const qualityEl = document.getElementById('jv-stats-quality');
-    qualityEl.textContent = '--';
-    qualityEl.className = 'quality-badge';
 }
 
 /**
