@@ -296,11 +296,6 @@ body.jv-body {
     color: var(--text-primary);
 }
 
-/* Right-align quality badge in stats bar */
-#jv-stats-row .measurement-stat:last-child {
-    margin-left: auto;
-}
-
 
 /* ============================================
    Buttons Row
