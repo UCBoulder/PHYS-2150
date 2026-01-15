@@ -149,39 +149,53 @@
              STABILITY TEST TAB
              ============================================ -->
         <div id="tab-stability" class="tab-content" role="tabpanel" aria-labelledby="tab-stability-btn">
-
-            <!-- Stability Test Configuration -->
-            <div class="params-panel">
-                <div class="panel-title">Test Parameters</div>
-                <div class="params-grid">
-                    <div class="param-field">
-                        <label for="stability-target-voltage">Target Voltage (V)</label>
-                        <input type="number" id="stability-target-voltage" step="0.1" value="0.5"
-                               aria-label="Target voltage in volts">
-                    </div>
-                    <div class="param-field">
-                        <label for="stability-duration">Duration (min)</label>
-                        <input type="number" id="stability-duration" step="1" value="5" min="1" max="60"
-                               aria-label="Test duration in minutes">
-                    </div>
-                    <div class="param-field">
-                        <label for="stability-interval">Interval (sec)</label>
-                        <input type="number" id="stability-interval" step="0.5" value="2" min="0.5" max="60"
-                               aria-label="Measurement interval in seconds">
-                    </div>
+            <!-- Device Status Row -->
+            <div class="device-status-row">
+                <span class="row-section-title">Device Status</span>
+                <div class="device-item">
+                    <span class="device-dot disconnected" id="stability-status-dot" aria-hidden="true"></span>
+                    <span class="device-name">Keithley 2450:</span>
+                    <span class="device-status" id="stability-status-text" aria-live="polite">Connecting...</span>
                 </div>
             </div>
 
-            <!-- Progress Panel -->
-            <div class="progress-panel">
-                <div class="panel-title">Status</div>
-                <div class="progress-content">
-                    <div class="progress-status" id="stability-status" role="status" aria-live="polite">Ready</div>
-                    <div class="progress-bar-container">
-                        <div class="progress-bar">
-                            <div class="progress-bar-fill" id="stability-progress-fill" style="width: 0%"></div>
+            <!-- Parameters + Status Row -->
+            <div class="top-section">
+                <div class="params-panel">
+                    <div class="panel-title">Test Parameters</div>
+                    <div class="params-grid">
+                        <div class="param-field">
+                            <label for="stability-target-voltage">Target Voltage (V)</label>
+                            <input type="number" id="stability-target-voltage" step="0.1" value="0.5"
+                                   aria-label="Target voltage in volts">
                         </div>
-                        <span class="progress-percent" id="stability-progress-percent">0%</span>
+                        <div class="param-field">
+                            <label for="stability-duration">Duration (min)</label>
+                            <input type="number" id="stability-duration" step="1" value="5" min="1" max="60"
+                                   aria-label="Test duration in minutes">
+                        </div>
+                        <div class="param-field">
+                            <label for="stability-interval">Interval (sec)</label>
+                            <input type="number" id="stability-interval" step="0.5" value="2" min="0.5" max="60"
+                                   aria-label="Measurement interval in seconds">
+                        </div>
+                        <div class="param-field">
+                            <label for="stability-cell-number">Cell Number</label>
+                            <input type="text" id="stability-cell-number" placeholder="e.g. 140" maxlength="3"
+                                   aria-label="Cell number, 3 digits">
+                        </div>
+                    </div>
+                </div>
+                <div class="progress-panel">
+                    <div class="panel-title">Status</div>
+                    <div class="progress-content">
+                        <div class="progress-status" id="stability-status" role="status" aria-live="polite">Ready</div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar">
+                                <div class="progress-bar-fill" id="stability-progress-fill" style="width: 0%"></div>
+                            </div>
+                            <span class="progress-percent" id="stability-progress-percent">0%</span>
+                        </div>
                     </div>
                 </div>
             </div>

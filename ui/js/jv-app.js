@@ -146,6 +146,12 @@ function switchTab(tabName) {
         return;
     }
 
+    // Prevent switching during active stability test
+    if (stabilityTestRunning) {
+        LabModals.showError('Cannot Switch', 'Please stop the stability test before switching tabs.');
+        return;
+    }
+
     activeTab = tabName;
 
     // Update tab buttons
@@ -169,6 +175,16 @@ function switchTab(tabName) {
                 Plotly.Plots.resize('iv-analysis-plot');
             }
             updateSessionButton();
+        }, 50);
+    } else if (tabName === 'stability') {
+        // Sync cell number from measurement tab if stability field is empty
+        const mainCellNumber = document.getElementById('cell-number').value;
+        const stabilityCellNumber = document.getElementById('stability-cell-number');
+        if (mainCellNumber && !stabilityCellNumber.value) {
+            stabilityCellNumber.value = mainCellNumber;
+        }
+        setTimeout(() => {
+            Plotly.Plots.resize('stability-plot');
         }, 50);
     } else {
         setTimeout(() => {
@@ -250,6 +266,10 @@ function updateDeviceStatus(connected, message, offlineMode) {
     const text = document.getElementById('status-text');
     const btn = document.getElementById('measure-btn');
 
+    // Also update stability tab device status
+    const stabilityDot = document.getElementById('stability-status-dot');
+    const stabilityText = document.getElementById('stability-status-text');
+
     isDeviceConnected = connected;
     isOfflineMode = offlineMode;
 
@@ -257,14 +277,20 @@ function updateDeviceStatus(connected, message, offlineMode) {
         dot.className = 'device-dot connected';
         text.textContent = message || 'Connected';
         btn.disabled = false;
+        if (stabilityDot) stabilityDot.className = 'device-dot connected';
+        if (stabilityText) stabilityText.textContent = message || 'Connected';
     } else if (offlineMode) {
         dot.className = 'device-dot warning';
         text.textContent = message || 'Offline mode';
         btn.disabled = false;
+        if (stabilityDot) stabilityDot.className = 'device-dot warning';
+        if (stabilityText) stabilityText.textContent = message || 'Offline mode';
     } else {
         dot.className = 'device-dot disconnected';
         text.textContent = message || 'Not connected';
         btn.disabled = true;
+        if (stabilityDot) stabilityDot.className = 'device-dot disconnected';
+        if (stabilityText) stabilityText.textContent = message || 'Not connected';
     }
 }
 
@@ -429,7 +455,7 @@ function startStabilityTest() {
     const targetVoltage = parseFloat(document.getElementById('stability-target-voltage').value);
     const duration = parseFloat(document.getElementById('stability-duration').value);
     const interval = parseFloat(document.getElementById('stability-interval').value);
-    const cellNumber = document.getElementById('cell-number').value;
+    const cellNumber = document.getElementById('stability-cell-number').value;
     const pixel = currentPixel || 1;
 
     // Validate inputs
@@ -439,7 +465,7 @@ function startStabilityTest() {
     }
 
     if (!cellNumber || cellNumber.length !== 3) {
-        LabModals.showError('Cell Number Required', 'Please enter a valid 3-digit cell number');
+        LabModals.showError('Cell Number Required', 'Please enter a valid 3-digit cell number in the Test Parameters panel');
         return;
     }
 
