@@ -654,20 +654,26 @@ function saveData() {
     const cellNumber = document.getElementById('cell-number').value || '000';
     const pixel = currentPixel || 1;
 
-    // Get headers from config (raw format with Direction column)
+    // Get headers from config (raw format with Direction, Voltage, Current, Std, n)
     const headersRaw = LabConfig.get('export.headers_raw', {
         direction: 'Direction',
         voltage: 'Voltage (V)',
-        current: 'Current (mA)'
+        current: 'Current (mA)',
+        std: 'Std (mA)',
+        n: 'n'
     });
-    let csv = `${headersRaw.direction},${headersRaw.voltage},${headersRaw.current}\n`;
+    let csv = `${headersRaw.direction},${headersRaw.voltage},${headersRaw.current},${headersRaw.std},${headersRaw.n}\n`;
 
     for (let i = 0; i < forwardData.x.length; i++) {
-        csv += `Forward,${forwardData.x[i].toFixed(4)},${forwardData.y[i].toFixed(6)}\n`;
+        const std = forwardData.stats[i] ? forwardData.stats[i].std_dev.toFixed(6) : '0';
+        const n = forwardData.stats[i] ? forwardData.stats[i].n : '1';
+        csv += `Forward,${forwardData.x[i].toFixed(4)},${forwardData.y[i].toFixed(6)},${std},${n}\n`;
     }
 
     for (let i = 0; i < reverseData.x.length; i++) {
-        csv += `Reverse,${reverseData.x[i].toFixed(4)},${reverseData.y[i].toFixed(6)}\n`;
+        const std = reverseData.stats[i] ? reverseData.stats[i].std_dev.toFixed(6) : '0';
+        const n = reverseData.stats[i] ? reverseData.stats[i].n : '1';
+        csv += `Reverse,${reverseData.x[i].toFixed(4)},${reverseData.y[i].toFixed(6)},${std},${n}\n`;
     }
 
     const api = LabAPI.get();

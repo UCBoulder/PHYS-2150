@@ -190,11 +190,13 @@ DATA_EXPORT_CONFIG: Dict[str, Any] = {
         "reverse_std": "Reverse Std (mA)",
         "reverse_n": "Reverse n",
     },
-    # CSV column headers for raw/sequential format (direction column)
+    # CSV column headers for raw/sequential format (direction column with statistics)
     "headers_raw": {
         "direction": "Direction",
         "voltage": "Voltage (V)",
         "current": "Current (mA)",
+        "std": "Std (mA)",
+        "n": "n",
     },
 
     # Stability test file naming and headers
