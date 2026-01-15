@@ -304,11 +304,11 @@ class Keithley2450Controller:
 
         # Clear buffer and configure for multiple readings
         self.write("TRAC:CLE 'defbuffer1'")
-        self.write(f"TRAC:POIN 'defbuffer1', {count}")
+        self.write(f"TRAC:POIN {count}, 'defbuffer1'")
 
         # Configure trigger model for simple count-based acquisition
         # This takes 'count' measurements as fast as possible
-        self.write("TRIG:LOAD 'SimpleLoop', " + str(count))
+        self.write(f"TRIG:LOAD 'SimpleLoop', {count}")
 
         # Initiate measurement sequence
         self.write("INIT")
@@ -318,16 +318,16 @@ class Keithley2450Controller:
 
         # Read all current values from buffer
         # Format: returns comma-separated values
-        response = self.query(f"TRAC:DATA? 1, {count}, 'defbuffer1', SOUR, READ")
+        response = self.query(f"TRAC:DATA? 1, {count}, 'defbuffer1', READ")
 
-        # Parse response - format is "voltage,current,voltage,current,..."
+        # Parse response - format is "current1,current2,current3,..."
         values = response.split(",")
 
-        # Extract just the current readings (every other value starting at index 1)
+        # Convert all values to floats
         currents = []
-        for i in range(1, len(values), 2):
+        for value in values:
             try:
-                currents.append(float(values[i]))
+                currents.append(float(value.strip()))
             except (ValueError, IndexError):
                 pass
 
