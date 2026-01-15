@@ -353,25 +353,41 @@ body:not(.dark-mode) .plot-panel .modebar-container {
 
 
 /* ============================================
-   Stats Row (Below Phase Plot)
+   Measurement Stats Bar (Below Plots)
    ============================================ */
 
-.stats-row {
+.measurement-stats-bar {
+    display: flex;
+    gap: 20px;
     padding: 8px 12px;
     border-top: 1px solid var(--gray-400);
-    font-size: 12px;
-    display: flex;
-    justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+    min-height: 32px;
 }
 
-.stat-item {
+.measurement-stat {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.measurement-stat-label {
+    font-size: 12px;
     color: var(--text-muted);
 }
 
-.stat-value {
+.measurement-stat-value {
     font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+    font-size: 13px;
     color: var(--text-primary);
+}
+
+/* Right-align quality badge in stats bars */
+#power-stats-row .measurement-stat:last-child,
+#current-stats-row .measurement-stat:last-child {
+    margin-left: auto;
 }
 
 

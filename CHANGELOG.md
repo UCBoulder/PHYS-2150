@@ -7,7 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Measurement statistics bar below both power and current plots showing readings count, wavelength, mean, std dev, and quality badge
+- Power measurement statistics display (previously only available for current measurements)
+- Quality-based coloring for power plot data points (matches current plot behavior)
+- Hover interaction on EQE plots to show statistics for individual data points
+
 ### Changed
+- EQE statistics bar now always visible (was only appearing during measurement)
+- EQE statistics persist after measurement completion (was resetting to placeholder text)
+- EQE readings display simplified from "n/total" to just "n" (no outlier rejection occurs)
 - J-V status bar now updates every voltage point (plot_update_interval: 1) for real-time feedback instead of every 10 points
 - EQE statistics display now shows wavelength, mean current, and standard deviation explicitly (e.g., "550nm: 227.11 nA (SD: 0.70 nA)") instead of ± notation
 - EQE statistics layout restructured: n: count on left, measurement in center, quality badge on right

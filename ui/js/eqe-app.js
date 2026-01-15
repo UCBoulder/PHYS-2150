@@ -30,7 +30,7 @@ const state = {
     shutterOpen: false,
     filter: 0,
 
-    powerData: { x: [], y: [] },
+    powerData: { x: [], y: [], stats: [], colors: [], pendingQuality: null },
     currentData: { x: [], y: [], stats: [], colors: [], pendingQuality: null },
     phaseData: { x: [], y: [] },
     stats: null,
@@ -307,6 +307,26 @@ function switchTab(tabName) {
 // Plots
 // ============================================
 
+function attachPowerPlotHover() {
+    const powerPlot = document.getElementById('power-plot');
+    powerPlot.on('plotly_hover', function(data) {
+        const pointIndex = data.points[0].pointIndex;
+        if (state.powerData.stats && state.powerData.stats[pointIndex]) {
+            displayPowerStats(state.powerData.stats[pointIndex]);
+        }
+    });
+}
+
+function attachCurrentPlotHover() {
+    const currentPlot = document.getElementById('current-plot');
+    currentPlot.on('plotly_hover', function(data) {
+        const pointIndex = data.points[0].pointIndex;
+        if (state.currentData.stats && state.currentData.stats[pointIndex]) {
+            displayCurrentStats(state.currentData.stats[pointIndex]);
+        }
+    });
+}
+
 function initPlots() {
     const isDark = LabTheme.isDark();
 
@@ -315,14 +335,38 @@ function initPlots() {
            marker: { color: PLOT_COLORS.power, size: 8 } }],
         getPlotLayout(isDark, 'Wavelength (nm)', 'Power (µW)'),
         plotConfig
-    );
+    ).then(() => attachPowerPlotHover());
 
     Plotly.newPlot('current-plot',
         [{ x: [], y: [], mode: 'markers', type: 'scatter', name: 'Current',
            marker: { color: PLOT_COLORS.current, size: 8 } }],
         getPlotLayout(isDark, 'Wavelength (nm)', 'Current (nA)'),
         plotConfig
-    );
+    ).then(() => attachCurrentPlotHover());
+}
+
+function displayPowerStats(stats) {
+    document.getElementById('power-stats-n').textContent = stats.n;
+    document.getElementById('power-stats-wavelength').textContent = `${stats.wavelength.toFixed(0)} nm`;
+    const meanMicroWatts = stats.mean * 1e6;
+    const sdMicroWatts = stats.std_dev * 1e6;
+    document.getElementById('power-stats-mean').textContent = `${meanMicroWatts.toFixed(3)} µW`;
+    document.getElementById('power-stats-std').textContent = `${sdMicroWatts.toFixed(3)} µW`;
+    const badge = document.getElementById('power-stats-quality');
+    badge.textContent = stats.quality;
+    badge.className = 'quality-badge quality-' + stats.quality.toLowerCase();
+}
+
+function displayCurrentStats(stats) {
+    document.getElementById('current-stats-n').textContent = stats.n;
+    document.getElementById('current-stats-wavelength').textContent = `${stats.wavelength.toFixed(0)} nm`;
+    const meanNanoamps = stats.mean * 1e9;
+    const sdNanoamps = stats.std_dev * 1e9;
+    document.getElementById('current-stats-mean').textContent = `${meanNanoamps.toFixed(2)} nA`;
+    document.getElementById('current-stats-std').textContent = `${sdNanoamps.toFixed(2)} nA`;
+    const badge = document.getElementById('current-stats-quality');
+    badge.textContent = stats.quality;
+    badge.className = 'quality-badge quality-' + stats.quality.toLowerCase();
 }
 
 window.addEventListener('resize', () => {
@@ -546,7 +590,7 @@ function startPowerMeasurement() {
     }
 
     state.measurementState = 'power';
-    state.powerData = { x: [], y: [] };
+    state.powerData = { x: [], y: [], stats: [], colors: [], pendingQuality: null };
     clearPlot('power');
     setMeasuringState(true);
     updateProgress(0, 'Starting power measurement...');
@@ -589,10 +633,6 @@ function startCurrentMeasurementWithPixel(pixel) {
     setMeasuringState(true);
     updateProgress(0, 'Validating chopper...');
     document.getElementById('pixel-label').textContent = 'Pixel: ' + pixel;
-    document.getElementById('stats-row').classList.remove('hidden');
-    setTimeout(() => {
-        Plotly.Plots.resize('current-plot');
-    }, 50);
 
     if (state.offlineMode) {
         mockCurrentMeasurement(pixel);
@@ -642,11 +682,7 @@ function setMeasuringState(measuring) {
 
     if (!measuring) {
         updateButtonStates();
-        document.getElementById('stats-row').classList.add('hidden');
-        setTimeout(() => {
-            Plotly.Plots.resize('power-plot');
-            Plotly.Plots.resize('current-plot');
-        }, 50);
+        // Stats persist after measurement - no reset needed
     }
 }
 
@@ -665,13 +701,25 @@ function onPowerProgress(wavelength, power, percent) {
     state.powerData.x.push(wavelength);
     state.powerData.y.push(powerUW);
 
+    // Determine point color from pending quality (stats arrive before progress)
+    const qualityColorMap = {
+        'Excellent': PLOT_COLORS.qualityExcellent,
+        'Good': PLOT_COLORS.qualityGood,
+        'Fair': PLOT_COLORS.qualityFair,
+        'Check measurement': PLOT_COLORS.qualityPoor,
+        'Check': PLOT_COLORS.qualityPoor
+    };
+    const pointColor = qualityColorMap[state.powerData.pendingQuality] || PLOT_COLORS.power;
+    state.powerData.colors.push(pointColor);
+    state.powerData.pendingQuality = null;
+
     const isDark = LabTheme.isDark();
     Plotly.newPlot('power-plot',
         [{ x: state.powerData.x, y: state.powerData.y, mode: 'markers', type: 'scatter',
-           name: 'Power', marker: { color: PLOT_COLORS.power, size: 8 } }],
+           name: 'Power', marker: { color: state.powerData.colors, size: 8 } }],
         getPlotLayout(isDark, 'Wavelength (nm)', 'Power (µW)'),
         plotConfig
-    );
+    ).then(() => attachPowerPlotHover());
     updateProgress(percent, `Measuring at ${wavelength.toFixed(0)} nm`);
 }
 
@@ -699,7 +747,7 @@ function onCurrentProgress(wavelength, current, percent) {
            name: 'Current', marker: { color: state.currentData.colors, size: 8 } }],
         getPlotLayout(isDark, 'Wavelength (nm)', 'Current (nA)'),
         plotConfig
-    );
+    ).then(() => attachCurrentPlotHover());
     updateProgress(percent, `Measuring at ${wavelength.toFixed(0)} nm`);
 }
 
@@ -731,30 +779,73 @@ function onMeasurementComplete(success, message) {
 
 function onMeasurementStats(stats) {
     state.stats = stats;
-    state.currentData.stats.push({
-        mean: stats.mean,
-        std_dev: stats.std_dev,
-        n: stats.n
-    });
 
-    // Update n: count display (left side)
-    document.getElementById('stats-n').textContent = `${stats.n}/${stats.total}`;
-
-    // Format measurement with average and SD explicitly shown (center)
-    const meanNanoamps = stats.mean * 1e9;
-    const sdNanoamps = stats.std_dev * 1e9;
+    const measurementType = stats.measurement_type || 'current';
     const wavelength = stats.wavelength_nm || state.wavelength;
-    document.getElementById('stats-wavelength').textContent = `${wavelength.toFixed(0)}nm`;
-    document.getElementById('stats-values').textContent = `${meanNanoamps.toFixed(2)} nA (SD: ${sdNanoamps.toFixed(2)} nA)`;
 
-    // Quality badge based on CV% (calculated internally, not displayed)
-    const badge = document.getElementById('stats-quality');
-    badge.textContent = stats.quality;
-    badge.className = 'quality-badge quality-' + stats.quality.toLowerCase();
+    if (measurementType === 'power') {
+        // Calculate quality from CV% (same thresholds as current)
+        const cv = stats.cv_percent || ((stats.std_dev / stats.mean) * 100);
+        const quality = stats.quality || (cv < 1.0 ? 'Excellent' : cv < 5.0 ? 'Good' : cv < 10.0 ? 'Fair' : 'Check');
 
-    // Store quality for the upcoming data point (stats arrive before progress in Python)
-    // onCurrentProgress will use this to set the point color
-    state.currentData.pendingQuality = stats.quality;
+        // Store stats for this wavelength (for hover interaction)
+        if (!state.powerData.stats) state.powerData.stats = [];
+        state.powerData.stats.push({
+            wavelength: wavelength,
+            mean: stats.mean,
+            std_dev: stats.std_dev,
+            n: stats.n,
+            quality: quality
+        });
+
+        // Update power stats row - just show number of readings, not n/total
+        document.getElementById('power-stats-n').textContent = stats.n;
+        document.getElementById('power-stats-wavelength').textContent = `${wavelength.toFixed(0)} nm`;
+
+        // Format power in µW
+        const meanMicroWatts = stats.mean * 1e6;
+        const sdMicroWatts = stats.std_dev * 1e6;
+        document.getElementById('power-stats-mean').textContent = `${meanMicroWatts.toFixed(3)} µW`;
+        document.getElementById('power-stats-std').textContent = `${sdMicroWatts.toFixed(3)} µW`;
+
+        // Quality badge
+        const badge = document.getElementById('power-stats-quality');
+        badge.textContent = quality;
+        badge.className = 'quality-badge quality-' + quality.toLowerCase();
+
+        // Store quality for the upcoming data point (stats arrive before progress)
+        // onPowerProgress will use this to set the point color
+        state.powerData.pendingQuality = quality;
+
+    } else {
+        // Store stats for this wavelength (for hover interaction)
+        state.currentData.stats.push({
+            wavelength: wavelength,
+            mean: stats.mean,
+            std_dev: stats.std_dev,
+            n: stats.n,
+            quality: stats.quality
+        });
+
+        // Update current stats row - just show number of readings, not n/total
+        document.getElementById('current-stats-n').textContent = stats.n;
+        document.getElementById('current-stats-wavelength').textContent = `${wavelength.toFixed(0)} nm`;
+
+        // Format current in nA
+        const meanNanoamps = stats.mean * 1e9;
+        const sdNanoamps = stats.std_dev * 1e9;
+        document.getElementById('current-stats-mean').textContent = `${meanNanoamps.toFixed(2)} nA`;
+        document.getElementById('current-stats-std').textContent = `${sdNanoamps.toFixed(2)} nA`;
+
+        // Quality badge based on CV%
+        const badge = document.getElementById('current-stats-quality');
+        badge.textContent = stats.quality;
+        badge.className = 'quality-badge quality-' + stats.quality.toLowerCase();
+
+        // Store quality for the upcoming data point (stats arrive before progress in Python)
+        // onCurrentProgress will use this to set the point color
+        state.currentData.pendingQuality = stats.quality;
+    }
 }
 
 function onPhaseAdjustmentComplete(data) {
@@ -768,20 +859,44 @@ function onPhaseAdjustmentComplete(data) {
 function clearPlot(type) {
     const isDark = LabTheme.isDark();
     if (type === 'power') {
+        state.powerData.stats = [];
         Plotly.newPlot('power-plot',
             [{ x: [], y: [], mode: 'markers', type: 'scatter', name: 'Power',
                marker: { color: PLOT_COLORS.power, size: 8 } }],
             getPlotLayout(isDark, 'Wavelength (nm)', 'Power (µW)'),
             plotConfig
-        );
+        ).then(() => attachPowerPlotHover());
+        resetPowerStatsDisplay();
     } else if (type === 'current') {
+        state.currentData.stats = [];
         Plotly.newPlot('current-plot',
             [{ x: [], y: [], mode: 'markers', type: 'scatter', name: 'Current',
                marker: { color: PLOT_COLORS.current, size: 8 } }],
             getPlotLayout(isDark, 'Wavelength (nm)', 'Current (nA)'),
             plotConfig
-        );
+        ).then(() => attachCurrentPlotHover());
+        resetCurrentStatsDisplay();
     }
+}
+
+function resetPowerStatsDisplay() {
+    document.getElementById('power-stats-n').textContent = '--';
+    document.getElementById('power-stats-wavelength').textContent = '--';
+    document.getElementById('power-stats-mean').textContent = '--';
+    document.getElementById('power-stats-std').textContent = '--';
+    const badge = document.getElementById('power-stats-quality');
+    badge.textContent = '--';
+    badge.className = 'quality-badge';
+}
+
+function resetCurrentStatsDisplay() {
+    document.getElementById('current-stats-n').textContent = '--';
+    document.getElementById('current-stats-wavelength').textContent = '--';
+    document.getElementById('current-stats-mean').textContent = '--';
+    document.getElementById('current-stats-std').textContent = '--';
+    const badge = document.getElementById('current-stats-quality');
+    badge.textContent = '--';
+    badge.className = 'quality-badge';
 }
 
 // ============================================
@@ -924,10 +1039,24 @@ function mockPowerMeasurement() {
             return;
         }
         const power = 2e-6 * Math.exp(-Math.pow((wavelength - 550) / 100, 2)) * (0.9 + 0.2 * Math.random());
+        const std_dev = power * 0.02 * Math.random();  // ~2% noise for mock
         count++;
 
         state.wavelength = wavelength;
         updateMonochromatorDisplay();
+
+        // Emit power stats before progress (mimics real behavior)
+        // Shows readings per wavelength (200/200), not wavelength progress
+        onMeasurementStats({
+            mean: power,
+            std_dev: std_dev,
+            n: 200,
+            total: 200,
+            wavelength_nm: wavelength,
+            cv_percent: (std_dev / power) * 100,
+            quality: 'Good',
+            measurement_type: 'power'
+        });
 
         onPowerProgress(wavelength, power, (count / total) * 100);
         wavelength += step;
@@ -975,7 +1104,8 @@ function mockCurrentMeasurement() {
             std_error: std_error,
             n: 5, total: 5, outliers: 0,
             cv_percent: cv, quality: quality,
-            wavelength_nm: wavelength
+            wavelength_nm: wavelength,
+            measurement_type: 'current'
         });
 
         // Then call progress (adds point with quality-based color)

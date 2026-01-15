@@ -127,22 +127,48 @@ class ThorlabsPowerMeterController:
             measurements.append(self.measure_power())
         return measurements
     
-    def measure_power_average(self, num_measurements: int = 200, 
+    def measure_power_average(self, num_measurements: int = 200,
                              correction_factor: float = 2.0) -> float:
         """
         Measure average power with multiple readings.
-        
+
         Args:
             num_measurements: Number of measurements to average
             correction_factor: Correction factor to apply
-            
+
         Returns:
             float: Average power measurement in watts
         """
         measurements = self.measure_power_multiple(num_measurements)
         average_power = sum(measurements) / len(measurements)
         return average_power * correction_factor
-    
+
+    def measure_power_with_stats(self, num_measurements: int = 200,
+                                  correction_factor: float = 2.0) -> dict:
+        """
+        Measure power with statistics (mean and standard deviation).
+
+        Args:
+            num_measurements: Number of measurements to take
+            correction_factor: Correction factor to apply to mean
+
+        Returns:
+            dict: Dictionary with 'mean', 'std_dev', and 'n' keys
+        """
+        measurements = self.measure_power_multiple(num_measurements)
+        n = len(measurements)
+        mean = sum(measurements) / n
+
+        # Calculate standard deviation
+        variance = sum((x - mean) ** 2 for x in measurements) / n
+        std_dev = variance ** 0.5
+
+        return {
+            'mean': mean * correction_factor,
+            'std_dev': std_dev * correction_factor,
+            'n': n
+        }
+
     def __enter__(self):
         """Context manager entry."""
         self.connect()

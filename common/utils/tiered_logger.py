@@ -48,7 +48,8 @@ class MeasurementStats:
         n_outliers: int = 0,
         cv_percent: float = 0.0,
         wavelength_nm: Optional[float] = None,
-        unit: str = "V"
+        unit: str = "V",
+        measurement_type: str = "current"
     ):
         self.mean = mean
         self.std_dev = std_dev
@@ -58,6 +59,7 @@ class MeasurementStats:
         self.cv_percent = cv_percent
         self.wavelength_nm = wavelength_nm
         self.unit = unit
+        self.measurement_type = measurement_type  # "current" or "power"
 
     @property
     def std_error(self) -> float:

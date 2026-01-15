@@ -316,3 +316,15 @@ class MockPowerMeterController:
         """Average multiple power measurements."""
         powers = [self.measure_power() for _ in range(num_measurements)]
         return float(np.mean(powers) * correction_factor)
+
+    def measure_power_with_stats(self, num_measurements: int = 200,
+                                  correction_factor: float = 1.0) -> dict:
+        """Measure power with statistics (mean and standard deviation)."""
+        powers = [self.measure_power() for _ in range(num_measurements)]
+        mean = float(np.mean(powers))
+        std_dev = float(np.std(powers))
+        return {
+            'mean': mean * correction_factor,
+            'std_dev': std_dev * correction_factor,
+            'n': num_measurements
+        }

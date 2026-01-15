@@ -775,7 +775,8 @@ class EQEWebApplication:
             'outliers': stats.n_outliers,
             'cv_percent': stats.cv_percent,
             'quality': stats.quality,
-            'wavelength_nm': stats.wavelength_nm
+            'wavelength_nm': stats.wavelength_nm,
+            'measurement_type': stats.measurement_type  # "current" or "power"
         }
         stats_json = json.dumps(stats_dict)
         # Emit signal to marshal to main thread (thread-safe)

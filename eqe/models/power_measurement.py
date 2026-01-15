@@ -9,6 +9,8 @@ import time
 from typing import List, Tuple, Optional, Callable
 import threading
 
+from common.utils import get_logger, MeasurementStats
+
 from ..controllers.thorlabs_power_meter import ThorlabsPowerMeterController, ThorlabsPowerMeterError
 from ..controllers.monochromator import MonochromatorController, MonochromatorError
 from ..config.settings import (
@@ -16,6 +18,9 @@ from ..config.settings import (
     PHASE_ADJUSTMENT_CONFIG,
 )
 from ..utils.data_handling import MeasurementDataLogger
+
+# Module-level logger for power measurement
+_logger = get_logger("eqe")
 
 
 class PowerMeasurementError(Exception):
@@ -105,33 +110,55 @@ class PowerMeasurementModel:
     def measure_power_at_wavelength(self, wavelength: float) -> Tuple[float, float]:
         """
         Measure power at a specific wavelength.
-        
+
         Args:
             wavelength: Wavelength in nm
-            
+
         Returns:
             Tuple[float, float]: (confirmed_wavelength, power)
-            
+
         Raises:
             PowerMeasurementError: If measurement fails
         """
         try:
             # Configure devices
             confirmed_wavelength = self._configure_for_wavelength(wavelength)
-            
-            # Take power measurement
+
+            # Take power measurement with statistics
             num_measurements = POWER_MEASUREMENT_CONFIG["num_measurements"]
             correction_factor = POWER_MEASUREMENT_CONFIG["correction_factor"]
-            
-            power = self.power_meter.measure_power_average(
+
+            stats_result = self.power_meter.measure_power_with_stats(
                 num_measurements=num_measurements,
                 correction_factor=correction_factor
             )
-            
+
+            power = stats_result['mean']
+            std_dev = stats_result['std_dev']
+            n = stats_result['n']
+
+            # Calculate CV% for quality assessment
+            cv_percent = (std_dev / power * 100) if power != 0 else 0.0
+
+            # Create and emit measurement statistics for student display
+            # n_measurements/n_total shows readings per wavelength (e.g., 200/200)
+            stats = MeasurementStats(
+                mean=power,
+                std_dev=std_dev,
+                n_measurements=n,
+                n_total=num_measurements,
+                n_outliers=0,
+                cv_percent=cv_percent,
+                wavelength_nm=confirmed_wavelength,
+                unit="W",
+                measurement_type="power"
+            )
+            _logger.student_stats(stats)
+
             self.logger.log(f"Power at {confirmed_wavelength:.1f} nm: {power:.6e} W")
-            
+
             return confirmed_wavelength, power
-            
+
         except (ThorlabsPowerMeterError, MonochromatorError) as e:
             raise PowerMeasurementError(f"Failed to measure power at {wavelength} nm: {e}")
     
@@ -172,21 +199,21 @@ class PowerMeasurementModel:
 
                     # Measure power
                     confirmed_wavelength, power = self.measure_power_at_wavelength(current_wavelength)
-                    
+
                     # Store data
                     self.wavelengths.append(confirmed_wavelength)
                     self.powers.append(power)
-                    
+
                     # Update progress
                     measurement_count += 1
                     progress_percent = (measurement_count / total_measurements) * 100
-                    
+
                     if self.progress_callback:
                         self.progress_callback(confirmed_wavelength, power, progress_percent)
-                    
+
                 except PowerMeasurementError as e:
                     self.logger.log(f"Error at wavelength {current_wavelength}: {e}", "ERROR")
-                
+
                 current_wavelength += step_size
             
             # Close shutter

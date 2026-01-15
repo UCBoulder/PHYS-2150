@@ -136,6 +136,27 @@
                 <div class="plot-container">
                     <div id="power-plot" class="plot"></div>
                 </div>
+                <div class="measurement-stats-bar" id="power-stats-row">
+                    <div class="measurement-stat">
+                        <span class="measurement-stat-label">Readings:</span>
+                        <span class="measurement-stat-value" id="power-stats-n">--</span>
+                    </div>
+                    <div class="measurement-stat">
+                        <span class="measurement-stat-label">Wavelength:</span>
+                        <span class="measurement-stat-value" id="power-stats-wavelength">--</span>
+                    </div>
+                    <div class="measurement-stat">
+                        <span class="measurement-stat-label">Mean:</span>
+                        <span class="measurement-stat-value" id="power-stats-mean">--</span>
+                    </div>
+                    <div class="measurement-stat">
+                        <span class="measurement-stat-label">Std Dev:</span>
+                        <span class="measurement-stat-value" id="power-stats-std">--</span>
+                    </div>
+                    <div class="measurement-stat">
+                        <span class="quality-badge" id="power-stats-quality">--</span>
+                    </div>
+                </div>
             </div>
 
             <div class="plot-panel">
@@ -143,12 +164,26 @@
                 <div class="plot-container">
                     <div id="current-plot" class="plot"></div>
                 </div>
-                <div class="stats-row hidden" id="stats-row">
-                    <span class="stat-item">n: <span class="stat-value" id="stats-n">--</span></span>
-                    <span class="stat-item" id="stats-measurement">
-                        <span id="stats-wavelength">--</span>: <span class="stat-value" id="stats-values">--</span>
-                    </span>
-                    <span class="quality-badge" id="stats-quality">--</span>
+                <div class="measurement-stats-bar" id="current-stats-row">
+                    <div class="measurement-stat">
+                        <span class="measurement-stat-label">Readings:</span>
+                        <span class="measurement-stat-value" id="current-stats-n">--</span>
+                    </div>
+                    <div class="measurement-stat">
+                        <span class="measurement-stat-label">Wavelength:</span>
+                        <span class="measurement-stat-value" id="current-stats-wavelength">--</span>
+                    </div>
+                    <div class="measurement-stat">
+                        <span class="measurement-stat-label">Mean:</span>
+                        <span class="measurement-stat-value" id="current-stats-mean">--</span>
+                    </div>
+                    <div class="measurement-stat">
+                        <span class="measurement-stat-label">Std Dev:</span>
+                        <span class="measurement-stat-value" id="current-stats-std">--</span>
+                    </div>
+                    <div class="measurement-stat">
+                        <span class="quality-badge" id="current-stats-quality">--</span>
+                    </div>
                 </div>
             </div>
         </div>
