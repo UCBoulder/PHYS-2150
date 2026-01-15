@@ -1441,3 +1441,12 @@ window.toggleConsole = toggleConsole;
 window.clearConsole = clearConsole;
 window.copyConsole = copyConsole;
 window.toggleTheme = () => LabTheme.toggle();
+
+// Stability test exports
+window.startStabilityTest = startStabilityTest;
+window.stopStabilityTest = stopStabilityTest;
+window.saveStabilityData = saveStabilityData;
+window.onStabilityMeasurement = onStabilityMeasurement;
+window.onStabilityComplete = onStabilityComplete;
+window.onStabilityError = onStabilityError;
+window.onStabilityStatus = onStabilityStatus;
