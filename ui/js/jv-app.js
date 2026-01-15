@@ -472,6 +472,7 @@ function startStabilityTest() {
 
 function executeStabilityTest(pixel) {
     currentPixel = pixel;
+    updatePixelLabel(pixel);
 
     const targetVoltage = parseFloat(document.getElementById('stability-target-voltage').value);
     const duration = parseFloat(document.getElementById('stability-duration').value);
