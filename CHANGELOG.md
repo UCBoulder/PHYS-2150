@@ -10,16 +10,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - J-V voltage stability test feature: monitors current stability at a fixed voltage over time with configurable duration and interval
 - Stability test tab in J-V interface with real-time plotting, statistics display (mean, std dev, CV%), and CSV export
+- J-V CSV export now includes measurement statistics: std_dev and n columns for both forward and reverse scans
+- Pixel number prompt and display for stability tests (matches J-V measurement workflow)
 
 ### Changed
+- J-V measurements increased from 5 to 10 readings per voltage point (Keithley 2450 trace buffer minimum requirement)
+- Stability test measurements increased from 5 to 10 readings per time point (Keithley 2450 trace buffer minimum)
 - Stability test now sets target voltage directly (removed voltage sweep from initial voltage)
 - Stability test stabilization time increased from 2s to 5s for better settling
+- Stability test filename format now matches J-V: `YYYY_MM_DD_IV_stability_cell#_pixel#.csv`
 - SEM% (standard error of mean as percentage) property on MeasurementStats for quality assessment
 - Keithley 2450 measurement optimization methods: NPLC integration time, device-native source delay, trace buffer
-- J-V measurement statistics via trace buffer: takes 5 readings per voltage point, calculates mean, std_dev, SEM%
+- J-V measurement statistics via trace buffer: takes 10 readings per voltage point, calculates mean, std_dev, SEM%
 - J-V quality thresholds in `JV_QUALITY_THRESHOLDS` config (excellent <0.1%, good <0.5%, fair <2% SEM%)
 - J-V stats callback for real-time measurement quality display
-- J-V measurement statistics bar below plot showing readings count, voltage, mean, std dev, and quality badge
+- J-V measurement statistics bar below plot showing readings count, voltage, mean, and std dev (quality badge removed)
 - Measurement-type-specific quality thresholds in `MEASUREMENT_QUALITY_THRESHOLDS` config
 - "Low signal" quality label for weak but valid signals below configurable threshold
 - Power measurement statistics display (previously only available for current measurements)
@@ -32,7 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - J-V measurements now use Keithley trace buffer for multiple readings with statistics calculation
 - J-V dwell time replaced with device-native source delay (50ms default vs 500ms Python sleep)
-- J-V now takes 5 readings per point via trace buffer (returns individual readings for stats, not just mean)
+- J-V now takes 10 readings per point via trace buffer (returns individual readings for stats, not just mean)
 - EQE lock-in integration cycles reduced from 100 to 12 (~5x faster measurements, validated across wavelengths)
 - EQE fast measurement cycles reduced from 20 to 5 for quicker live monitoring
 - Measurement quality assessment now uses SEM% instead of CV% (better reflects uncertainty in the mean)
@@ -57,11 +62,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - J-V raw export format headers now configurable via `DATA_EXPORT_CONFIG["headers_raw"]`
 
 ### Removed
+- Quality badge from J-V measurement statistics bar (students see raw mean ± std dev without quality classification)
 - SE (Standard Error) and CV% (Coefficient of Variation) from EQE measurement statistics display
 - SE and CV% columns from EQE current measurement CSV export (now: Wavelength, Current_mean, Current_std, n)
 - `FILE_NAMING` config from EQE settings.py (merged into `DATA_EXPORT_CONFIG`)
 
 ### Fixed
+- Stability test filename now uses proper format with cell and pixel numbers instead of timestamp-based naming
+- Stability test now updates pixel label in UI top-right corner when starting test
+- Keithley 2450 trace buffer SCPI command parameter order (Error 1127: TRAC:POIN expects count first, buffer name second)
+- Keithley 2450 trace buffer minimum capacity requirement (Error 4920: increased from 5 to 10 readings minimum)
 - PicoScope PS2204A driver now respects `num_cycles` parameter (was capturing only ~6 cycles regardless of setting due to buffer/sample rate constraints)
 - PicoScope PS2204A auto-trigger timeout reduced from 1000ms to 100ms (was adding ~1 second overhead to every measurement)
 - EQE data export filenames now follow documented convention (`YYYY_MM_DD_power_cell{N}.csv`, `YYYY_MM_DD_current_cell{N}_pixel{P}.csv`) using templates from settings.py
