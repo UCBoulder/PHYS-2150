@@ -346,22 +346,21 @@ class JVApi(BaseWebApi):
             self._experiment.stop_stability_test()
         return json.dumps({"success": True})
 
-    @Slot(str, result=str)
-    def save_stability_data(self, csv_content: str) -> str:
+    @Slot(str, str, int, result=str)
+    def save_stability_data(self, csv_content: str, cell_number: str, pixel: int) -> str:
         """
         Save stability test data to file.
 
         Args:
             csv_content: CSV string to save
+            cell_number: Cell number for filename
+            pixel: Pixel number for filename
 
         Returns:
             JSON string with success status and file path
         """
-        from datetime import datetime
-
-        # Generate default filename
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        default_filename = f"stability_{timestamp}.csv"
+        # Generate default filename using settings template
+        default_filename = self._exporter.generate_stability_filename(cell_number, pixel)
 
         # Show save dialog
         file_path, _ = QFileDialog.getSaveFileName(

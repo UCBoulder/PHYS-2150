@@ -539,6 +539,9 @@ function saveStabilityData() {
         return;
     }
 
+    const cellNumber = document.getElementById('stability-cell-number').value || '000';
+    const pixel = currentPixel || 1;
+
     // Generate CSV
     const headers = ['Timestamp (s)', 'Voltage (V)', 'Current (mA)'];
     let csv = headers.join(',') + '\n';
@@ -549,9 +552,9 @@ function saveStabilityData() {
         csv += `${stabilityData.currents[i].toFixed(5)}\n`;
     }
 
-    // Call save API
+    // Call save API with cell number and pixel
     const api = LabAPI.get();
-    api.save_stability_data(csv, (result) => {
+    api.save_stability_data(csv, cellNumber, pixel, (result) => {
         const response = JSON.parse(result);
         if (response.success) {
             console.log('Stability data saved to:', response.path);
