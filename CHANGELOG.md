@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.3.1] - 2026-01-15
+
+### Security
+- Updated fonttools dependency from 4.60.1 to 4.61.1 to address CVE-2025-66034 (arbitrary file write vulnerability in fontTools.varLib module). This project does not use the vulnerable varLib functionality, so risk was very low.
+
 ## [3.3.0] - 2026-01-15
 
 ### Added
@@ -345,6 +350,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Key Changes |
 |---------|------|-------------|
+| 3.3.1 | 2026-01-15 | Security: Update fonttools to 4.61.1 (CVE-2025-66034) |
 | 3.3.0 | 2026-01-15 | J-V stability test, measurement statistics, EQE uncertainty visualization, performance improvements |
 | 3.2.0 | 2026-01-05 | Lock-in Lab, test suite (201 tests), WCAG accessibility, security fix |
 | 3.1.0 | 2025-12-25 | PyInstaller/Inno Setup build, hidden offline mode toggle |
@@ -356,7 +362,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 | 1.0.0 | 2025-04-22 | Filter wheel automation, improved workflows |
 | 0.1.0 | 2024-09-06 | Initial development release with SR510 lock-in |
 
-[Unreleased]: https://github.com/UCBoulder/PHYS-2150/compare/v3.3.0...HEAD
+[Unreleased]: https://github.com/UCBoulder/PHYS-2150/compare/v3.3.1...HEAD
+[3.3.1]: https://github.com/UCBoulder/PHYS-2150/compare/v3.3.0...v3.3.1
 [3.3.0]: https://github.com/UCBoulder/PHYS-2150/compare/v3.2.0...v3.3.0
 [3.2.0]: https://github.com/UCBoulder/PHYS-2150/compare/v3.1.0...v3.2.0
 [3.1.0]: https://github.com/UCBoulder/PHYS-2150/compare/v3.0.0...v3.1.0
