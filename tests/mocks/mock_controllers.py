@@ -66,13 +66,25 @@ class MockKeithley2450Controller:
         """Generate mock current with high precision (returns Decimal for math compatibility)."""
         return Decimal(str(self.measure_current()))
 
+    def measure_current_multiple(self, count: int = 10) -> List[float]:
+        """Take multiple current measurements and return all individual readings."""
+        import time
+        count = max(10, min(100, count))  # Clamp to valid range
+        # Small delay to simulate real I/O latency (allows stop tests to work)
+        time.sleep(0.001)
+        return [self.measure_current() for _ in range(count)]
+
     def configure_source_voltage(self) -> None:
         pass
 
     def configure_for_jv_measurement(self, voltage_range: float = 2,
                                       current_range: float = 10,
                                       current_limit: float = 1,
-                                      remote_sensing: bool = True) -> None:
+                                      remote_sensing: bool = True,
+                                      nplc: float = 1.0,
+                                      averaging_count: int = 1,
+                                      averaging_filter: str = "REPEAT",
+                                      source_delay_s: float = 0.0) -> None:
         """Configure device for J-V measurement."""
         self._current_compliance = current_limit
         self.output_on()

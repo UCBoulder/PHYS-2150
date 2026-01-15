@@ -277,7 +277,7 @@ class TestJVConfigIntegration:
         assert "voltage_range" in JV_MEASUREMENT_CONFIG
         assert "current_range" in JV_MEASUREMENT_CONFIG
         assert "current_compliance" in JV_MEASUREMENT_CONFIG
-        assert "dwell_time_ms" in JV_MEASUREMENT_CONFIG
+        assert "source_delay_s" in JV_MEASUREMENT_CONFIG
 
     def test_default_params_structure(self):
         """Default params should have expected structure."""

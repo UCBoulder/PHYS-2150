@@ -213,11 +213,11 @@ class TestJVDataExporter:
             header = next(reader)
             rows = list(reader)
 
-        # Should have 3 columns
-        assert len(header) == 3
+        # Should have 7 columns (Voltage, Forward, Forward Std, Forward n, Reverse, Reverse Std, Reverse n)
+        assert len(header) == 7
         assert "Voltage" in header[0]
         assert "Forward" in header[1]
-        assert "Reverse" in header[2]
+        assert "Reverse" in header[4]
 
         # Should have rows (grouped by voltage)
         assert len(rows) >= 1
@@ -252,8 +252,8 @@ class TestJVDataExporter:
         """Should convert result to DataFrame."""
         df = exporter.result_to_dataframe(sample_result)
 
-        # Should have 3 columns
-        assert len(df.columns) == 3
+        # Should have 7 columns (Voltage, Forward, Forward Std, Forward n, Reverse, Reverse Std, Reverse n)
+        assert len(df.columns) == 7
 
         # Should have voltage sorted
         voltage_col = df.columns[0]
