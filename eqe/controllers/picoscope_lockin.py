@@ -11,7 +11,7 @@ from typing import Optional, Dict, Tuple
 import numpy as np
 
 from ..drivers.picoscope_driver import PicoScopeDriver
-from ..config.settings import DEVICE_CONFIGS, DeviceType, CURRENT_MEASUREMENT_CONFIG
+from ..config.settings import DEVICE_CONFIGS, DeviceType, CURRENT_MEASUREMENT_CONFIG, MEASUREMENT_QUALITY_THRESHOLDS
 from common.utils import get_logger, MeasurementStats, get_error
 
 # Module-level logger for lock-in controller
@@ -382,6 +382,9 @@ class PicoScopeController:
             current = average_signal * self._transimpedance_gain
             current_std = std_signal * self._transimpedance_gain
 
+            # Get current-specific quality thresholds
+            current_thresholds = MEASUREMENT_QUALITY_THRESHOLDS["current"]
+
             # Create measurement statistics for student display (CRITICAL for learning objectives!)
             # Show current (not voltage) since that's what students care about
             stats = MeasurementStats(
@@ -392,7 +395,10 @@ class PicoScopeController:
                 n_outliers=0,
                 cv_percent=cv,
                 unit="A",
-                wavelength_nm=wavelength_nm
+                wavelength_nm=wavelength_nm,
+                measurement_type="current",
+                quality_thresholds=current_thresholds,
+                low_signal_threshold=current_thresholds.get("low_signal_threshold")
             )
             # Log to console and emit to GUI stats widget
             _logger.student_stats(stats)

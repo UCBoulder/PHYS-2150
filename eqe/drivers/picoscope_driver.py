@@ -692,22 +692,58 @@ class PicoScopeDriver:
         # Calculate acquisition parameters based on device type
         if self.device_type == '2000':
             # PicoScope 2204A parameters
+            # Buffer is limited to 2000 samples, so we dynamically adjust timebase
+            # to fit the requested number of cycles
+            max_samples = 2000
+            min_samples_per_cycle = 20  # Minimum for accurate lock-in (20x oversampling)
+
             if visualization_mode:
-                # Visualization mode: slower sample rate to capture more cycles
-                # Timebase 15 ≈ 327680ns = ~3 kHz, gives ~38 samples/cycle at 81 Hz
-                # With 2000 samples buffer: ~53 cycles for educational display
+                # Visualization mode: use fixed slower rate for consistent display
                 timebase = 15
                 fs = 1e9 / 327680  # ~3.05 kHz
+                samples_per_cycle = fs / reference_freq
+                num_samples = min(int(num_cycles * samples_per_cycle), max_samples)
             else:
-                # Measurement mode: fast sample rate for best SNR
-                # Timebase 12 = 40960ns = ~24 kHz, gives ~300 samples/cycle at 81 Hz
-                timebase = 12
-                fs = 1e9 / 40960  # ~24.4 kHz
+                # Measurement mode: calculate timebase to fit requested cycles
+                # Target: fit num_cycles in max_samples with adequate samples/cycle
+                target_samples_per_cycle = max_samples / num_cycles
+
+                # Ensure minimum samples per cycle for lock-in accuracy
+                if target_samples_per_cycle < min_samples_per_cycle:
+                    # Can't fit requested cycles - use maximum possible
+                    target_samples_per_cycle = min_samples_per_cycle
+                    actual_num_cycles = max_samples / target_samples_per_cycle
+                    _logger.debug(f"Requested {num_cycles} cycles but limited to {actual_num_cycles:.0f} "
+                                  f"(min {min_samples_per_cycle} samples/cycle)")
+
+                # Calculate required sample rate
+                fs_needed = target_samples_per_cycle * reference_freq
+
+                # PS2000 timebase formula (for timebase >= 8):
+                # interval_ns = 40960 * 2^(timebase - 12)
+                # So: timebase = 12 + log2(interval_ns / 40960)
+                # And: interval_ns = 1e9 / fs_needed
+                interval_ns = 1e9 / fs_needed
+
+                # Calculate timebase (must be integer >= 8)
+                timebase = 12 + np.log2(interval_ns / 40960)
+                timebase = max(8, int(np.ceil(timebase)))  # Round up to ensure enough time
+
+                # Cap at reasonable maximum (timebase 20 = ~1.6ms interval = ~625 Hz)
+                timebase = min(timebase, 20)
+
+                # Calculate actual sample rate from chosen timebase
+                actual_interval_ns = 40960 * (2 ** (timebase - 12)) if timebase >= 12 else 40960 / (2 ** (12 - timebase))
+                fs = 1e9 / actual_interval_ns
+                samples_per_cycle = fs / reference_freq
+                num_samples = min(int(num_cycles * samples_per_cycle), max_samples)
+
+                _logger.debug(f"PS2204A: timebase={timebase}, fs={fs:.0f}Hz, "
+                              f"{samples_per_cycle:.1f} samples/cycle, {num_samples} samples")
+
             decimation = timebase  # Pass timebase to _acquire_block for ps2000
-            samples_per_cycle = fs / reference_freq
-            num_samples = min(int(num_cycles * samples_per_cycle), 2000)
             if num_samples < samples_per_cycle:
-                num_samples = min(int(samples_per_cycle * 2), 2000)
+                num_samples = min(int(samples_per_cycle * 2), max_samples)
         else:
             # PicoScope 5000 series parameters
             base_rate = 100e6  # 100 MS/s
@@ -1091,13 +1127,15 @@ class PicoScopeDriver:
 
             # Set up trigger with auto-trigger
             # ps2000_set_trigger(handle, source, threshold, direction, delay, auto_trigger_ms)
+            # Use short auto-trigger since we're free-running (signal is continuous)
+            # 100ms is enough to capture several cycles at 81 Hz if trigger doesn't fire
             self.status["trigger"] = ps.ps2000_set_trigger(
                 self.chandle,
                 0,     # trigger on Channel A (signal)
                 64,    # threshold in ADC counts
                 0,     # direction: rising
                 0,     # delay
-                1000   # auto-trigger after 1000ms
+                100    # auto-trigger after 100ms (was 1000ms)
             )
             self.assert_pico_ok(self.status["trigger"])
 

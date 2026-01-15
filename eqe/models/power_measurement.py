@@ -16,6 +16,7 @@ from ..controllers.monochromator import MonochromatorController, MonochromatorEr
 from ..config.settings import (
     POWER_MEASUREMENT_CONFIG,
     PHASE_ADJUSTMENT_CONFIG,
+    MEASUREMENT_QUALITY_THRESHOLDS,
 )
 from ..utils.data_handling import MeasurementDataLogger
 
@@ -140,6 +141,9 @@ class PowerMeasurementModel:
             # Calculate CV% for quality assessment
             cv_percent = (std_dev / power * 100) if power != 0 else 0.0
 
+            # Get power-specific quality thresholds
+            power_thresholds = MEASUREMENT_QUALITY_THRESHOLDS["power"]
+
             # Create and emit measurement statistics for student display
             # n_measurements/n_total shows readings per wavelength (e.g., 200/200)
             stats = MeasurementStats(
@@ -151,7 +155,9 @@ class PowerMeasurementModel:
                 cv_percent=cv_percent,
                 wavelength_nm=confirmed_wavelength,
                 unit="W",
-                measurement_type="power"
+                measurement_type="power",
+                quality_thresholds=power_thresholds,
+                low_signal_threshold=power_thresholds.get("low_signal_threshold")
             )
             _logger.student_stats(stats)
 

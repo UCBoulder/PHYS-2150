@@ -49,7 +49,9 @@ class MeasurementStats:
         cv_percent: float = 0.0,
         wavelength_nm: Optional[float] = None,
         unit: str = "V",
-        measurement_type: str = "current"
+        measurement_type: str = "current",
+        quality_thresholds: Optional[Dict[str, float]] = None,
+        low_signal_threshold: Optional[float] = None
     ):
         self.mean = mean
         self.std_dev = std_dev
@@ -60,31 +62,75 @@ class MeasurementStats:
         self.wavelength_nm = wavelength_nm
         self.unit = unit
         self.measurement_type = measurement_type  # "current" or "power"
+        self.quality_thresholds = quality_thresholds  # Optional CV thresholds dict
+        self.low_signal_threshold = low_signal_threshold  # Optional signal level threshold
 
     @property
     def std_error(self) -> float:
         """
-        Calculate standard error of the mean.
+        Calculate standard error of the mean (absolute value).
 
-        SE = σ / √n
+        SEM = σ / √n
 
         This represents uncertainty in the mean, not spread of measurements.
-        Key learning goal: students should understand SD vs SE distinction.
+        Key learning goal: students should understand SD vs SEM distinction.
         """
         if self.n_measurements > 0:
             return self.std_dev / (self.n_measurements ** 0.5)
         return 0.0
 
     @property
+    def sem_percent(self) -> float:
+        """
+        Calculate standard error of the mean as percentage of mean (relative SEM).
+
+        SEM% = (SEM / mean) × 100% = (std_dev / (mean × √n)) × 100%
+
+        This is the appropriate metric for data quality assessment:
+        - Reflects uncertainty in the reported value (the mean)
+        - Rewards taking more measurements (√n in denominator)
+        - Independent of measurement technique (unlike CV for chopped signals)
+        """
+        if self.mean != 0 and self.n_measurements > 0:
+            return (self.std_error / abs(self.mean)) * 100.0
+        return 0.0
+
+    @property
     def quality(self) -> str:
-        """Return quality assessment based on CV."""
-        if self.cv_percent < 1.0:
+        """
+        Return quality assessment based on SEM% (standard error of mean) and measurement type.
+
+        Uses measurement-specific SEM% thresholds if provided, otherwise falls back
+        to CV%-based legacy defaults for backward compatibility.
+
+        For signals below low_signal_threshold, returns "Low signal" instead
+        of "Check measurement" to distinguish weak but valid signals from
+        measurement problems.
+        """
+        # Use provided thresholds or fall back to legacy defaults
+        if self.quality_thresholds:
+            # New approach: use SEM% (uncertainty in the mean)
+            thresholds = self.quality_thresholds
+            metric = self.sem_percent
+        else:
+            # Legacy defaults using CV% (maintain backward compatibility)
+            thresholds = {
+                "excellent": 1.0,
+                "good": 5.0,
+                "fair": 10.0
+            }
+            metric = self.cv_percent
+
+        if metric < thresholds["excellent"]:
             return "Excellent"
-        elif self.cv_percent < 5.0:
+        elif metric < thresholds["good"]:
             return "Good"
-        elif self.cv_percent < 10.0:
+        elif metric < thresholds["fair"]:
             return "Fair"
         else:
+            # Check if this is a low signal condition (weak but valid)
+            if self.low_signal_threshold is not None and abs(self.mean) < self.low_signal_threshold:
+                return "Low signal"
             return "Check measurement"
 
     def format_for_student(self) -> str:
@@ -111,12 +157,13 @@ class MeasurementStats:
 
         mean_scaled = self.mean * scale
         std_scaled = self.std_dev * scale
+        sem_scaled = self.std_error * scale
         unit_str = f"{prefix}{self.unit}"
 
         location = f"{self.wavelength_nm:.0f}nm: " if self.wavelength_nm else ""
         return (
-            f"{location}{mean_scaled:.2f} ± {std_scaled:.2f} {unit_str} "
-            f"(n={self.n_measurements}/{self.n_total}, CV={self.cv_percent:.1f}%)"
+            f"{location}{mean_scaled:.2f} ± {sem_scaled:.2f} {unit_str} "
+            f"(n={self.n_measurements}/{self.n_total}, SEM={self.sem_percent:.2f}%)"
         )
 
 

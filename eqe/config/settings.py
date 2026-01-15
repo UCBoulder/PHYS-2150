@@ -69,6 +69,34 @@ STABILITY_TEST_CONFIG = {
     "interval_range": (1, 60),          # seconds - valid range (min, max)
 }
 
+# Measurement quality thresholds based on SEM% (standard error of mean as % of mean)
+# SEM represents uncertainty in the mean value: SEM% = (std_dev / (mean × √n)) × 100%
+# This is the appropriate metric for data quality as it:
+#   - Reflects uncertainty in the reported value (the mean)
+#   - Rewards taking more measurements (√n in denominator)
+#   - Is independent of measurement technique (unlike CV for chopped signals)
+MEASUREMENT_QUALITY_THRESHOLDS = {
+    # Power measurements: chopped light, asynchronous sampling, n=200
+    # Typical: CV ~13%, n=200 → SEM% ~0.9%
+    "power": {
+        "excellent": 1.5,   # SEM% < 1.5% - mean is well-determined
+        "good": 2.5,        # SEM% < 2.5%
+        "fair": 4.0,        # SEM% < 4%
+        # SEM% >= 4% = "Check measurement"
+        "low_signal_threshold": None,  # Not applicable (all signals are adequate)
+    },
+    # Current measurements: lock-in detection, n=5
+    # Typical strong signal: CV ~0.5%, n=5 → SEM% ~0.22%
+    # Weak signal edges: CV ~25%, n=5 → SEM% ~11%
+    "current": {
+        "excellent": 0.5,   # SEM% < 0.5% - excellent precision
+        "good": 2.0,        # SEM% < 2%
+        "fair": 15.0,       # SEM% < 15% - accommodates low-signal spectrum edges
+        # SEM% >= 15% = "Check measurement" or "Low signal" if below threshold
+        "low_signal_threshold": 5e-9,  # 5 nA - below this, label as "Low signal" not "Check measurement"
+    }
+}
+
 # Device-specific configurations
 DEVICE_CONFIGS = {
     # Thorlabs PM100D power meter settings
@@ -90,8 +118,8 @@ DEVICE_CONFIGS = {
         # Reference signal validation - 5V square wave clipped to ~2V by PicoScope input range
         "min_reference_amplitude": 1.0,    # V peak-to-peak - reject noise masquerading as signal
         # Integration cycles - more cycles = better noise rejection but slower
-        "default_num_cycles": 100,         # cycles for accurate measurements (~1.2s at 81Hz)
-        "fast_measurement_cycles": 20,     # cycles for live monitoring (~0.25s at 81Hz)
+        "default_num_cycles": 12,          # cycles for accurate measurements (~0.25s at 81Hz)
+        "fast_measurement_cycles": 5,      # cycles for live monitoring (~0.18s at 81Hz)
         # Averaging and quality control
         "num_measurements": 5,             # readings to average per data point
         "saturation_threshold_v": 0.95,    # V - warn if signal approaches ADC limit

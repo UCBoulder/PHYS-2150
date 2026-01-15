@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Measurement statistics bar below both power and current plots showing readings count, wavelength, mean, std dev, and quality badge
+- SEM% (standard error of mean as percentage) property on MeasurementStats for quality assessment
+- Measurement-type-specific quality thresholds in `MEASUREMENT_QUALITY_THRESHOLDS` config
+- "Low signal" quality label for weak but valid signals below configurable threshold
 - Power measurement statistics display (previously only available for current measurements)
 - Quality-based coloring for power plot data points (matches current plot behavior)
 - Hover interaction on EQE plots to show statistics for individual data points
@@ -17,6 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Toggle checkbox to show/hide error bars on EQE plot (only visible when uncertainty data available)
 
 ### Changed
+- EQE lock-in integration cycles reduced from 100 to 12 (~5x faster measurements, validated across wavelengths)
+- EQE fast measurement cycles reduced from 20 to 5 for quicker live monitoring
+- Measurement quality assessment now uses SEM% instead of CV% (better reflects uncertainty in the mean)
+- Console statistics output now shows SEM% instead of CV%
 - EQE power CSV export now includes statistics: Power_mean (uW), Power_std (uW), n (matches current format)
 - EQE power CSV units changed from Watts to microwatts (uW) for readability
 - EQE statistics bar now always visible (was only appearing during measurement)
@@ -42,6 +49,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `FILE_NAMING` config from EQE settings.py (merged into `DATA_EXPORT_CONFIG`)
 
 ### Fixed
+- PicoScope PS2204A driver now respects `num_cycles` parameter (was capturing only ~6 cycles regardless of setting due to buffer/sample rate constraints)
+- PicoScope PS2204A auto-trigger timeout reduced from 1000ms to 100ms (was adding ~1 second overhead to every measurement)
 - EQE data export filenames now follow documented convention (`YYYY_MM_DD_power_cell{N}.csv`, `YYYY_MM_DD_current_cell{N}_pixel{P}.csv`) using templates from settings.py
 - J-V data export filename in offline mode now uses settings.py template (`YYYY_MM_DD_IV_cell{N}_pixel{P}.csv`)
 - EQE pixel validation now shows inline error message instead of browser alert (consistent with cell number validation)
