@@ -690,6 +690,32 @@ body:not(.dark-mode) .plot-panel .modebar-container {
     min-height: 350px;
 }
 
+/* Error bar toggle in plot title */
+.analysis-eqe-panel .plot-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.error-bar-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: normal;
+    cursor: pointer;
+}
+
+.error-bar-toggle input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+}
+
+.error-bar-toggle .toggle-label {
+    color: var(--text-secondary);
+}
+
 .analysis-results-panel {
     display: flex;
     flex-direction: column;

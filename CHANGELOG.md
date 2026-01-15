@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Power measurement statistics display (previously only available for current measurements)
 - Quality-based coloring for power plot data points (matches current plot behavior)
 - Hover interaction on EQE plots to show statistics for individual data points
+- EQE uncertainty visualization with error bars on EQE Analysis plot
+- EQE uncertainty propagation using standard error: δEQE/EQE = √[(δI/I)² + (δP/P)²]
+- Toggle checkbox to show/hide error bars on EQE plot (only visible when uncertainty data available)
 
 ### Changed
 - EQE power CSV export now includes statistics: Power_mean (uW), Power_std (uW), n (matches current format)

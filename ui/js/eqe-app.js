@@ -46,14 +46,15 @@ const state = {
 
     analysis: {
         visible: false,
-        powerData: null,
-        currentData: null,
-        eqeData: null,
+        powerData: null,      // { wavelengths: [], values: [], stats: [] }
+        currentData: null,    // { wavelengths: [], values: [], stats: [] }
+        eqeData: null,        // { wavelengths: [], eqe: [], uncertainty: [] }
         metrics: null,
         cellNumber: null,
         pixel: null,
         powerFile: null,
-        currentFile: null
+        currentFile: null,
+        showErrorBars: true   // Toggle for error bar display
     },
 
     lockinlab: {
@@ -2202,9 +2203,16 @@ function usePowerSession() {
         return;
     }
 
+    // Convert µW to W for EQE calculation, include stats for uncertainty
+    const stats = state.powerData.stats.map(s => ({
+        std_dev: s.std_dev * 1e-6,  // µW to W
+        n: s.n
+    }));
+
     state.analysis.powerData = {
         wavelengths: [...state.powerData.x],
-        values: state.powerData.y.map(p => p * 1e-6)
+        values: state.powerData.y.map(p => p * 1e-6),  // µW to W
+        stats: stats
     };
 
     document.getElementById('power-file-status').textContent = `Session (${state.powerData.x.length} pts)`;
@@ -2220,9 +2228,16 @@ function useCurrentSession() {
         return;
     }
 
+    // Convert nA to A for EQE calculation, include stats for uncertainty
+    const stats = state.currentData.stats.map(s => ({
+        std_dev: s.std_dev * 1e-9,  // nA to A
+        n: s.n
+    }));
+
     state.analysis.currentData = {
         wavelengths: [...state.currentData.x],
-        values: state.currentData.y.map(c => c * 1e-9)
+        values: state.currentData.y.map(c => c * 1e-9),  // nA to A
+        stats: stats
     };
 
     document.getElementById('current-file-status').textContent = `Session (${state.currentData.x.length} pts)`;
@@ -2253,16 +2268,23 @@ function onPowerFileSelected(event) {
         try {
             const data = parseCSV(e.target.result);
             // CSV stores power in µW, but EQE calculation expects Watts (SI units)
-            // Convert µW to W to match usePowerSession behavior
+            // Convert µW to W, and stats if available
+            const stats = data.stats ? data.stats.map(s => s ? {
+                std_dev: s.std_dev * 1e-6,  // µW to W
+                n: s.n
+            } : null) : null;
+
             state.analysis.powerData = {
                 wavelengths: data.wavelengths,
-                values: data.values.map(v => v * 1e-6)
+                values: data.values.map(v => v * 1e-6),
+                stats: stats
             };
             state.analysis.powerFile = file.name;
             document.getElementById('power-file-status').textContent = file.name;
             document.getElementById('power-file-status').classList.add('loaded');
             updateCalculateButton();
-            setAnalysisStatus(`Power data loaded (${data.wavelengths.length} points)`, 'success');
+            const statsMsg = stats ? ' (with uncertainty)' : '';
+            setAnalysisStatus(`Power data loaded (${data.wavelengths.length} points${statsMsg})`, 'success');
         } catch (err) {
             setAnalysisStatus('Failed to parse power CSV: ' + err.message, 'error');
         }
@@ -2279,10 +2301,16 @@ function onCurrentFileSelected(event) {
         try {
             const data = parseCSV(e.target.result);
             // CSV stores current in nA, but EQE calculation expects Amps (SI units)
-            // Convert nA to A to match useCurrentSession behavior
+            // Convert nA to A, and stats if available
+            const stats = data.stats ? data.stats.map(s => s ? {
+                std_dev: s.std_dev * 1e-9,  // nA to A
+                n: s.n
+            } : null) : null;
+
             state.analysis.currentData = {
                 wavelengths: data.wavelengths,
-                values: data.values.map(v => v * 1e-9)
+                values: data.values.map(v => v * 1e-9),
+                stats: stats
             };
             state.analysis.currentFile = file.name;
 
@@ -2293,7 +2321,8 @@ function onCurrentFileSelected(event) {
             document.getElementById('current-file-status').textContent = file.name;
             document.getElementById('current-file-status').classList.add('loaded');
             updateCalculateButton();
-            setAnalysisStatus(`Current data loaded (${data.wavelengths.length} points)`, 'success');
+            const statsMsg = stats ? ' (with uncertainty)' : '';
+            setAnalysisStatus(`Current data loaded (${data.wavelengths.length} points${statsMsg})`, 'success');
         } catch (err) {
             setAnalysisStatus('Failed to parse current CSV: ' + err.message, 'error');
         }
@@ -2305,6 +2334,8 @@ function parseCSV(content) {
     const lines = content.trim().split('\n');
     const wavelengths = [];
     const values = [];
+    const stats = [];
+    let hasStats = false;
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
@@ -2317,6 +2348,20 @@ function parseCSV(content) {
             if (!isNaN(wl) && !isNaN(val)) {
                 wavelengths.push(wl);
                 values.push(val);
+
+                // Check for stats columns (std_dev, n)
+                if (parts.length >= 4) {
+                    const std_dev = parseFloat(parts[2]);
+                    const n = parseInt(parts[3], 10);
+                    if (!isNaN(std_dev) && !isNaN(n)) {
+                        stats.push({ std_dev, n });
+                        hasStats = true;
+                    } else {
+                        stats.push(null);
+                    }
+                } else {
+                    stats.push(null);
+                }
             }
         }
     }
@@ -2325,7 +2370,7 @@ function parseCSV(content) {
         throw new Error('No valid data found');
     }
 
-    return { wavelengths, values };
+    return { wavelengths, values, stats: hasStats ? stats : null };
 }
 
 function calculateEQE() {
@@ -2340,6 +2385,12 @@ function calculateEQE() {
     try {
         const eqeWavelengths = [];
         const eqeValues = [];
+        const eqeUncertainty = [];
+
+        // Check if we have stats for uncertainty calculation
+        const hasCurrentStats = current.stats && current.stats.length === current.values.length;
+        const hasPowerStats = power.stats && power.stats.length === power.values.length;
+        const canCalculateUncertainty = hasCurrentStats && hasPowerStats;
 
         for (let i = 0; i < current.wavelengths.length; i++) {
             const wl = current.wavelengths[i];
@@ -2355,6 +2406,33 @@ function calculateEQE() {
             if (eqePercent >= 0 && eqePercent <= 150) {
                 eqeWavelengths.push(wl);
                 eqeValues.push(eqePercent);
+
+                // Calculate propagated uncertainty if stats are available
+                if (canCalculateUncertainty) {
+                    const currentStat = current.stats[i];
+                    const powerStat = interpolateStats(power.wavelengths, power.stats, wl);
+
+                    if (currentStat && powerStat && currentStat.n > 1 && powerStat.n > 1) {
+                        // Standard error = std_dev / sqrt(n)
+                        const se_I = currentStat.std_dev / Math.sqrt(currentStat.n);
+                        const se_P = powerStat.std_dev / Math.sqrt(powerStat.n);
+
+                        // Relative uncertainties
+                        const rel_I = se_I / Math.abs(I);
+                        const rel_P = se_P / P;
+
+                        // Propagated relative uncertainty: δEQE/EQE = sqrt[(δI/I)² + (δP/P)²]
+                        const rel_EQE = Math.sqrt(rel_I * rel_I + rel_P * rel_P);
+
+                        // Absolute uncertainty in EQE (%)
+                        const uncertaintyPercent = eqePercent * rel_EQE;
+                        eqeUncertainty.push(uncertaintyPercent);
+                    } else {
+                        eqeUncertainty.push(null);
+                    }
+                } else {
+                    eqeUncertainty.push(null);
+                }
             }
         }
 
@@ -2363,7 +2441,11 @@ function calculateEQE() {
             return;
         }
 
-        state.analysis.eqeData = { wavelengths: eqeWavelengths, eqe: eqeValues };
+        state.analysis.eqeData = {
+            wavelengths: eqeWavelengths,
+            eqe: eqeValues,
+            uncertainty: canCalculateUncertainty ? eqeUncertainty : null
+        };
 
         const peakEQE = Math.max(...eqeValues);
         const peakIndex = eqeValues.indexOf(peakEQE);
@@ -2394,12 +2476,46 @@ function calculateEQE() {
         updateEQEPlot();
         updateMetricsDisplay();
 
-        setAnalysisStatus('EQE calculated successfully', 'success');
+        const hasValidUncertainty = eqeUncertainty.some(u => u !== null);
+        const uncertaintyMsg = hasValidUncertainty ? ' with uncertainty' : '';
+        setAnalysisStatus(`EQE calculated successfully${uncertaintyMsg}`, 'success');
         document.getElementById('btn-save-analysis').disabled = false;
 
     } catch (err) {
         setAnalysisStatus('Calculation error: ' + err.message, 'error');
     }
+}
+
+// Interpolate stats at a given wavelength
+function interpolateStats(xArray, statsArray, x) {
+    if (!statsArray || statsArray.length === 0) return null;
+
+    // Find surrounding points
+    for (let i = 0; i < xArray.length - 1; i++) {
+        if (xArray[i] <= x && xArray[i + 1] >= x) {
+            const stat1 = statsArray[i];
+            const stat2 = statsArray[i + 1];
+
+            if (!stat1 || !stat2) return null;
+
+            // Linear interpolation factor
+            const t = (x - xArray[i]) / (xArray[i + 1] - xArray[i]);
+
+            // Interpolate std_dev and use average n
+            return {
+                std_dev: stat1.std_dev + t * (stat2.std_dev - stat1.std_dev),
+                n: Math.round((stat1.n + stat2.n) / 2)
+            };
+        }
+    }
+
+    // Check exact match at boundaries
+    const firstIdx = xArray.indexOf(x);
+    if (firstIdx !== -1 && statsArray[firstIdx]) {
+        return statsArray[firstIdx];
+    }
+
+    return null;
 }
 
 function updateEQEPlot() {
@@ -2411,10 +2527,42 @@ function updateEQEPlot() {
         [data.wavelengths[0], data.wavelengths[data.wavelengths.length - 1]] : [];
     const peakY = metrics ? [metrics.peakEQE, metrics.peakEQE] : [];
 
+    // Check if we have uncertainty data and error bars are enabled
+    const hasUncertainty = data.uncertainty && data.uncertainty.some(u => u !== null);
+    const showErrorBars = hasUncertainty && state.analysis.showErrorBars;
+
+    // Show/hide error bar toggle based on uncertainty data availability
+    const toggleContainer = document.getElementById('error-bar-toggle-container');
+    if (toggleContainer) {
+        toggleContainer.style.display = hasUncertainty ? 'flex' : 'none';
+    }
+
+    // Build the EQE trace with optional error bars
+    const eqeTrace = {
+        x: data.wavelengths,
+        y: data.eqe,
+        mode: 'lines+markers',
+        type: 'scatter',
+        name: 'EQE',
+        line: { color: PLOT_COLORS.power, width: 2 },
+        marker: { size: 6 }
+    };
+
+    // Add error bars if available and enabled
+    if (showErrorBars) {
+        eqeTrace.error_y = {
+            type: 'data',
+            array: data.uncertainty.map(u => u !== null ? u : 0),
+            visible: true,
+            color: PLOT_COLORS.power,
+            thickness: 1.5,
+            width: 3
+        };
+    }
+
     Plotly.react('eqe-plot',
         [
-            { x: data.wavelengths, y: data.eqe, mode: 'lines+markers', type: 'scatter', name: 'EQE',
-              line: { color: PLOT_COLORS.power, width: 2 }, marker: { size: 6 } },
+            eqeTrace,
             { x: peakX, y: peakY, mode: 'lines', type: 'scatter', name: `Peak: ${metrics?.peakEQE?.toFixed(1)}%`,
               line: { color: PLOT_COLORS.phaseFit, dash: 'dash', width: 1 } }
         ],
@@ -2428,6 +2576,13 @@ function updateEQEPlot() {
         },
         plotConfig
     );
+}
+
+function toggleErrorBars() {
+    state.analysis.showErrorBars = document.getElementById('error-bar-toggle').checked;
+    if (state.analysis.eqeData) {
+        updateEQEPlot();
+    }
 }
 
 function updateMetricsDisplay() {
@@ -2718,6 +2873,7 @@ window.onPowerFileSelected = onPowerFileSelected;
 window.onCurrentFileSelected = onCurrentFileSelected;
 window.calculateEQE = calculateEQE;
 window.saveAnalysisResults = saveAnalysisResults;
+window.toggleErrorBars = toggleErrorBars;
 window.toggleConsole = toggleConsole;
 window.clearConsole = clearConsole;
 window.copyConsole = copyConsole;

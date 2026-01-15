@@ -467,7 +467,13 @@
             <!-- Plot Row: EQE Spectrum + Results -->
             <div class="analysis-plots-row">
                 <div class="plot-panel analysis-eqe-panel">
-                    <div class="plot-title">EQE Spectrum</div>
+                    <div class="plot-title">
+                        EQE Spectrum
+                        <label class="error-bar-toggle" id="error-bar-toggle-container" style="display: none;">
+                            <input type="checkbox" id="error-bar-toggle" checked onchange="toggleErrorBars()">
+                            <span class="toggle-label">Error bars</span>
+                        </label>
+                    </div>
                     <div class="plot-container">
                         <div id="eqe-plot" class="plot"></div>
                     </div>
