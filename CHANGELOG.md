@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.3.0] - 2026-01-15
+
 ### Added
 - J-V voltage stability test feature: monitors current stability at a fixed voltage over time with configurable duration and interval
 - Stability test tab in J-V interface with real-time plotting, statistics display (mean, std dev, CV%), and CSV export
@@ -343,6 +345,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Key Changes |
 |---------|------|-------------|
+| 3.3.0 | 2026-01-15 | J-V stability test, measurement statistics, EQE uncertainty visualization, performance improvements |
 | 3.2.0 | 2026-01-05 | Lock-in Lab, test suite (201 tests), WCAG accessibility, security fix |
 | 3.1.0 | 2025-12-25 | PyInstaller/Inno Setup build, hidden offline mode toggle |
 | 3.0.0 | 2025-12-24 | Web UI with Plotly.js, Qt WebEngine architecture |
@@ -353,7 +356,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 | 1.0.0 | 2025-04-22 | Filter wheel automation, improved workflows |
 | 0.1.0 | 2024-09-06 | Initial development release with SR510 lock-in |
 
-[Unreleased]: https://github.com/UCBoulder/PHYS-2150/compare/v3.2.0...HEAD
+[Unreleased]: https://github.com/UCBoulder/PHYS-2150/compare/v3.3.0...HEAD
+[3.3.0]: https://github.com/UCBoulder/PHYS-2150/compare/v3.2.0...v3.3.0
 [3.2.0]: https://github.com/UCBoulder/PHYS-2150/compare/v3.1.0...v3.2.0
 [3.1.0]: https://github.com/UCBoulder/PHYS-2150/compare/v3.0.0...v3.1.0
 [3.0.0]: https://github.com/UCBoulder/PHYS-2150/compare/v2.3.0...v3.0.0
