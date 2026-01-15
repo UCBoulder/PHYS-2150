@@ -286,7 +286,7 @@ class Keithley2450Controller:
         response = self.query("MEAS:CURR?")
         return Decimal(response)
 
-    def measure_current_multiple(self, count: int = 5) -> List[float]:
+    def measure_current_multiple(self, count: int = 10) -> List[float]:
         """
         Take multiple current measurements and return all individual readings.
 
@@ -295,12 +295,12 @@ class Keithley2450Controller:
         (mean, std_dev) for data quality assessment.
 
         Args:
-            count: Number of measurements to take (1-100)
+            count: Number of measurements to take (10-100, minimum 10 per Keithley spec)
 
         Returns:
             List[float]: List of current readings in Amps
         """
-        count = max(1, min(100, count))  # Clamp to valid range
+        count = max(10, min(100, count))  # Clamp to valid range (Keithley min is 10)
 
         # Clear buffer and configure for multiple readings
         self.write("TRAC:CLE 'defbuffer1'")

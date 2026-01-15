@@ -28,8 +28,8 @@ DEFAULT_MEASUREMENT_PARAMS: Dict[str, Any] = {
 JV_MEASUREMENT_CONFIG: Dict[str, Any] = {
     # Number of current measurements per voltage point
     # Multiple measurements allow calculation of statistics (mean, std_dev, SEM%)
-    # Using trace buffer for efficient multi-reading acquisition
-    "num_measurements": 5,
+    # Using trace buffer for efficient multi-reading acquisition (minimum 10 per Keithley spec)
+    "num_measurements": 10,
 
     # Device-native source delay after setting voltage (seconds)
     # This replaces Python time.sleep() for more precise timing
@@ -97,7 +97,7 @@ JV_STABILITY_TEST_CONFIG: Dict[str, Any] = {
     "target_stabilization_s": 2.0,      # seconds - wait at target voltage before measurements
 
     # Measurement configuration (reuse from JV_MEASUREMENT_CONFIG)
-    "num_measurements": 5,              # Number of current measurements per point
+    "num_measurements": 10,             # Number of current measurements per point (min 10 per Keithley spec)
     "nplc": 1.0,                        # Integration time (NPLC)
     "averaging_count": 1,               # Device averaging (1 = use trace buffer instead)
     "averaging_filter": "REPEAT",       # Filter type (unused when averaging_count=1)
