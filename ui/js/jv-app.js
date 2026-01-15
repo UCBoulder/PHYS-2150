@@ -432,23 +432,17 @@ function initStabilityPlot() {
         mode: 'lines+markers',
         type: 'scatter',
         name: 'Current',
-        line: { color: '#0077BB', width: 2 },
-        marker: { size: 4 }
+        line: { color: PLOT_COLORS.jvForward, width: 2 },
+        marker: { size: 5, color: PLOT_COLORS.jvForward }
     };
 
-    const layout = {
+    const layout = getBaseLayout(isDark, 'Time (s)', 'Current (mA)', {
+        transparentBg: true,
         title: 'Current Stability vs Time',
-        xaxis: { title: 'Time (s)' },
-        yaxis: { title: 'Current (mA)' },
-        paper_bgcolor: isDark ? '#1e1e1e' : '#ffffff',
-        plot_bgcolor: isDark ? '#2d2d2d' : '#f5f5f5',
-        font: { color: isDark ? '#e0e0e0' : '#333333' },
         showlegend: false
-    };
+    });
 
-    const config = { responsive: true };
-
-    Plotly.newPlot(plotDiv, [trace], layout, config);
+    Plotly.newPlot(plotDiv, [trace], layout, plotConfig);
 }
 
 function startStabilityTest() {
@@ -483,8 +477,8 @@ function startStabilityTest() {
         y: [],
         mode: 'lines+markers',
         type: 'scatter',
-        line: { color: '#0077BB', width: 2 },
-        marker: { size: 4 }
+        line: { color: PLOT_COLORS.jvForward, width: 2 },
+        marker: { size: 5, color: PLOT_COLORS.jvForward }
     });
 
     // Reset stats
