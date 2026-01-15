@@ -194,7 +194,7 @@ DATA_EXPORT_CONFIG: Dict[str, Any] = {
     },
 
     # Stability test file naming and headers
-    "stability_file_template": "{date}_stability_cell{cell_number}_pixel{pixel_number}_{voltage}V.csv",
+    "stability_file_template": "{date}_IV_stability_cell{cell_number}_pixel{pixel_number}.csv",
     "headers_stability": {
         "timestamp": "Timestamp (s)",
         "voltage": "Voltage (V)",

@@ -221,7 +221,6 @@ class JVDataExporter:
         self,
         cell_number: str,
         pixel_number: int,
-        voltage: float,
     ) -> str:
         """
         Generate a filename for stability test data.
@@ -229,7 +228,6 @@ class JVDataExporter:
         Args:
             cell_number: Cell identifier
             pixel_number: Pixel number
-            voltage: Test voltage
 
         Returns:
             str: Generated filename
@@ -239,15 +237,11 @@ class JVDataExporter:
 
         template = self.config.get(
             "stability_file_template",
-            "{date}_stability_cell{cell_number}_pixel{pixel_number}_{voltage}V.csv"
+            "{date}_IV_stability_cell{cell_number}_pixel{pixel_number}.csv"
         )
-
-        # Format voltage for filename (replace decimal point with underscore)
-        voltage_str = f"{voltage:.2f}".replace('.', '_')
 
         return template.format(
             date=date_str,
             cell_number=cell_number,
             pixel_number=pixel_number,
-            voltage=voltage_str
         )

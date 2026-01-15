@@ -446,22 +446,37 @@ function initStabilityPlot() {
 }
 
 function startStabilityTest() {
+    // Validate test parameters first
     const targetVoltage = parseFloat(document.getElementById('stability-target-voltage').value);
     const duration = parseFloat(document.getElementById('stability-duration').value);
     const interval = parseFloat(document.getElementById('stability-interval').value);
-    const cellNumber = document.getElementById('stability-cell-number').value;
-    const pixel = currentPixel || 1;
 
-    // Validate inputs
     if (isNaN(targetVoltage) || isNaN(duration) || isNaN(interval)) {
         LabModals.showError('Invalid Input', 'Please enter valid test parameters');
         return;
     }
 
-    if (!cellNumber || cellNumber.length !== 3) {
-        LabModals.showError('Cell Number Required', 'Please enter a valid 3-digit cell number in the Test Parameters panel');
+    // Check cell number, prompt if needed
+    const cellNumber = document.getElementById('stability-cell-number').value;
+    if (!cellNumber || !/^\d{3}$/.test(cellNumber)) {
+        LabModals.showCell((cell) => {
+            document.getElementById('stability-cell-number').value = cell;
+            LabModals.showPixel(executeStabilityTest);
+        });
         return;
     }
+
+    // Prompt for pixel number
+    LabModals.showPixel(executeStabilityTest);
+}
+
+function executeStabilityTest(pixel) {
+    currentPixel = pixel;
+
+    const targetVoltage = parseFloat(document.getElementById('stability-target-voltage').value);
+    const duration = parseFloat(document.getElementById('stability-duration').value);
+    const interval = parseFloat(document.getElementById('stability-interval').value);
+    const cellNumber = document.getElementById('stability-cell-number').value;
 
     // Clear previous data
     stabilityData.timestamps = [];
