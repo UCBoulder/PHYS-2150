@@ -60,10 +60,10 @@ class JVDataExporter:
         """
         Save measurement result to a CSV file.
 
-        The format matches the original application output:
+        The format includes voltage, currents, and statistics (std_dev, n):
         - Voltage column with all voltage values
-        - Forward Scan column with forward currents (None for reverse-only rows)
-        - Reverse Scan column with reverse currents (None for forward-only rows)
+        - Forward Scan columns: current, std_dev, n
+        - Reverse Scan columns: current, std_dev, n
 
         After grouping by voltage, forward and reverse values are combined.
 
@@ -74,31 +74,59 @@ class JVDataExporter:
         headers = self.config.get("headers", {})
         voltage_header = headers.get("voltage", "Voltage (V)")
         forward_header = headers.get("forward_current", "Forward Scan (mA)")
+        forward_std_header = headers.get("forward_std", "Forward Std (mA)")
+        forward_n_header = headers.get("forward_n", "Forward n")
         reverse_header = headers.get("reverse_current", "Reverse Scan (mA)")
+        reverse_std_header = headers.get("reverse_std", "Reverse Std (mA)")
+        reverse_n_header = headers.get("reverse_n", "Reverse n")
 
-        # Build combined data similar to original implementation
+        # Build combined data with statistics
         forward_voltages = result.forward.voltages
         forward_currents = result.forward.currents
+        forward_stds = result.forward.std_devs
+        forward_ns = result.forward.n_measurements
         reverse_voltages = result.reverse.voltages
         reverse_currents = result.reverse.currents
+        reverse_stds = result.reverse.std_devs
+        reverse_ns = result.reverse.n_measurements
 
-        # Create DataFrame with both sweeps
+        # Create DataFrame with both sweeps (including statistics)
         combined_data = pd.DataFrame({
             voltage_header: np.concatenate((forward_voltages, reverse_voltages)),
             forward_header: np.concatenate((
                 forward_currents,
                 [None] * len(reverse_currents)
             )),
+            forward_std_header: np.concatenate((
+                forward_stds,
+                [None] * len(reverse_currents)
+            )),
+            forward_n_header: np.concatenate((
+                forward_ns,
+                [None] * len(reverse_currents)
+            )),
             reverse_header: np.concatenate((
                 [None] * len(forward_currents),
                 reverse_currents
+            )),
+            reverse_std_header: np.concatenate((
+                [None] * len(forward_currents),
+                reverse_stds
+            )),
+            reverse_n_header: np.concatenate((
+                [None] * len(forward_currents),
+                reverse_ns
             )),
         })
 
         # Group by voltage to combine forward and reverse values
         combined_data = combined_data.groupby(voltage_header).agg({
             forward_header: "first",
+            forward_std_header: "first",
+            forward_n_header: "first",
             reverse_header: "first",
+            reverse_std_header: "first",
+            reverse_n_header: "first",
         }).reset_index()
 
         # Save to CSV
@@ -149,39 +177,45 @@ class JVDataExporter:
         result: JVMeasurementResult,
     ) -> pd.DataFrame:
         """
-        Convert measurement result to a pandas DataFrame.
+        Convert measurement result to a pandas DataFrame with statistics.
 
         Args:
             result: Measurement result
 
         Returns:
-            pd.DataFrame: Combined data
+            pd.DataFrame: Combined data with statistics
         """
         headers = self.config.get("headers", {})
         voltage_header = headers.get("voltage", "Voltage (V)")
         forward_header = headers.get("forward_current", "Forward Scan (mA)")
+        forward_std_header = headers.get("forward_std", "Forward Std (mA)")
+        forward_n_header = headers.get("forward_n", "Forward n")
         reverse_header = headers.get("reverse_current", "Reverse Scan (mA)")
+        reverse_std_header = headers.get("reverse_std", "Reverse Std (mA)")
+        reverse_n_header = headers.get("reverse_n", "Reverse n")
 
         # Get unique voltages (sorted)
         all_voltages = sorted(set(
             result.forward.voltages + result.reverse.voltages
         ))
 
-        # Create voltage to current mappings
-        forward_map = dict(zip(
-            result.forward.voltages,
-            result.forward.currents
-        ))
-        reverse_map = dict(zip(
-            result.reverse.voltages,
-            result.reverse.currents
-        ))
+        # Create voltage to data mappings
+        forward_current_map = dict(zip(result.forward.voltages, result.forward.currents))
+        forward_std_map = dict(zip(result.forward.voltages, result.forward.std_devs))
+        forward_n_map = dict(zip(result.forward.voltages, result.forward.n_measurements))
+        reverse_current_map = dict(zip(result.reverse.voltages, result.reverse.currents))
+        reverse_std_map = dict(zip(result.reverse.voltages, result.reverse.std_devs))
+        reverse_n_map = dict(zip(result.reverse.voltages, result.reverse.n_measurements))
 
-        # Build DataFrame
+        # Build DataFrame with statistics
         data = {
             voltage_header: all_voltages,
-            forward_header: [forward_map.get(v) for v in all_voltages],
-            reverse_header: [reverse_map.get(v) for v in all_voltages],
+            forward_header: [forward_current_map.get(v) for v in all_voltages],
+            forward_std_header: [forward_std_map.get(v) for v in all_voltages],
+            forward_n_header: [forward_n_map.get(v) for v in all_voltages],
+            reverse_header: [reverse_current_map.get(v) for v in all_voltages],
+            reverse_std_header: [reverse_std_map.get(v) for v in all_voltages],
+            reverse_n_header: [reverse_n_map.get(v) for v in all_voltages],
         }
 
         return pd.DataFrame(data)

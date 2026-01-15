@@ -180,11 +180,15 @@ DATA_EXPORT_CONFIG: Dict[str, Any] = {
     "date_format": "%Y_%m_%d",
     "file_template": "{date}_IV_cell{cell_number}_pixel{pixel_number}.csv",
 
-    # CSV column headers for grouped format (voltage, forward, reverse columns)
+    # CSV column headers for grouped format (voltage, forward, reverse columns with statistics)
     "headers": {
         "voltage": "Voltage (V)",
         "forward_current": "Forward Scan (mA)",
+        "forward_std": "Forward Std (mA)",
+        "forward_n": "Forward n",
         "reverse_current": "Reverse Scan (mA)",
+        "reverse_std": "Reverse Std (mA)",
+        "reverse_n": "Reverse n",
     },
     # CSV column headers for raw/sequential format (direction column)
     "headers_raw": {

@@ -36,17 +36,23 @@ class SweepData:
     """Container for sweep measurement data."""
     voltages: List[float] = field(default_factory=list)
     currents: List[float] = field(default_factory=list)
+    std_devs: List[float] = field(default_factory=list)
+    n_measurements: List[int] = field(default_factory=list)
     direction: str = "forward"  # "forward" or "reverse"
 
     def clear(self) -> None:
         """Clear all data."""
         self.voltages.clear()
         self.currents.clear()
+        self.std_devs.clear()
+        self.n_measurements.clear()
 
-    def add_point(self, voltage: float, current: float) -> None:
-        """Add a measurement point."""
+    def add_point(self, voltage: float, current: float, std_dev: float = 0.0, n: int = 1) -> None:
+        """Add a measurement point with statistics."""
         self.voltages.append(voltage)
         self.currents.append(current)
+        self.std_devs.append(std_dev)
+        self.n_measurements.append(n)
 
     def __len__(self) -> int:
         return len(self.voltages)
@@ -384,8 +390,8 @@ class JVMeasurementModel:
                     Decimal(precision), rounding=ROUND_HALF_UP
                 ))
 
-                # Store data (mean value)
-                sweep_data.add_point(float(voltage), current_mA)
+                # Store data (mean value, std_dev, and n)
+                sweep_data.add_point(float(voltage), current_mA, std_mA, n)
 
                 # Create MeasurementStats and notify callback
                 if self._stats_callback:
