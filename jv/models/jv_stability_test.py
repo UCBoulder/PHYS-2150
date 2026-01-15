@@ -136,8 +136,8 @@ class JVStabilityTestModel:
         Run voltage stability test (worker function).
 
         Test flow:
-        1. Start at typical voltage (e.g., -0.2V)
-        2. Sweep to target voltage
+        1. Set target voltage directly
+        2. Wait for stabilization
         3. Take repeated measurements at target voltage
 
         Args:
@@ -148,6 +148,7 @@ class JVStabilityTestModel:
         timestamps = []
         voltages = []
         currents = []
+        success = False
 
         try:
             # Configure device for stability testing
@@ -165,37 +166,23 @@ class JVStabilityTestModel:
                 source_delay_s=self.config.get("source_delay_s", 0.05),
             )
 
-            # Step 1: Start at typical voltage
-            start_voltage = self.config.get("sweep_start_voltage", -0.2)
-            if self.status_callback:
-                self.status_callback(f"Setting initial voltage to {start_voltage}V...")
+            if self._stop_requested:
+                return
 
-            self.controller.set_voltage(start_voltage)
-            time.sleep(self.config.get("initial_stabilization_s", 2.0))
+            # Set target voltage directly
+            if self.status_callback:
+                self.status_callback(f"Setting voltage to {target_voltage}V...")
+
+            self.controller.set_voltage(target_voltage)
+
+            # Wait for voltage to stabilize
+            stabilization_time = self.config.get("target_stabilization_s", 2.0)
+            time.sleep(stabilization_time)
 
             if self._stop_requested:
                 return
 
-            # Step 2: Sweep to target voltage
-            if self.status_callback:
-                self.status_callback(f"Sweeping to target voltage {target_voltage}V...")
-
-            sweep_step = self.config.get("sweep_step_voltage", 0.05)
-            sweep_voltages = self._generate_sweep_array(start_voltage, target_voltage, sweep_step)
-
-            for v in sweep_voltages:
-                if self._stop_requested:
-                    return
-                self.controller.set_voltage(float(v))
-                time.sleep(self.config.get("sweep_delay_s", 0.1))
-
-            # Final voltage settling
-            time.sleep(self.config.get("target_stabilization_s", 2.0))
-
-            if self._stop_requested:
-                return
-
-            # Step 3: Start stability measurements at target voltage
+            # Start stability measurements at target voltage
             start_time = time.time()
             end_time = start_time + (duration_min * 60)
             measurement_count = 0
@@ -235,22 +222,12 @@ class JVStabilityTestModel:
             self.voltages = voltages
             self.currents = currents
 
-            # Call completion callback
+            # Mark as successful completion (not stopped or errored)
             success = not self._stop_requested
-            if self.status_callback:
-                if success:
-                    self.status_callback(f"Test complete ({measurement_count} measurements)")
-                else:
-                    self.status_callback(f"Test stopped ({measurement_count} measurements)")
-
-            if self.completion_callback:
-                try:
-                    self.completion_callback(success)
-                except Exception as e:
-                    self.logger.warning(f"Completion callback error: {e}")
 
         except Exception as e:
             self.logger.error(f"Stability test error: {e}", exc_info=True)
+            success = False
             if self.error_callback:
                 try:
                     self.error_callback(f"Test failed: {str(e)}")
@@ -263,6 +240,20 @@ class JVStabilityTestModel:
                 self.controller.output_off()
             except:
                 pass
+
+            # ALWAYS call completion callback and update status
+            measurement_count = len(timestamps)
+            if self.status_callback:
+                if success:
+                    self.status_callback(f"Test complete ({measurement_count} measurements)")
+                else:
+                    self.status_callback(f"Test stopped ({measurement_count} measurements)")
+
+            if self.completion_callback:
+                try:
+                    self.completion_callback(success)
+                except Exception as e:
+                    self.logger.warning(f"Completion callback error: {e}")
 
             self._is_running = False
 

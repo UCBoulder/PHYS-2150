@@ -87,14 +87,8 @@ JV_STABILITY_TEST_CONFIG: Dict[str, Any] = {
     "default_interval_sec": 2,          # seconds - default measurement interval
     "interval_range": (0.5, 60),        # seconds - valid range (min, max)
 
-    # Sweep parameters (start → target)
-    "sweep_start_voltage": -0.2,        # V - starting voltage before sweeping to target
-    "sweep_step_voltage": 0.05,         # V - step size during sweep to target
-    "sweep_delay_s": 0.1,               # seconds - delay between sweep steps
-
-    # Stabilization times
-    "initial_stabilization_s": 2.0,     # seconds - wait at start voltage before sweep
-    "target_stabilization_s": 2.0,      # seconds - wait at target voltage before measurements
+    # Stabilization time
+    "target_stabilization_s": 5.0,      # seconds - wait at target voltage before measurements (increased for better settling)
 
     # Measurement configuration (reuse from JV_MEASUREMENT_CONFIG)
     "num_measurements": 10,             # Number of current measurements per point (min 10 per Keithley spec)

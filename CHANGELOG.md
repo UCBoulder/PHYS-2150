@@ -10,7 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - J-V voltage stability test feature: monitors current stability at a fixed voltage over time with configurable duration and interval
 - Stability test tab in J-V interface with real-time plotting, statistics display (mean, std dev, CV%), and CSV export
-- Measurement statistics bar below both power and current plots showing readings count, wavelength, mean, std dev, and quality badge
+
+### Changed
+- Stability test now sets target voltage directly (removed voltage sweep from initial voltage)
+- Stability test stabilization time increased from 2s to 5s for better settling
 - SEM% (standard error of mean as percentage) property on MeasurementStats for quality assessment
 - Keithley 2450 measurement optimization methods: NPLC integration time, device-native source delay, trace buffer
 - J-V measurement statistics via trace buffer: takes 5 readings per voltage point, calculates mean, std_dev, SEM%
