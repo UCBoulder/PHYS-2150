@@ -199,6 +199,17 @@ Follow [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/):
 
 When ready to release a new version:
 
+#### 1. Version Number Management
+
+**CRITICAL:** The version number must be updated in multiple places for it to display correctly throughout the application:
+
+- **`pyproject.toml`**: `[project].version = "X.Y.Z"` - Python package version
+- **`build/installer.iss`**: `#define MyAppVersion "X.Y.Z"` - Installer metadata
+
+The launcher reads the version from `importlib.metadata.version("phys2150")`, which gets embedded by PyInstaller from `pyproject.toml`. You **must rebuild the PyInstaller executable** after updating `pyproject.toml`, not just the installer.
+
+#### 2. Release Process
+
 1. **Ensure develop is up to date and tested**
    ```bash
    git checkout develop
@@ -211,12 +222,24 @@ When ready to release a new version:
    git merge develop
    ```
 
-3. **Update CHANGELOG.md**
-   - Move [Unreleased] content to new version section
-   - Add release date
-   - Update comparison links at bottom
+3. **Update version numbers**
+   ```bash
+   # Edit pyproject.toml: set version = "X.Y.Z"
+   # Edit build/installer.iss: set MyAppVersion "X.Y.Z"
+   git add pyproject.toml build/installer.iss
+   ```
 
-4. **Commit changelog, tag, and push**
+4. **Update CHANGELOG.md**
+   - Move [Unreleased] content to new version section `## [X.Y.Z] - YYYY-MM-DD`
+   - Add release date (ISO 8601 format)
+   - Update comparison links at bottom:
+     ```
+     [Unreleased]: https://github.com/UCBoulder/PHYS-2150/compare/vX.Y.Z...HEAD
+     [X.Y.Z]: https://github.com/UCBoulder/PHYS-2150/compare/vX.Y-1.Z-1...vX.Y.Z
+     ```
+   - Update version history summary table
+
+5. **Commit version changes and create tag**
    ```bash
    git add CHANGELOG.md
    git commit -m "Release vX.Y.Z"
@@ -224,9 +247,73 @@ When ready to release a new version:
    git push origin main --tags
    ```
 
-5. **Merge release commit back to develop**
+6. **Create GitHub Release**
+   ```bash
+   gh release create vX.Y.Z --title "vX.Y.Z - Title" --notes "Release notes here"
+   ```
+
+7. **Build and upload installer**
+
+   **Important:** Build PyInstaller executable FIRST (to embed correct version metadata), THEN build the installer:
+
+   ```bash
+   # Step 1: Build PyInstaller executable (embeds version from pyproject.toml)
+   rm -rf dist/PHYS2150
+   uv run pyinstaller build/phys2150.spec
+
+   # Step 2: Build Inno Setup installer (uses version from installer.iss)
+   iscc build/installer.iss
+   # Or: "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" build\installer.iss
+
+   # Step 3: Upload installer to GitHub Release
+   gh release upload vX.Y.Z "dist/PHYS2150-Setup.exe" --clobber
+   ```
+
+   **Why this order matters:**
+   - PyInstaller embeds package metadata from `pyproject.toml` into the executable
+   - The launcher reads version via `importlib.metadata.version("phys2150")`
+   - If you only rebuild the installer without rebuilding PyInstaller, the launcher will show the old version
+   - Inno Setup just packages the PyInstaller output, so the executable must be built first
+
+8. **Merge release commit back to develop**
    ```bash
    git checkout develop
    git merge main
    git push origin develop
    ```
+
+9. **Commit uv.lock if changed**
+   ```bash
+   # Check if uv.lock was updated during the build
+   git status
+   git add uv.lock
+   git commit -m "Update uv.lock for vX.Y.Z"
+   git push origin develop
+   git checkout main
+   git merge develop
+   git push origin main
+   git checkout develop
+   ```
+
+#### Version Display Checklist
+
+Before finalizing a release, verify the version appears correctly in:
+
+- [ ] Installer title window (from `installer.iss`)
+- [ ] Launcher app bottom-left corner (from `pyproject.toml` via PyInstaller metadata)
+- [ ] Windows "Add/Remove Programs" list (from `installer.iss`)
+- [ ] GitHub Release page
+- [ ] CHANGELOG.md
+
+#### Known Issue: Metadata Caching on Upgrade
+
+**Problem:** When installing a new version over an existing installation, the launcher may display the old version number even though Windows shows the correct version in "Add/Remove Programs".
+
+**Root Cause:** Python package metadata (`.dist-info` directories) from the old installation may not be fully replaced during upgrade, causing `importlib.metadata` to read stale version information.
+
+**Solution:** If the launcher shows an incorrect version after installation:
+1. Uninstall the application completely
+2. Reinstall using the new installer
+3. The version should now display correctly
+
+**Prevention:** The installer has been updated (v3.3.1+) to force complete removal of all application files during uninstall, which should prevent this issue in future upgrades. Users upgrading from older versions may still experience this once.
