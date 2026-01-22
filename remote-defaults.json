@@ -21,7 +21,7 @@
   "eqe": {
     "defaults": {
       "start_wavelength": 350.0,
-      "end_wavelength": 720.0,
+      "end_wavelength": 730.0,
       "step_size": 10.0
     },
     "validation": {
