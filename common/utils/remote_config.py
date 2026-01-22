@@ -27,7 +27,7 @@ except ImportError:
     _SSL_CONTEXT = None
 
 # GitHub raw URL for remote config
-REMOTE_CONFIG_URL = "https://raw.githubusercontent.com/UCBoulder/PHYS-2150/main/remote-defaults.json"
+REMOTE_CONFIG_URL = "https://raw.githubusercontent.com/UCBoulder/PHYS-2150/main/defaults.json"
 
 
 def get_cache_path() -> Path:
@@ -40,7 +40,7 @@ def get_cache_path() -> Path:
     """
     cache_dir = Path.home() / ".phys2150" / "cache"
     cache_dir.mkdir(parents=True, exist_ok=True)
-    return cache_dir / "remote-defaults.json"
+    return cache_dir / "defaults.json"
 
 
 def fetch_remote_config(timeout: float = 5.0) -> Optional[Dict[str, Any]]:

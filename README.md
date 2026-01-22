@@ -79,7 +79,7 @@ PHYS 2150/
 ├── launcher.py              # Unified launcher - select EQE or J-V
 ├── pyproject.toml           # Project dependencies (uv sync)
 ├── requirements.txt         # Alternative pip dependencies
-├── remote-defaults.json     # Semester-specific config (fetched from GitHub)
+├── defaults.json            # All configuration (fetched from GitHub, bundled with app)
 │
 ├── ui/                      # Web UI (shared by all apps)
 │   ├── eqe.html            # EQE measurement interface
@@ -244,11 +244,13 @@ See [docs/developer-setup.md](docs/developer-setup.md) for complete build instru
 
 ## Configuration
 
-The application supports semester-specific default values via remote configuration:
+All configuration is centralized in `defaults.json` with a fallback chain:
 
-- On startup, the launcher fetches `remote-defaults.json` from the GitHub repository
-- Settings are cached locally in `~/.phys2150/cache/` for offline use
-- To update defaults for all users, edit `remote-defaults.json` and push to `main`
+1. **GitHub fetch** (5 sec timeout) - Fresh updates for all lab computers
+2. **Local cache** (`~/.phys2150/cache/`) - Last known good config for offline use
+3. **Bundled copy** - Release defaults packaged with the installer
+
+To update defaults for all users, edit `defaults.json` in the repo root and push to `main`.
 
 ## Documentation
 

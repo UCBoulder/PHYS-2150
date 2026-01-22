@@ -191,12 +191,12 @@ class TestJVDataExporter:
 
     def test_generate_filename_format(self, exporter):
         """Filename should include date, cell, and pixel."""
-        filename = exporter.generate_filename(cell_number="195", pixel_number=3)
+        filename = exporter.generate_filename(cell_number="A03", pixel_number=3)
 
         # Should have today's date
         today = datetime.now().strftime("%Y_%m_%d")
         assert today in filename
-        assert "195" in filename
+        assert "A03" in filename
         assert "3" in filename
         assert filename.endswith(".csv")
 

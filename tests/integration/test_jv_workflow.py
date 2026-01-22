@@ -182,7 +182,7 @@ class TestJVParameterValidation:
         import re
 
         params = {
-            'cell_number': '195',
+            'cell_number': 'A03',
             'pixel_number': 1,
             'start_voltage': -0.2,
             'stop_voltage': 1.5,
@@ -207,15 +207,15 @@ class TestJVParameterValidation:
 
         pattern = VALIDATION_PATTERNS["cell_number"]
 
-        # Valid patterns
-        assert re.match(pattern, "195") is not None
-        assert re.match(pattern, "001") is not None
-        assert re.match(pattern, "999") is not None
+        # Valid patterns (letter + 2 digits)
+        assert re.match(pattern, "A03") is not None
+        assert re.match(pattern, "R26") is not None
+        assert re.match(pattern, "Z99") is not None
 
         # Invalid patterns
-        assert re.match(pattern, "12") is None  # Too short
-        assert re.match(pattern, "1234") is None  # Too long
-        assert re.match(pattern, "abc") is None  # Non-numeric
+        assert re.match(pattern, "A1") is None  # Too short
+        assert re.match(pattern, "A123") is None  # Too long
+        assert re.match(pattern, "123") is None  # Old format (digits only)
 
     def test_pixel_range_from_config(self):
         """Pixel range should match config values."""

@@ -10,16 +10,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - `diagnose_config()` function in `remote_config.py` to debug cache vs. fetch mismatches
 - Comprehensive test suite for remote config (19 tests covering fetch, cache, merge, fallback)
+- Centralized config loader (`common/config/loader.py`) with fallback chain: GitHub → cache → bundled
+- `JVConfig` and `EQEConfig` classes for type-safe access to configuration values
+- `defaults.json` as single source of truth for ALL configuration (replaces distributed settings.py values)
+- Bundled `defaults.json` in PyInstaller builds for offline fallback
 
 ### Changed
+- **BREAKING**: Configuration architecture unified into single `defaults.json` file
+  - All JV config (measurement params, device settings, GUI, export, error messages) now in JSON
+  - All EQE config (measurement params, device settings, GUI, export, error messages) now in JSON
+  - `*/config/settings.py` files are now thin wrappers that re-export from JSON loader
+  - Existing imports (`from jv.config.settings import ...`) continue working unchanged
+- Renamed `remote-defaults.json` to `defaults.json` (now contains ALL config, not just UI defaults)
+- Config version updated to "2026-spring-full" to reflect expanded schema
+- Cell naming convention updated from 3-digit numbers (e.g., "195") to letter + 2 digits (e.g., "A03", "R26") to match new lab format
 - File save dialogs now default to user's Documents folder instead of application installation directory
 - Save dialogs remember the last used directory and return to it on subsequent saves (persists across app restarts)
-- Clarified two-tier configuration architecture: `remote-defaults.json` for UI defaults, `settings.py` for technical/hardware configs
-- `get_ui_config()` now prioritizes remote config values over built-in settings.py defaults
 - Hardware parameters (NPLC, source_delay, timeouts, etc.) are no longer exposed to frontend JavaScript
-- Added J-V stability test defaults to `remote-defaults.json` (was missing, causing fallback to settings.py)
-- Updated EQE end wavelength default from 750nm to 720nm in `remote-defaults.json`
-- Updated `remote-defaults.json` version to "2026-spring"
+- Updated EQE end wavelength default from 750nm to 720nm
 
 ## [3.3.1] - 2026-01-15
 

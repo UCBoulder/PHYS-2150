@@ -45,7 +45,7 @@ PHYS-2150/
 ├── launcher.py              # Main entry point - measurement selector
 ├── pyproject.toml           # Project configuration and dependencies
 ├── requirements.txt         # Alternative pip dependencies
-├── remote-defaults.json     # Semester-specific defaults (served via GitHub)
+├── defaults.json            # All configuration (fetched from GitHub, bundled with app)
 │
 ├── ui/                      # Web UI (shared by all apps)
 │   ├── eqe.html            # EQE measurement interface
@@ -55,8 +55,9 @@ PHYS-2150/
 │   └── js/                 # JavaScript modules
 │
 ├── common/                  # Shared infrastructure
+│   ├── config/             # Centralized config loader (loads defaults.json)
 │   ├── drivers/            # Hardware drivers (TLPMX.py)
-│   └── utils/              # Logging, data export, remote config
+│   └── utils/              # Logging, data export
 │
 ├── eqe/                    # EQE measurement application
 │   ├── web_main.py        # Qt WebEngine app, Python-JS bridge
@@ -486,39 +487,57 @@ When `--offline` is passed on the command line, the flag is set to `True` before
 
 ---
 
-## Remote Configuration
+## Centralized Configuration
 
-The application supports semester-specific defaults via remote configuration, allowing updates without rebuilding.
+All configuration is centralized in `defaults.json` at the repo root. This file contains ALL configuration values for both JV and EQE applications, including:
+- Form field defaults (voltages, wavelengths, step sizes)
+- Validation patterns (cell number regex, pixel ranges)
+- Hardware settings (timeouts, USB IDs, SCPI parameters)
+- Measurement algorithms (NPLC, lock-in cycles, quality thresholds)
+- GUI settings (window sizes, fonts, colors)
+- Export formats (CSV headers, precision)
 
 ### How It Works
 
-1. On startup, the launcher fetches `remote-defaults.json` from the GitHub `main` branch
-2. Settings are cached locally in `~/.phys2150/cache/` for offline use
-3. If fetch fails, cached values are used; if no cache, built-in defaults apply
+The config loader uses a fallback chain:
+
+1. **GitHub fetch** (5 sec timeout) - Fresh updates for all lab computers
+2. **Local cache** (`~/.phys2150/cache/defaults.json`) - Last known good config
+3. **Bundled copy** (packaged with installer) - Release defaults
 
 ### Updating Defaults
 
 To change defaults for all users (e.g., new semester cell naming):
 
-1. Edit `remote-defaults.json` in the repository root
+1. Edit `defaults.json` in the repository root
 2. Push to `main` branch
-3. Users get new defaults on next app launch
+3. Users get new defaults on next app launch (no rebuild needed)
 
-### File Format
+### File Structure
 
 ```json
 {
-  "version": "2025-spring",
+  "version": "2026-spring-full",
   "jv": {
-    "cell_number": 1,
-    "pixel_number": 1
+    "defaults": { "start_voltage": -0.2, "stop_voltage": 1.5, "step_voltage": 0.02 },
+    "measurement": { "nplc": 1.0, "source_delay_s": 0.05, ... },
+    "device": { "timeout_ms": 30000, "usb_id_pattern": "..." },
+    "validation": { "cell_number": "^[A-Z]\\d{2}$", "pixel_range": [1, 8] },
+    ...
   },
   "eqe": {
-    "cell_number": 1,
-    "start_wavelength": 400,
-    "end_wavelength": 1100
+    "defaults": { "start_wavelength": 350.0, "end_wavelength": 720.0, ... },
+    "devices": { "monochromator": {...}, "picoscope_lockin": {...}, ... },
+    ...
   }
 }
+```
+
+### Disabling Remote Fetch
+
+For development, set the environment variable to use only bundled defaults:
+```bash
+PHYS2150_DISABLE_REMOTE_CONFIG=1 python -m eqe --offline
 ```
 
 ### Disabling Remote Config (Development)

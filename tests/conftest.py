@@ -48,7 +48,7 @@ def sample_measurement_data():
 def valid_cell_params():
     """Standard valid measurement parameters."""
     return {
-        'cell_number': '195',
+        'cell_number': 'A03',
         'pixel_number': 1,
         'start_voltage': -0.2,
         'stop_voltage': 1.5,

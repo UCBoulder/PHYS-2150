@@ -43,6 +43,8 @@ a = Analysis(
         (str(PROJECT_ROOT / 'ui'), 'ui'),
         # Application icon
         (str(PROJECT_ROOT / 'assets'), 'assets'),
+        # Bundled configuration defaults (fallback when network/cache unavailable)
+        (str(PROJECT_ROOT / 'defaults.json'), '.'),
     ] + numpy_datas + scipy_datas + certifi_datas,
     hiddenimports=[
         # PySide6 core modules
@@ -88,6 +90,7 @@ a = Analysis(
 
         # Common modules
         'common',
+        'common.config',
         'common.drivers',
         'common.ui',
         'common.utils',

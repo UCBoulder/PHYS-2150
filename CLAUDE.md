@@ -73,34 +73,44 @@ User clicks "Start" → JS calls Python API via QWebChannel → Model validates 
 
 ### Configuration Architecture
 
-This project uses a **two-tier configuration system**:
+This project uses a **centralized JSON configuration system**:
 
-**`remote-defaults.json`** (fetched from GitHub) - UI defaults that may change per semester:
-- Form field initial values (voltages, wavelengths, step sizes)
+**`defaults.json`** (repo root) - Single source of truth for ALL configuration:
+- Form field defaults (voltages, wavelengths, step sizes)
 - Validation patterns (cell number regex, pixel ranges)
-- Stability test modal defaults (duration, interval)
-
-Update this file on GitHub to change defaults for all lab computers without rebuilding the installer. The remote config is fetched at app startup and cached locally (`~/.phys2150/cache/`).
-
-**`*/config/settings.py`** - Technical configs that should NOT change remotely:
+- Stability test defaults (duration, interval)
 - Hardware communication (timeouts, USB IDs, SCPI settings)
 - Physical constants (grating thresholds, filter wavelengths, gains)
 - Measurement algorithms (NPLC, lock-in cycles, quality thresholds)
 - GUI rendering (window sizes, fonts, colors)
 - CSV export formats (headers, precision)
+- Error messages
 
-**How it works:**
-1. `get_ui_config()` in `web_main.py` fetches remote config first
-2. Remote values override built-in `settings.py` values for UI defaults
-3. Hardware params stay in `settings.py` only - never sent to frontend
-4. Set `PHYS2150_DISABLE_REMOTE_CONFIG=1` to use only local settings.py values
+**How it works at runtime:**
+```
+1. Fetch from GitHub (5 sec timeout)  → FRESH UPDATES
+         │
+         ▼ (if fetch fails)
+2. Local Cache (~/.phys2150/cache/)   → LAST KNOWN GOOD
+         │
+         ▼ (if no cache)
+3. Bundled Copy (packaged with exe)   → RELEASE DEFAULTS
+```
+
+**`*/config/settings.py`** - Thin wrappers that re-export from JSON:
+- Import values from `common.config.loader`
+- Convert JSON types to Python (lists→tuples, string keys→enum keys)
+- Provide backward-compatible exports for existing imports
+- Define Python-only constructs (enums, OFFLINE_MODE flag)
+
+Set `PHYS2150_DISABLE_REMOTE_CONFIG=1` to use only bundled defaults.json values.
 
 **When adding new configurable values:**
 
-1. Decide: Is this a UI default (might change per semester) or technical config (hardware-specific)?
-2. For UI defaults: Add to `remote-defaults.json` AND `settings.py` (fallback)
-3. For technical configs: Add to `settings.py` only
-4. Update `get_ui_config()` to expose UI values (but never hardware params)
+1. Add to `defaults.json` with appropriate section (jv/eqe/common)
+2. Update the loader class (`JVConfig` or `EQEConfig`) in `common/config/loader.py`
+3. Re-export from `*/config/settings.py` for backward compatibility
+4. If needed for JavaScript, expose via `get_ui_config()` in `web_main.py`
 5. For JavaScript access, use `LabConfig.get()` with fallback defaults in `ui/js/config.js`
 
 ## Project Structure
@@ -127,6 +137,7 @@ eqe/                     # EQE Application
 └── config/settings.py   # EQE measurement parameters
 
 common/                  # Shared code
+├── config/              # Centralized config loader (loads defaults.json)
 ├── drivers/             # Thorlabs power meter (TLPMX.py)
 └── utils/               # Logging, data export, error messages
 ```
@@ -134,9 +145,11 @@ common/                  # Shared code
 ## Key Files
 
 - `launcher.py`: Entry point - Qt WebEngine launcher for EQE or J-V
+- `defaults.json`: Single source of truth for ALL configuration (fetched from GitHub)
+- `common/config/loader.py`: Config loading with fallback chain (GitHub→cache→bundled)
 - `jv/web_main.py`: JVWebApplication class, QWebChannel API
 - `eqe/web_main.py`: EQEWebApplication class, QWebChannel API
-- `*/config/settings.py`: Measurement defaults and device configs
+- `*/config/settings.py`: Thin wrappers re-exporting values from defaults.json
 
 ## Hardware Dependencies
 

@@ -60,7 +60,7 @@ class TestCacheOperations:
 
     def test_save_and_load_cache(self, tmp_path, monkeypatch):
         """Test that saved config can be loaded back."""
-        cache_file = tmp_path / "cache" / "remote-defaults.json"
+        cache_file = tmp_path / "cache" / "defaults.json"
         cache_file.parent.mkdir(parents=True, exist_ok=True)
         monkeypatch.setattr(
             "common.utils.remote_config.get_cache_path",
@@ -75,7 +75,7 @@ class TestCacheOperations:
 
     def test_load_nonexistent_cache_returns_none(self, tmp_path, monkeypatch):
         """Test that loading from nonexistent cache returns None."""
-        cache_file = tmp_path / "nonexistent" / "remote-defaults.json"
+        cache_file = tmp_path / "nonexistent" / "defaults.json"
         monkeypatch.setattr(
             "common.utils.remote_config.get_cache_path",
             lambda: cache_file
@@ -86,7 +86,7 @@ class TestCacheOperations:
 
     def test_load_invalid_json_cache_returns_none(self, tmp_path, monkeypatch):
         """Test that invalid JSON in cache returns None."""
-        cache_file = tmp_path / "cache" / "remote-defaults.json"
+        cache_file = tmp_path / "cache" / "defaults.json"
         cache_file.parent.mkdir(parents=True, exist_ok=True)
         cache_file.write_text("not valid json {{{")
 
@@ -151,7 +151,7 @@ class TestGetRemoteConfig:
         This tests the bug where the app was using cached 750nm instead of
         fetched 720nm.
         """
-        cache_file = tmp_path / "cache" / "remote-defaults.json"
+        cache_file = tmp_path / "cache" / "defaults.json"
         cache_file.parent.mkdir(parents=True, exist_ok=True)
 
         # Set up stale cache with old value
@@ -189,7 +189,7 @@ class TestGetRemoteConfig:
 
     def test_fetch_failure_falls_back_to_cache(self, tmp_path, monkeypatch):
         """Test that fetch failure uses cached config."""
-        cache_file = tmp_path / "cache" / "remote-defaults.json"
+        cache_file = tmp_path / "cache" / "defaults.json"
         cache_file.parent.mkdir(parents=True, exist_ok=True)
 
         # Set up cache
@@ -213,7 +213,7 @@ class TestGetRemoteConfig:
 
     def test_no_fetch_no_cache_returns_empty(self, tmp_path, monkeypatch):
         """Test that no fetch and no cache returns empty dict."""
-        cache_file = tmp_path / "nonexistent" / "remote-defaults.json"
+        cache_file = tmp_path / "nonexistent" / "defaults.json"
         monkeypatch.setattr(
             "common.utils.remote_config.get_cache_path",
             lambda: cache_file
@@ -237,7 +237,7 @@ class TestGetRemoteConfig:
 
     def test_unknown_app_returns_empty(self, tmp_path, monkeypatch):
         """Test that unknown app name returns empty dict."""
-        cache_file = tmp_path / "cache" / "remote-defaults.json"
+        cache_file = tmp_path / "cache" / "defaults.json"
         monkeypatch.setattr(
             "common.utils.remote_config.get_cache_path",
             lambda: cache_file
@@ -278,7 +278,7 @@ class TestVersionTracking:
         import logging
         caplog.set_level(logging.INFO)
 
-        cache_file = tmp_path / "cache" / "remote-defaults.json"
+        cache_file = tmp_path / "cache" / "defaults.json"
         cache_file.parent.mkdir(parents=True, exist_ok=True)
         cache_file.write_text('{"version": "cached", "eqe": {}}')
 
@@ -298,7 +298,7 @@ class TestDiagnoseConfig:
 
     def test_diagnose_returns_expected_keys(self, tmp_path, monkeypatch):
         """Test that diagnose_config returns all expected keys."""
-        cache_file = tmp_path / "cache" / "remote-defaults.json"
+        cache_file = tmp_path / "cache" / "defaults.json"
         monkeypatch.setattr(
             "common.utils.remote_config.get_cache_path",
             lambda: cache_file
@@ -316,7 +316,7 @@ class TestDiagnoseConfig:
 
     def test_diagnose_detects_mismatch(self, tmp_path, monkeypatch):
         """Test that diagnose_config detects version mismatch."""
-        cache_file = tmp_path / "cache" / "remote-defaults.json"
+        cache_file = tmp_path / "cache" / "defaults.json"
         cache_file.parent.mkdir(parents=True, exist_ok=True)
         cache_file.write_text('{"version": "old", "eqe": {"defaults": {"end_wavelength": 750.0}}}')
 

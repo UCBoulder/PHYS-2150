@@ -25,7 +25,7 @@ from .config.settings import (
     JV_STABILITY_TEST_CONFIG, DATA_EXPORT_CONFIG
 )
 from common.utils import get_logger, TieredLogger, WebConsoleHandler
-from common.utils.remote_config import get_remote_config, deep_merge
+from common.config import get_config
 from common.ui import BaseWebWindow, BaseWebApi
 
 _logger = get_logger("jv")
@@ -124,30 +124,27 @@ class JVApi(BaseWebApi):
         """
         Get UI configuration values for the frontend.
 
-        Remote config (from GitHub) is the primary source for UI defaults.
-        Built-in settings.py values serve as fallbacks only.
+        Config is loaded from defaults.json (remote/cache/bundled fallback).
+        Settings.py re-exports these values, so we use them directly.
 
         Note: Hardware/measurement params (NPLC, source_delay, etc.) are NOT
         exposed to the frontend - those stay in settings.py for Python use only.
         """
-        # Remote config is the primary source for UI defaults
-        remote = get_remote_config('jv')
-
-        # Extract stability UI defaults from settings.py (for fallback only)
-        stability_ui_defaults = {
-            "default_target_voltage": JV_STABILITY_TEST_CONFIG["default_target_voltage"],
-            "default_duration_min": JV_STABILITY_TEST_CONFIG["default_duration_min"],
-            "duration_range": list(JV_STABILITY_TEST_CONFIG["duration_range"]),
-            "default_interval_sec": JV_STABILITY_TEST_CONFIG["default_interval_sec"],
-            "interval_range": list(JV_STABILITY_TEST_CONFIG["interval_range"]),
-        }
-
-        # Build config with remote values, falling back to settings.py
+        # Build config from settings (which load from defaults.json)
         config = {
-            "defaults": remote.get("defaults", dict(DEFAULT_MEASUREMENT_PARAMS)),
-            "validation": remote.get("validation", dict(VALIDATION_PATTERNS)),
-            "stability": remote.get("stability", stability_ui_defaults),
-            "export": dict(DATA_EXPORT_CONFIG),  # Not remotely configurable
+            "defaults": dict(DEFAULT_MEASUREMENT_PARAMS),
+            "validation": {
+                "cell_number": VALIDATION_PATTERNS.get("cell_number"),
+                "pixel_range": list(VALIDATION_PATTERNS.get("pixel_range", (1, 8))),
+            },
+            "stability": {
+                "default_target_voltage": JV_STABILITY_TEST_CONFIG["default_target_voltage"],
+                "default_duration_min": JV_STABILITY_TEST_CONFIG["default_duration_min"],
+                "duration_range": list(JV_STABILITY_TEST_CONFIG["duration_range"]),
+                "default_interval_sec": JV_STABILITY_TEST_CONFIG["default_interval_sec"],
+                "interval_range": list(JV_STABILITY_TEST_CONFIG["interval_range"]),
+            },
+            "export": dict(DATA_EXPORT_CONFIG),
         }
 
         return json.dumps(config)
