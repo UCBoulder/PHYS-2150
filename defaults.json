@@ -1,5 +1,25 @@
 {
   "version": "2026-spring-full",
+  "common": {
+    "error_messages": {
+      "cannot_switch_title": "Cannot Switch",
+      "cannot_switch_measurement": "Please stop the current measurement before switching tabs.",
+      "cannot_switch_stability": "Please stop the stability test before switching tabs.",
+      "measurement_failed_title": "Measurement Failed",
+      "save_failed_title": "Save Failed",
+      "error_title": "Error",
+      "no_data_title": "No Data"
+    }
+  },
+  "launcher": {
+    "error_messages": {
+      "connection_error_title": "Connection Error",
+      "not_connected": "Not connected to backend",
+      "launch_failed_title": "Launch Failed",
+      "launch_eqe_failed": "Failed to launch EQE: {message}",
+      "launch_jv_failed": "Failed to launch I-V: {message}"
+    }
+  },
   "jv": {
     "defaults": {
       "start_voltage": -0.2,
@@ -129,7 +149,14 @@
       "invalid_cell_number": "Cell number must be a letter + 2 digits (e.g., A03, R26).",
       "invalid_pixel_number": "Pixel number must be between {min} and {max}.",
       "measurement_failed": "Measurement failed. Please check device connections.",
-      "file_save_failed": "Failed to save file. Please check permissions and disk space."
+      "file_save_failed": "Failed to save file. Please check permissions and disk space.",
+      "no_device_title": "No Device",
+      "no_device_message": "No device connected. Use --offline flag for testing.",
+      "invalid_input_title": "Invalid Input",
+      "invalid_test_params": "Please enter valid test parameters",
+      "no_data_to_save": "No data to save",
+      "stability_test_failed_title": "Stability Test Failed",
+      "stability_test_error_title": "Stability Test Error"
     }
   },
   "eqe": {
@@ -213,7 +240,21 @@
     },
     "lockinlab": {
       "waveform_display_points": 10000,
-      "fft_max_frequency": 200
+      "fft_max_frequency": 200,
+      "defaults": {
+        "amplitude_mv": 150,
+        "dcoffset_mv": 100,
+        "noise_percent": 30,
+        "phase_offset": 0,
+        "cycles": 10
+      },
+      "ranges": {
+        "amplitude": [10, 500],
+        "dcoffset": [0, 300],
+        "noise": [0, 100],
+        "phase": [-180, 180],
+        "cycles": [1, 50]
+      }
     },
     "gui": {
       "window_title": "PHYS 2150 EQE Measurement - MVC Architecture",
@@ -269,7 +310,11 @@
       "invalid_pixel_number": "Pixel number must be between {min} and {max}.",
       "measurement_failed": "Measurement failed. Please check device connections.",
       "file_save_failed": "Failed to save file. Please check permissions and disk space.",
-      "low_r_squared": "Is the lamp on? If it is, pixel {pixel} might be dead. Check in with a TA."
+      "low_r_squared": "Is the lamp on? If it is, pixel {pixel} might be dead. Check in with a TA.",
+      "invalid_wavelength_title": "Invalid Wavelength",
+      "invalid_wavelength_message": "Enter wavelength between {min}-{max} nm",
+      "no_measurement_data": "No measurement data to save",
+      "test_failed_title": "Test Failed"
     }
   },
   "_documentation": {

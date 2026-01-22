@@ -126,10 +126,16 @@ class EQEApi(BaseWebApi):
         chopper freq, etc.) are NOT exposed to the frontend - those stay in
         settings.py for Python use only.
         """
-        # Only expose UI-relevant device info (wavelength range for validation)
+        # Get full config for accessing common and eqe-specific settings
+        full_config = get_config()
+
+        # Only expose UI-relevant device info (wavelength range for validation, chopper freq)
         devices_ui_config = {
             "monochromator": {
                 "wavelength_range": list(DEVICE_CONFIGS[DeviceType.MONOCHROMATOR]["wavelength_range"]),
+            },
+            "picoscope_lockin": {
+                "default_chopper_freq": full_config.get("eqe", {}).get("devices", {}).get("picoscope_lockin", {}).get("default_chopper_freq", 81),
             },
         }
 
@@ -151,6 +157,11 @@ class EQEApi(BaseWebApi):
             "devices": devices_ui_config,  # Only UI-relevant device info
             "phase": dict(PHASE_ADJUSTMENT_CONFIG),
             "export": dict(DATA_EXPORT_CONFIG),
+            "lockinlab": full_config.get("eqe", {}).get("lockinlab", {}),
+            "error_messages": {
+                **full_config.get("common", {}).get("error_messages", {}),
+                **full_config.get("eqe", {}).get("error_messages", {}),
+            },
         }
 
         return json.dumps(config)

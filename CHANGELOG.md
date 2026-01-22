@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `JVConfig` and `EQEConfig` classes for type-safe access to configuration values
 - `defaults.json` as single source of truth for ALL configuration (replaces distributed settings.py values)
 - Bundled `defaults.json` in PyInstaller builds for offline fallback
+- All user-facing error messages now in `defaults.json` under `error_messages` sections (common, launcher, jv, eqe)
+- `getErrorMsg()` helper functions in JavaScript for retrieving error strings from config
+- `get_ui_config()` method added to launcher API for config access
 
 ### Changed
 - **BREAKING**: Configuration architecture unified into single `defaults.json` file
@@ -28,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Save dialogs remember the last used directory and return to it on subsequent saves (persists across app restarts)
 - Hardware parameters (NPLC, source_delay, timeouts, etc.) are no longer exposed to frontend JavaScript
 - Updated EQE end wavelength default from 750nm to 720nm
+- Removed all JavaScript fallback values from `LabConfig.get()` calls (config loading failures now fail visibly instead of silently using stale defaults)
 
 ## [3.3.1] - 2026-01-15
 

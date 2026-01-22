@@ -142,8 +142,8 @@ function confirmCellNumber() {
     const value = input.value.trim();
 
     // Get pattern from config (with anchors for full match)
-    const cellInput = LabConfig.get('validation.cell_input', {});
-    const pattern = cellInput.pattern ? `^${cellInput.pattern}$` : '^[A-Z][0-9]{2}$';
+    const cellInput = LabConfig.get('validation.cell_input');
+    const pattern = `^${cellInput.pattern}$`;
 
     if (!new RegExp(pattern).test(value)) {
         input.classList.add('error');
@@ -227,8 +227,8 @@ function confirmPixel() {
     const error = document.getElementById('pixel-input-error');
     const pixel = parseInt(input.value);
 
-    // Get pixel range from config, fallback to [1, 8]
-    const pixelRange = LabConfig.get('validation.pixel_range', [1, 8]);
+    // Get pixel range from config
+    const pixelRange = LabConfig.get('validation.pixel_range');
     const minPixel = pixelRange[0];
     const maxPixel = pixelRange[1];
 
@@ -597,13 +597,8 @@ function closeInfoModal() {
  * @returns {string} Modal HTML
  */
 function getCellModalHTML() {
-    // Get cell input config from config, fallback to defaults
-    const cellInput = LabConfig.get('validation.cell_input', {
-        pattern: '[A-Z][0-9]{2}',
-        placeholder: 'A00',
-        example: 'A12',
-        error: 'Enter a letter + 2 digits (e.g., A03)'
-    });
+    // Get cell input config from config
+    const cellInput = LabConfig.get('validation.cell_input');
 
     return `
     <div class="modal-overlay" id="cell-modal">
@@ -632,8 +627,8 @@ function getCellModalHTML() {
  * @returns {string} Modal HTML
  */
 function getPixelModalHTML(options = {}) {
-    // Get pixel range from config, fallback to [1, 8]
-    const pixelRange = LabConfig.get('validation.pixel_range', [1, 8]);
+    // Get pixel range from config
+    const pixelRange = LabConfig.get('validation.pixel_range');
     const min = options.min || pixelRange[0];
     const max = options.max || pixelRange[1];
     const showCancel = options.showCancel !== false;

@@ -11,6 +11,7 @@
     <script src="js/theme.js"></script>
     <script src="js/api.js"></script>
     <script src="js/modals.js"></script>
+    <script src="js/config.js"></script>
 </head>
 <body class="dark-mode">
     <a href="#main-content" class="skip-link">Skip to main content</a>
@@ -96,6 +97,11 @@
             return offlineModeEnabled;
         }
 
+        // Helper to get error messages from config
+        function getErrorMsg(key) {
+            return LabConfig.get(`error_messages.${key}`);
+        }
+
         function toggleOfflineMode() {
             offlineModeEnabled = !offlineModeEnabled;
             const indicator = document.getElementById('offline-indicator');
@@ -109,7 +115,7 @@
         function launchEQE() {
             const api = LabAPI.get();
             if (!api) {
-                LabModals.showError('Connection Error', 'Not connected to backend');
+                LabModals.showError(getErrorMsg('connection_error_title'), getErrorMsg('not_connected'));
                 return;
             }
             const btn = document.getElementById('btn-eqe');
@@ -119,7 +125,7 @@
             api.launch_eqe(isOfflineMode(), getTheme(), function(result) {
                 const response = JSON.parse(result);
                 if (!response.success) {
-                    LabModals.showError('Launch Failed', 'Failed to launch EQE: ' + response.message);
+                    LabModals.showError(getErrorMsg('launch_failed_title'), getErrorMsg('launch_eqe_failed').replace('{message}', response.message));
                     btn.classList.remove('loading');
                     btn.textContent = 'EQE Measurement';
                 }
@@ -129,7 +135,7 @@
         function launchJV() {
             const api = LabAPI.get();
             if (!api) {
-                LabModals.showError('Connection Error', 'Not connected to backend');
+                LabModals.showError(getErrorMsg('connection_error_title'), getErrorMsg('not_connected'));
                 return;
             }
             const btn = document.getElementById('btn-jv');
@@ -139,7 +145,7 @@
             api.launch_jv(isOfflineMode(), getTheme(), function(result) {
                 const response = JSON.parse(result);
                 if (!response.success) {
-                    LabModals.showError('Launch Failed', 'Failed to launch I-V: ' + response.message);
+                    LabModals.showError(getErrorMsg('launch_failed_title'), getErrorMsg('launch_jv_failed').replace('{message}', response.message));
                     btn.classList.remove('loading');
                     btn.textContent = 'I-V Measurement';
                 }
@@ -202,8 +208,11 @@
             LabTheme.init();
             LabAPI.init();
 
-            // Load version after API is ready
-            setTimeout(loadVersion, 100);
+            // Load config and version after API is ready
+            setTimeout(function() {
+                LabConfig.init();
+                loadVersion();
+            }, 100);
         });
     </script>
 </body>

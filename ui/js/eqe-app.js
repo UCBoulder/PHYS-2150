@@ -163,9 +163,9 @@ function escapeHtml(text) {
  * Called after config is loaded.
  */
 function populateFormDefaults() {
-    const defaults = LabConfig.get('defaults', {});
-    const stability = LabConfig.get('stability', {});
-    const validation = LabConfig.get('validation', {});
+    const defaults = LabConfig.get('defaults');
+    const stability = LabConfig.get('stability');
+    const validation = LabConfig.get('validation');
 
     // Wavelength measurement parameters
     if (defaults.start_wavelength !== undefined) {
@@ -212,13 +212,20 @@ function populateFormDefaults() {
     const cellError = document.getElementById('cell-input-error');
     if (cellInputEl && cellInput.pattern) {
         cellInputEl.pattern = cellInput.pattern;
-        cellInputEl.placeholder = cellInput.placeholder || 'A00';
+        cellInputEl.placeholder = cellInput.placeholder;
     }
     if (cellLabel && cellInput.example) {
         cellLabel.textContent = `Cell Number (e.g., ${cellInput.example})`;
     }
     if (cellError && cellInput.error) {
         cellError.textContent = cellInput.error;
+    }
+
+    // Main form cell number input - set placeholder from config
+    const cellNumberEl = document.getElementById('cell-number');
+    const cellExample = cellInput.example;
+    if (cellNumberEl) {
+        cellNumberEl.placeholder = `e.g. ${cellExample}`;
     }
 
     // Pixel modal defaults
@@ -235,6 +242,63 @@ function populateFormDefaults() {
         if (pixelError) {
             pixelError.textContent = `Pixel must be between ${validation.pixel_range[0]} and ${validation.pixel_range[1]}`;
         }
+    }
+
+    // Lock-in Lab defaults and ranges from config
+    const lockinlab = LabConfig.get('lockinlab');
+    const lockinDefaults = lockinlab.defaults || {};
+    const lockinRanges = lockinlab.ranges || {};
+
+    // Update state with config defaults
+    if (lockinDefaults.amplitude_mv !== undefined) state.lockinlab.userAmplitude = lockinDefaults.amplitude_mv;
+    if (lockinDefaults.dcoffset_mv !== undefined) state.lockinlab.userDcOffset = lockinDefaults.dcoffset_mv;
+    if (lockinDefaults.noise_percent !== undefined) state.lockinlab.noiseLevel = lockinDefaults.noise_percent;
+    if (lockinDefaults.phase_offset !== undefined) state.lockinlab.phaseOffset = lockinDefaults.phase_offset;
+    if (lockinDefaults.cycles !== undefined) state.lockinlab.numCycles = lockinDefaults.cycles;
+
+    // Set slider ranges and values
+    const ampSlider = document.getElementById('lockinlab-amplitude');
+    const dcSlider = document.getElementById('lockinlab-dcoffset');
+    const noiseSlider = document.getElementById('lockinlab-noise');
+    const phaseSlider = document.getElementById('lockinlab-phase');
+    const cyclesSlider = document.getElementById('lockinlab-cycles');
+
+    if (ampSlider && lockinRanges.amplitude) {
+        ampSlider.min = lockinRanges.amplitude[0];
+        ampSlider.max = lockinRanges.amplitude[1];
+        ampSlider.value = lockinDefaults.amplitude_mv;
+        document.getElementById('lockinlab-amplitude-value').textContent = `${ampSlider.value} mV`;
+    }
+    if (dcSlider && lockinRanges.dcoffset) {
+        dcSlider.min = lockinRanges.dcoffset[0];
+        dcSlider.max = lockinRanges.dcoffset[1];
+        dcSlider.value = lockinDefaults.dcoffset_mv;
+        document.getElementById('lockinlab-dcoffset-value').textContent = `${dcSlider.value} mV`;
+    }
+    if (noiseSlider && lockinRanges.noise) {
+        noiseSlider.min = lockinRanges.noise[0];
+        noiseSlider.max = lockinRanges.noise[1];
+        noiseSlider.value = lockinDefaults.noise_percent;
+        document.getElementById('lockinlab-noise-value').textContent = `${noiseSlider.value}%`;
+    }
+    if (phaseSlider && lockinRanges.phase) {
+        phaseSlider.min = lockinRanges.phase[0];
+        phaseSlider.max = lockinRanges.phase[1];
+        phaseSlider.value = lockinDefaults.phase_offset;
+        document.getElementById('lockinlab-phase-value').textContent = `${phaseSlider.value}°`;
+    }
+    if (cyclesSlider && lockinRanges.cycles) {
+        cyclesSlider.min = lockinRanges.cycles[0];
+        cyclesSlider.max = lockinRanges.cycles[1];
+        cyclesSlider.value = lockinDefaults.cycles;
+        document.getElementById('lockinlab-cycles-value').textContent = cyclesSlider.value;
+    }
+
+    // Update chopper frequency label from config
+    const chopperFreq = LabConfig.get('devices.picoscope_lockin.default_chopper_freq');
+    const refLegend = document.querySelector('.legend-item.reference');
+    if (refLegend) {
+        refLegend.textContent = `Reference (${chopperFreq} Hz)`;
     }
 }
 
@@ -277,13 +341,18 @@ function showStartupCellModal() {
 // Tab Navigation
 // ============================================
 
+// Helper to get error messages from config
+function getErrorMsg(key) {
+    return LabConfig.get(`error_messages.${key}`);
+}
+
 function switchTab(tabName) {
     if (state.measurementState !== 'idle' && state.measurementState !== 'live_monitor') {
-        LabModals.showError('Cannot Switch', 'Please stop the current measurement before switching tabs.');
+        LabModals.showError(getErrorMsg('cannot_switch_title'), getErrorMsg('cannot_switch_measurement'));
         return;
     }
     if (state.stability.running) {
-        LabModals.showError('Cannot Switch', 'Please stop the stability test before switching tabs.');
+        LabModals.showError(getErrorMsg('cannot_switch_title'), getErrorMsg('cannot_switch_stability'));
         return;
     }
 
@@ -521,9 +590,9 @@ function updateMonochromatorDisplay() {
 function goToWavelength() {
     const wavelength = parseFloat(document.getElementById('wavelength-input').value);
     // Get wavelength range from config, fallback to [200, 1200]
-    const wlRange = LabConfig.get('devices.monochromator.wavelength_range', [200, 1200]);
+    const wlRange = LabConfig.get('devices.monochromator.wavelength_range');
     if (isNaN(wavelength) || wavelength < wlRange[0] || wavelength > wlRange[1]) {
-        LabModals.showError('Invalid Wavelength', `Enter wavelength between ${wlRange[0]}-${wlRange[1]} nm`);
+        LabModals.showError(getErrorMsg('invalid_wavelength_title'), getErrorMsg('invalid_wavelength_message').replace('{min}', wlRange[0]).replace('{max}', wlRange[1]));
         return;
     }
     if (state.offlineMode) {
@@ -535,7 +604,7 @@ function goToWavelength() {
     if (api && api.set_wavelength) {
         api.set_wavelength(wavelength, (result) => {
             const r = JSON.parse(result);
-            if (!r.success) LabModals.showError('Error', r.message);
+            if (!r.success) LabModals.showError(getErrorMsg('error_title'), r.message);
         });
     }
 }
@@ -565,7 +634,7 @@ function alignMonochromator() {
     if (api && api.align_monochromator) {
         api.align_monochromator((result) => {
             const r = JSON.parse(result);
-            if (!r.success) LabModals.showError('Error', r.message);
+            if (!r.success) LabModals.showError(getErrorMsg('error_title'), r.message);
         });
     }
 }
@@ -597,7 +666,8 @@ function getParams() {
 
 function startPowerMeasurement() {
     const cell = document.getElementById('cell-number').value;
-    if (!cell || !/^\d{3}$/.test(cell)) {
+    const cellPattern = new RegExp(LabConfig.get('validation.cell_number'));
+    if (!cell || !cellPattern.test(cell)) {
         LabModals.showCell((cellNumber) => {
             document.getElementById('cell-number').value = cellNumber;
             state.cellNumber = cellNumber;
@@ -622,7 +692,7 @@ function startPowerMeasurement() {
         api.start_power_measurement(JSON.stringify(getParams()), (result) => {
             const r = JSON.parse(result);
             if (!r.success) {
-                LabModals.showError('Measurement Failed', r.message);
+                LabModals.showError(getErrorMsg('measurement_failed_title'), r.message);
                 setMeasuringState(false);
             }
         });
@@ -631,7 +701,8 @@ function startPowerMeasurement() {
 
 function startCurrentMeasurement() {
     const cell = document.getElementById('cell-number').value;
-    if (!cell || !/^\d{3}$/.test(cell)) {
+    const cellPattern = new RegExp(LabConfig.get('validation.cell_number'));
+    if (!cell || !cellPattern.test(cell)) {
         LabModals.showCell((cellNumber) => {
             document.getElementById('cell-number').value = cellNumber;
             state.cellNumber = cellNumber;
@@ -662,7 +733,7 @@ function startCurrentMeasurementWithPixel(pixel) {
         api.start_current_measurement(JSON.stringify(params), (result) => {
             const r = JSON.parse(result);
             if (!r.success) {
-                LabModals.showError('Measurement Failed', r.message);
+                LabModals.showError(getErrorMsg('measurement_failed_title'), r.message);
                 setMeasuringState(false);
             }
         });
@@ -789,7 +860,7 @@ function onMeasurementComplete(success, message) {
     } else {
         updateProgress(0, 'Failed');
         if (message && message !== 'Stopped') {
-            LabModals.showError('Measurement Failed', message);
+            LabModals.showError(getErrorMsg('measurement_failed_title'), message);
         }
     }
 }
@@ -977,7 +1048,7 @@ function saveData() {
     const hasCurrent = state.currentData.x.length > 0;
 
     if (!hasPower && !hasCurrent) {
-        LabModals.showError('No Data', 'No measurement data to save');
+        LabModals.showError(getErrorMsg('no_data_title'), getErrorMsg('no_measurement_data'));
         return;
     }
 
@@ -993,7 +1064,7 @@ function saveData() {
 function savePowerData() {
     // Get headers from config (single source of truth)
     // Use power_with_stats since we collect stats for each measurement
-    const headers = LabConfig.get('export.headers.power_with_stats', ['Wavelength (nm)', 'Power_mean (uW)', 'Power_std (uW)', 'n']);
+    const headers = LabConfig.get('export.headers.power_with_stats');
     let csv = headers.join(',') + '\n';
     for (let i = 0; i < state.powerData.x.length; i++) {
         const wavelength = state.powerData.x[i];
@@ -1009,7 +1080,7 @@ function savePowerData() {
         api.save_power_data(csv, document.getElementById('cell-number').value, (result) => {
             const r = JSON.parse(result);
             if (r.success) console.log('Saved:', r.path);
-            else if (r.message !== 'Cancelled') LabModals.showError('Save Failed', r.message);
+            else if (r.message !== 'Cancelled') LabModals.showError(getErrorMsg('save_failed_title'), r.message);
         });
     }
 }
@@ -1017,7 +1088,7 @@ function savePowerData() {
 function saveCurrentData() {
     // Get headers from config (single source of truth)
     // Use current_with_stats since offline mode generates mock stats
-    const headers = LabConfig.get('export.headers.current_with_stats', ['Wavelength (nm)', 'Current_mean (nA)', 'Current_std (nA)', 'n']);
+    const headers = LabConfig.get('export.headers.current_with_stats');
     let csv = headers.join(',') + '\n';
     for (let i = 0; i < state.currentData.x.length; i++) {
         const wavelength = state.currentData.x[i];
@@ -1032,7 +1103,7 @@ function saveCurrentData() {
         api.save_current_data(csv, document.getElementById('cell-number').value, state.currentPixel, (result) => {
             const r = JSON.parse(result);
             if (r.success) console.log('Saved:', r.path);
-            else if (r.message !== 'Cancelled') LabModals.showError('Save Failed', r.message);
+            else if (r.message !== 'Cancelled') LabModals.showError(getErrorMsg('save_failed_title'), r.message);
         });
     }
 }
@@ -1210,9 +1281,9 @@ function startStabilityTest() {
 
     const wavelength = parseFloat(document.getElementById('stability-wavelength').value);
     // Get wavelength range from config, fallback to [200, 1200]
-    const wlRange = LabConfig.get('devices.monochromator.wavelength_range', [200, 1200]);
+    const wlRange = LabConfig.get('devices.monochromator.wavelength_range');
     if (isNaN(wavelength) || wavelength < wlRange[0] || wavelength > wlRange[1]) {
-        LabModals.showError('Invalid Wavelength', `Enter wavelength between ${wlRange[0]}-${wlRange[1]} nm`);
+        LabModals.showError(getErrorMsg('invalid_wavelength_title'), getErrorMsg('invalid_wavelength_message').replace('{min}', wlRange[0]).replace('{max}', wlRange[1]));
         return;
     }
 
@@ -1250,7 +1321,7 @@ function startStabilityTestWithPixel(pixel) {
         api.start_stability_test(JSON.stringify(params), (result) => {
             const r = JSON.parse(result);
             if (!r.success) {
-                LabModals.showError('Test Failed', r.message);
+                LabModals.showError(getErrorMsg('test_failed_title'), r.message);
                 setStabilityTestState(false);
             } else if (r.phase === 'adjusting') {
                 updateStabilityProgress(0, 'Adjusting phase (locking to chopper)...');
@@ -1419,7 +1490,7 @@ function onStabilityComplete(success, message) {
     } else {
         updateStabilityProgress(0, message || 'Failed');
         if (message && message !== 'Stopped') {
-            LabModals.showError('Test Failed', message);
+            LabModals.showError(getErrorMsg('test_failed_title'), message);
         }
     }
 }
@@ -1457,7 +1528,7 @@ function saveStabilityData() {
         api.save_stability_data(csv, params.wavelength, state.stability.testType, (result) => {
             const r = JSON.parse(result);
             if (r.success) console.log('Saved:', r.path);
-            else if (r.message !== 'Cancelled') LabModals.showError('Save Failed', r.message);
+            else if (r.message !== 'Cancelled') LabModals.showError(getErrorMsg('save_failed_title'), r.message);
         });
     }
 }
@@ -1504,7 +1575,7 @@ const LOCKINLAB_EXPLANATIONS = {
              '<p>This is the technique used in lock-in amplifiers: multiply by a reference, then average.</p>',
 
     raw: '<p>The <span style="color:#2196F3"><strong>blue trace</strong></span> is your photocurrent - it goes up when light hits the cell (chopper open) and down when blocked.</p>' +
-         '<p>The <span style="color:#FF9800"><strong>orange trace</strong></span> is the reference from the chopper wheel at 81 Hz. It\'s a square wave that switches between <strong>+1</strong> and <strong>-1</strong> (see right axis).</p>' +
+         '<p>The <span style="color:#FF9800"><strong>orange trace</strong></span> is the reference from the chopper wheel at {chopper_freq} Hz. It\'s a square wave that switches between <strong>+1</strong> and <strong>-1</strong> (see right axis).</p>' +
          '<p>Notice the signal has a <strong>DC offset</strong> (not centered at zero) - we need to remove this first.</p>',
 
     removeDC: '<p>We <strong>subtract the mean</strong> to center the signal at zero.</p>' +
@@ -1785,10 +1856,10 @@ async function fetchRealLockinData() {
             state.lockinlab.isSynthetic = false;  // Real data - use interpolation for phase
             state.lockinlab.hasData = true;
 
-            // Estimate samples per cycle from time axis and chopper frequency (81 Hz)
+            // Estimate samples per cycle from time axis and chopper frequency
             const duration = result.time_axis[result.time_axis.length - 1] / 1000;  // ms to seconds
             const numSamples = result.signal_waveform.length;
-            const chopperFreq = result.freq || 81;
+            const chopperFreq = result.freq || getChopperFreq();
             state.lockinlab.samplesPerCycle = numSamples / (duration * chopperFreq);
 
             // Generate and store noise array for real data too
@@ -2090,15 +2161,24 @@ function applyLockinProcessingSteps() {
 
 function updateLockinLegend(items) {
     const legend = document.getElementById('lockinlab-legend');
+    const chopperFreq = getChopperFreq();
     legend.innerHTML = items.map(item => {
         const labels = {
             signal: 'Signal',
-            reference: 'Reference (81 Hz)',
+            reference: `Reference (${chopperFreq} Hz)`,
             product: 'Product (signal × ref)',
             average: 'Running Average'
         };
         return `<span class="legend-item ${item}">${labels[item]}</span>`;
     }).join('');
+}
+
+function getChopperFreq() {
+    return LabConfig.get('devices.picoscope_lockin.default_chopper_freq');
+}
+
+function applyConfigPlaceholders(text) {
+    return text.replace(/{chopper_freq}/g, getChopperFreq());
 }
 
 function updateLockinExplanation() {
@@ -2112,26 +2192,26 @@ function updateLockinExplanation() {
     }
 
     if (isLiveMode) {
-        textEl.innerHTML = LOCKINLAB_EXPLANATIONS.liveMode;
+        textEl.innerHTML = applyConfigPlaceholders(LOCKINLAB_EXPLANATIONS.liveMode);
         return;
     }
 
     if (!state.lockinlab.hasData) {
-        textEl.innerHTML = LOCKINLAB_EXPLANATIONS.initial;
+        textEl.innerHTML = applyConfigPlaceholders(LOCKINLAB_EXPLANATIONS.initial);
         return;
     }
 
     // Show explanation for highest enabled step (simulated mode only)
     if (state.lockinlab.steps.average) {
-        textEl.innerHTML = LOCKINLAB_EXPLANATIONS.average;
+        textEl.innerHTML = applyConfigPlaceholders(LOCKINLAB_EXPLANATIONS.average);
     } else if (state.lockinlab.steps.multiply) {
-        textEl.innerHTML = LOCKINLAB_EXPLANATIONS.multiply;
+        textEl.innerHTML = applyConfigPlaceholders(LOCKINLAB_EXPLANATIONS.multiply);
     } else if (state.lockinlab.steps.removeDC) {
-        textEl.innerHTML = LOCKINLAB_EXPLANATIONS.removeDC;
+        textEl.innerHTML = applyConfigPlaceholders(LOCKINLAB_EXPLANATIONS.removeDC);
     } else if (state.lockinlab.steps.showRaw) {
-        textEl.innerHTML = LOCKINLAB_EXPLANATIONS.raw;
+        textEl.innerHTML = applyConfigPlaceholders(LOCKINLAB_EXPLANATIONS.raw);
     } else {
-        textEl.innerHTML = LOCKINLAB_EXPLANATIONS.initial;
+        textEl.innerHTML = applyConfigPlaceholders(LOCKINLAB_EXPLANATIONS.initial);
     }
 }
 

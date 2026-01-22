@@ -22,6 +22,7 @@ from PySide6.QtCore import QObject, Slot, QTimer
 from PySide6.QtWidgets import QApplication
 
 from common.ui import BaseWebWindow
+from common.config import get_config
 
 
 def set_windows_app_id():
@@ -64,6 +65,18 @@ class LauncherApi(QObject):
     def get_version(self) -> str:
         """Get the application version."""
         return json.dumps({"version": get_app_version()})
+
+    @Slot(result=str)
+    def get_ui_config(self) -> str:
+        """Get launcher configuration for the UI."""
+        full_config = get_config()
+        config = {
+            "error_messages": {
+                **full_config.get("common", {}).get("error_messages", {}),
+                **full_config.get("launcher", {}).get("error_messages", {}),
+            }
+        }
+        return json.dumps(config)
 
     @Slot(result=str)
     def toggle_terminal(self) -> str:

@@ -82,8 +82,8 @@ function getPlotLayout(isDark) {
  * Called after config is loaded.
  */
 function populateFormDefaults() {
-    const defaults = LabConfig.get('defaults', {});
-    const validation = LabConfig.get('validation', {});
+    const defaults = LabConfig.get('defaults');
+    const validation = LabConfig.get('validation');
 
     // Voltage parameters
     if (defaults.start_voltage !== undefined) {
@@ -103,13 +103,24 @@ function populateFormDefaults() {
     const cellError = document.getElementById('cell-input-error');
     if (cellInputEl && cellInput.pattern) {
         cellInputEl.pattern = cellInput.pattern;
-        cellInputEl.placeholder = cellInput.placeholder || 'A00';
+        cellInputEl.placeholder = cellInput.placeholder;
     }
     if (cellLabel && cellInput.example) {
         cellLabel.textContent = `Cell Number (e.g., ${cellInput.example})`;
     }
     if (cellError && cellInput.error) {
         cellError.textContent = cellInput.error;
+    }
+
+    // Main form cell number inputs - set placeholder from config
+    const cellNumberEl = document.getElementById('cell-number');
+    const stabilityCellEl = document.getElementById('stability-cell-number');
+    const cellExample = cellInput.example;
+    if (cellNumberEl) {
+        cellNumberEl.placeholder = `e.g. ${cellExample}`;
+    }
+    if (stabilityCellEl) {
+        stabilityCellEl.placeholder = `e.g. ${cellExample}`;
     }
 
     // Pixel modal defaults
@@ -155,16 +166,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Tab Navigation
 // ============================================
 
+// Helper to get error messages from config
+function getErrorMsg(key) {
+    return LabConfig.get(`error_messages.${key}`);
+}
+
 function switchTab(tabName) {
     // Prevent switching during active measurements
     if (isMeasuring) {
-        LabModals.showError('Cannot Switch', 'Please stop the current measurement before switching tabs.');
+        LabModals.showError(getErrorMsg('cannot_switch_title'), getErrorMsg('cannot_switch_measurement'));
         return;
     }
 
     // Prevent switching during active stability test
     if (stabilityTestRunning) {
-        LabModals.showError('Cannot Switch', 'Please stop the stability test before switching tabs.');
+        LabModals.showError(getErrorMsg('cannot_switch_title'), getErrorMsg('cannot_switch_stability'));
         return;
     }
 
@@ -315,7 +331,8 @@ function toggleMeasurement() {
         stopMeasurement();
     } else {
         const cellNumber = document.getElementById('cell-number').value;
-        if (!cellNumber || !/^\d{3}$/.test(cellNumber)) {
+        const cellPattern = new RegExp(LabConfig.get('validation.cell_number'));
+        if (!cellNumber || !cellPattern.test(cellNumber)) {
             LabModals.showCell((cell) => {
                 document.getElementById('cell-number').value = cell;
                 LabModals.showPixel(startMeasurement);
@@ -354,7 +371,7 @@ async function startMeasurement(pixel) {
             api.start_measurement(JSON.stringify(params), (result) => {
                 const response = JSON.parse(result);
                 if (!response.success) {
-                    LabModals.showError('Measurement Failed', response.message);
+                    LabModals.showError(getErrorMsg('measurement_failed_title'), response.message);
                     isMeasuring = false;
                     updateMeasuringState(false);
                 }
@@ -364,7 +381,7 @@ async function startMeasurement(pixel) {
         console.log('Starting mock measurement with params:', params);
         mockMeasurement(params);
     } else {
-        LabModals.showError('No Device', 'No device connected. Use --offline flag for testing.');
+        LabModals.showError(getErrorMsg('no_device_title'), getErrorMsg('no_device_message'));
         isMeasuring = false;
         updateMeasuringState(false);
     }
@@ -468,13 +485,14 @@ function startStabilityTest() {
     const interval = parseFloat(document.getElementById('stability-interval').value);
 
     if (isNaN(targetVoltage) || isNaN(duration) || isNaN(interval)) {
-        LabModals.showError('Invalid Input', 'Please enter valid test parameters');
+        LabModals.showError(getErrorMsg('invalid_input_title'), getErrorMsg('invalid_test_params'));
         return;
     }
 
     // Check cell number, prompt if needed
     const cellNumber = document.getElementById('stability-cell-number').value;
-    if (!cellNumber || !/^\d{3}$/.test(cellNumber)) {
+    const cellPattern = new RegExp(LabConfig.get('validation.cell_number'));
+    if (!cellNumber || !cellPattern.test(cellNumber)) {
         LabModals.showCell((cell) => {
             document.getElementById('stability-cell-number').value = cell;
             LabModals.showPixel(executeStabilityTest);
@@ -535,7 +553,7 @@ function executeStabilityTest(pixel) {
     api.start_stability_test(JSON.stringify(params), (result) => {
         const response = JSON.parse(result);
         if (!response.success) {
-            LabModals.showError('Stability Test Failed', response.message);
+            LabModals.showError(getErrorMsg('stability_test_failed_title'), response.message);
             resetStabilityUI();
         } else {
             stabilityStartTime = Date.now() / 1000;
@@ -552,7 +570,7 @@ function stopStabilityTest() {
 
 function saveStabilityData() {
     if (stabilityData.timestamps.length === 0) {
-        LabModals.showError('No Data', 'No data to save');
+        LabModals.showError(getErrorMsg('no_data_title'), getErrorMsg('no_data_to_save'));
         return;
     }
 
@@ -627,7 +645,7 @@ function onStabilityComplete(success) {
 // Callback from Python: error
 function onStabilityError(errorMessage) {
     console.error('Stability test error:', errorMessage);
-    LabModals.showError('Stability Test Error', errorMessage);
+    LabModals.showError(getErrorMsg('stability_test_error_title'), errorMessage);
     resetStabilityUI();
     document.getElementById('stability-status').textContent = 'Error: ' + errorMessage;
 }
@@ -675,13 +693,7 @@ function saveData() {
     const pixel = currentPixel || 1;
 
     // Get headers from config (raw format with Direction, Voltage, Current, Std, n)
-    const headersRaw = LabConfig.get('export.headers_raw', {
-        direction: 'Direction',
-        voltage: 'Voltage (V)',
-        current: 'Current (mA)',
-        std: 'Std (mA)',
-        n: 'n'
-    });
+    const headersRaw = LabConfig.get('export.headers_raw');
     let csv = `${headersRaw.direction},${headersRaw.voltage},${headersRaw.current},${headersRaw.std},${headersRaw.n}\n`;
 
     for (let i = 0; i < forwardData.x.length; i++) {
@@ -703,7 +715,7 @@ function saveData() {
             if (response.success) {
                 console.log('Data saved to:', response.path);
             } else if (response.message !== 'Cancelled') {
-                LabModals.showError('Save Failed', response.message);
+                LabModals.showError(getErrorMsg('save_failed_title'), response.message);
             }
         });
     } else {
@@ -1268,10 +1280,7 @@ function saveAnalysisResults() {
 
     const data = m.sweepType === 'forward' ? analysisState.forwardData : analysisState.reverseData;
     // Get headers from config (use raw format headers for simple V-I export)
-    const headersRaw = LabConfig.get('export.headers_raw', {
-        voltage: 'Voltage (V)',
-        current: 'Current (mA)'
-    });
+    const headersRaw = LabConfig.get('export.headers_raw');
     csv += `${headersRaw.voltage},${headersRaw.current}\n`;
     for (let i = 0; i < data.voltages.length; i++) {
         csv += `${data.voltages[i].toFixed(4)},${data.currents[i].toFixed(6)}\n`;

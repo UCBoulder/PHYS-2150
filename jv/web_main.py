@@ -131,6 +131,7 @@ class JVApi(BaseWebApi):
         exposed to the frontend - those stay in settings.py for Python use only.
         """
         # Build config from settings (which load from defaults.json)
+        full_config = get_config()
         config = {
             "defaults": dict(DEFAULT_MEASUREMENT_PARAMS),
             "validation": {
@@ -146,6 +147,10 @@ class JVApi(BaseWebApi):
                 "interval_range": list(JV_STABILITY_TEST_CONFIG["interval_range"]),
             },
             "export": dict(DATA_EXPORT_CONFIG),
+            "error_messages": {
+                **full_config.get("common", {}).get("error_messages", {}),
+                **full_config.get("jv", {}).get("error_messages", {}),
+            },
         }
 
         return json.dumps(config)

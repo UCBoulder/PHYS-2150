@@ -364,8 +364,11 @@ class JVExperimentModel(QObject):
             raise JVExperimentError("Cannot start stability test during measurement")
 
         # Validate parameters
-        if not (-1.0 <= target_voltage <= 2.0):
-            raise JVExperimentError(f"Target voltage {target_voltage}V out of safe range (-1.0 to 2.0V)")
+        bounds = VALIDATION_PATTERNS.get("voltage_bounds", {})
+        min_v = bounds.get("min_start", -1.0)
+        max_v = bounds.get("max_stop", 2.0)
+        if not (min_v <= target_voltage <= max_v):
+            raise JVExperimentError(f"Target voltage {target_voltage}V out of safe range ({min_v} to {max_v}V)")
 
         duration_range = JV_STABILITY_TEST_CONFIG.get("duration_range", (1, 60))
         if not (duration_range[0] <= duration_min <= duration_range[1]):
