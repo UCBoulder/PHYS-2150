@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `diagnose_config()` function in `remote_config.py` to debug cache vs. fetch mismatches
+- Comprehensive test suite for remote config (19 tests covering fetch, cache, merge, fallback)
+
 ### Changed
 - File save dialogs now default to user's Documents folder instead of application installation directory
 - Save dialogs remember the last used directory and return to it on subsequent saves (persists across app restarts)

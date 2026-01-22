@@ -133,6 +133,54 @@ def deep_merge(base: Dict, override: Dict) -> Dict:
     return result
 
 
+def diagnose_config() -> Dict[str, Any]:
+    """
+    Diagnostic function to check remote config state.
+
+    Returns a dict with:
+    - cache_path: Path to local cache file
+    - cache_exists: Whether cache file exists
+    - cache_version: Version in cached config (or None)
+    - cache_eqe_end: EQE end_wavelength in cache (or None)
+    - fetch_success: Whether GitHub fetch succeeded
+    - fetch_version: Version from GitHub (or None)
+    - fetch_eqe_end: EQE end_wavelength from GitHub (or None)
+    - match: Whether cache and fetch versions match
+
+    Run with: python -c "from common.utils.remote_config import diagnose_config; import json; print(json.dumps(diagnose_config(), indent=2))"
+    """
+    result = {
+        "cache_path": str(get_cache_path()),
+        "cache_exists": False,
+        "cache_version": None,
+        "cache_eqe_end": None,
+        "fetch_success": False,
+        "fetch_version": None,
+        "fetch_eqe_end": None,
+        "match": False,
+    }
+
+    # Check cache
+    cached = load_cached_config()
+    if cached:
+        result["cache_exists"] = True
+        result["cache_version"] = cached.get("version")
+        result["cache_eqe_end"] = cached.get("eqe", {}).get("defaults", {}).get("end_wavelength")
+
+    # Check GitHub
+    fetched = fetch_remote_config(timeout=5.0)
+    if fetched:
+        result["fetch_success"] = True
+        result["fetch_version"] = fetched.get("version")
+        result["fetch_eqe_end"] = fetched.get("eqe", {}).get("defaults", {}).get("end_wavelength")
+
+    # Check match
+    if result["cache_version"] and result["fetch_version"]:
+        result["match"] = result["cache_version"] == result["fetch_version"]
+
+    return result
+
+
 def get_remote_config(app: str, timeout: float = 5.0) -> Dict[str, Any]:
     """
     Get remote config for an app, with fallback chain.
