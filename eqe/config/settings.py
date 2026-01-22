@@ -27,7 +27,7 @@ class DeviceType(Enum):
 # These are the initial values shown in the GUI when the application starts
 DEFAULT_MEASUREMENT_PARAMS = {
     "start_wavelength": 350.0,  # nm - beginning of wavelength sweep
-    "end_wavelength": 750.0,    # nm - end of wavelength sweep
+    "end_wavelength": 720.0,    # nm - end of wavelength sweep
     "step_size": 10.0,          # nm - wavelength increment between measurements
     "cell_number": "",          # Three-digit cell identifier for file naming (user must enter)
     "pixel_number": 1,          # Which pixel (1-8) on the solar cell to measure
