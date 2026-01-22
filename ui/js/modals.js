@@ -141,7 +141,11 @@ function confirmCellNumber() {
     const error = document.getElementById('cell-input-error');
     const value = input.value.trim();
 
-    if (!/^\d{3}$/.test(value)) {
+    // Get pattern from config (with anchors for full match)
+    const cellInput = LabConfig.get('validation.cell_input', {});
+    const pattern = cellInput.pattern ? `^${cellInput.pattern}$` : '^[A-Z][0-9]{2}$';
+
+    if (!new RegExp(pattern).test(value)) {
         input.classList.add('error');
         if (error) error.classList.add('visible');
         input.focus();
