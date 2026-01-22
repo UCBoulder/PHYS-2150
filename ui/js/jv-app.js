@@ -50,10 +50,32 @@ let consoleVisible = false;
 const consoleMessages = [];
 const MAX_CONSOLE_MESSAGES = 500;
 
+// Filename generators for plot save buttons (matches CSV naming)
+function getJvPlotFilename() {
+    const date = new Date().toISOString().slice(0, 10).replace(/-/g, '_');
+    const cell = document.getElementById('cell-number')?.value.toUpperCase() || 'unknown';
+    const pixel = currentPixel || 0;
+    return `${date}_IV_cell${cell}_pixel${pixel}`;
+}
+
+function getStabilityPlotFilename() {
+    const date = new Date().toISOString().slice(0, 10).replace(/-/g, '_');
+    const cell = document.getElementById('stability-cell-number')?.value.toUpperCase() || 'unknown';
+    const pixel = currentPixel || 0;
+    return `${date}_IV_stability_cell${cell}_pixel${pixel}`;
+}
+
+function getAnalysisPlotFilename() {
+    const date = new Date().toISOString().slice(0, 10).replace(/-/g, '_');
+    const cell = analysisState.cellNumber || 'unknown';
+    const pixel = analysisState.pixel || 0;
+    return `${date}_IV_analysis_cell${cell}_pixel${pixel}`;
+}
+
 // Plot configurations for each plot type (with custom save buttons)
-const jvPlotConfig = getPlotConfig('jv-plot', 'jv_curve');
-const stabilityPlotConfig = getPlotConfig('stability-plot', 'stability_test');
-const analysisPlotConfig = getPlotConfig('iv-analysis-plot', 'jv_analysis');
+const jvPlotConfig = getPlotConfig('jv-plot', getJvPlotFilename);
+const stabilityPlotConfig = getPlotConfig('stability-plot', getStabilityPlotFilename);
+const analysisPlotConfig = getPlotConfig('iv-analysis-plot', getAnalysisPlotFilename);
 
 // ============================================
 // Helper Functions

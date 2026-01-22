@@ -94,13 +94,47 @@ const MAX_CONSOLE_MESSAGES = 500;
 // Live monitor state
 let liveMonitorActive = false;
 
+// Filename generators for plot save buttons (matches CSV naming)
+function getPowerPlotFilename() {
+    const date = new Date().toISOString().slice(0, 10).replace(/-/g, '_');
+    const cell = state.cellNumber || 'unknown';
+    return `${date}_power_cell${cell}`;
+}
+
+function getCurrentPlotFilename() {
+    const date = new Date().toISOString().slice(0, 10).replace(/-/g, '_');
+    const cell = state.cellNumber || 'unknown';
+    const pixel = state.currentPixel || 0;
+    return `${date}_current_cell${cell}_pixel${pixel}`;
+}
+
+function getStabilityPlotFilename() {
+    const date = new Date().toISOString().slice(0, 10).replace(/-/g, '_');
+    const cell = state.cellNumber || 'unknown';
+    const pixel = state.stability.pixel || 0;
+    const testType = state.stability.testType || 'measurement';
+    return `${date}_stability_${testType}_cell${cell}_pixel${pixel}`;
+}
+
+function getLockinLabPlotFilename() {
+    const date = new Date().toISOString().slice(0, 10).replace(/-/g, '_');
+    return `${date}_lockin_demo`;
+}
+
+function getEqePlotFilename() {
+    const date = new Date().toISOString().slice(0, 10).replace(/-/g, '_');
+    const cell = state.analysis.cellNumber || 'unknown';
+    const pixel = state.analysis.pixel || 0;
+    return `${date}_EQE_cell${cell}_pixel${pixel}`;
+}
+
 // Plot configurations for each plot type (with custom save buttons)
-const powerPlotConfig = getPlotConfig('power-plot', 'eqe_power');
-const currentPlotConfig = getPlotConfig('current-plot', 'eqe_current');
-const stabilityTimePlotConfig = getPlotConfig('stability-time-plot', 'eqe_stability');
-const stabilityHistPlotConfig = getPlotConfig('stability-hist-plot', 'eqe_histogram');
-const lockinlabPlotConfig = getPlotConfig('lockinlab-plot', 'lockin_demo');
-const eqePlotConfig = getPlotConfig('eqe-plot', 'eqe_analysis');
+const powerPlotConfig = getPlotConfig('power-plot', getPowerPlotFilename);
+const currentPlotConfig = getPlotConfig('current-plot', getCurrentPlotFilename);
+const stabilityTimePlotConfig = getPlotConfig('stability-time-plot', getStabilityPlotFilename);
+const stabilityHistPlotConfig = getPlotConfig('stability-hist-plot', getStabilityPlotFilename);
+const lockinlabPlotConfig = getPlotConfig('lockinlab-plot', getLockinLabPlotFilename);
+const eqePlotConfig = getPlotConfig('eqe-plot', getEqePlotFilename);
 
 // Physical constants for EQE calculation
 const PLANCK = 6.62607015e-34;

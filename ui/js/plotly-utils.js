@@ -24,14 +24,17 @@ export function getThemeColors(isDark) {
 /**
  * Save a plot as an image file via Python backend.
  * @param {string} plotId - The DOM element ID of the plot
- * @param {string} defaultName - Default filename (without extension)
+ * @param {string|function} nameOrFn - Filename (without extension) or function that returns filename
  */
-export function savePlotImage(plotId, defaultName = 'plot') {
+export function savePlotImage(plotId, nameOrFn = 'plot') {
     const plotDiv = document.getElementById(plotId);
     if (!plotDiv) {
         console.error('Plot not found:', plotId);
         return;
     }
+
+    // Resolve filename (call function if provided, otherwise use string)
+    const defaultName = typeof nameOrFn === 'function' ? nameOrFn() : nameOrFn;
 
     Plotly.toImage(plotDiv, { format: 'png', scale: 2 }).then(function(dataUrl) {
         const api = window.LabAPI ? window.LabAPI.get() : null;
@@ -57,15 +60,15 @@ export function savePlotImage(plotId, defaultName = 'plot') {
 /**
  * Create a custom save button for the Plotly modebar.
  * @param {string} plotId - The DOM element ID of the plot
- * @param {string} defaultName - Default filename (without extension)
+ * @param {string|function} nameOrFn - Filename (without extension) or function that returns filename
  * @returns {Object} Modebar button configuration
  */
-export function createSaveButton(plotId, defaultName = 'plot') {
+export function createSaveButton(plotId, nameOrFn = 'plot') {
     return {
         name: 'Save as PNG',
         icon: Plotly.Icons.camera,
         click: function() {
-            savePlotImage(plotId, defaultName);
+            savePlotImage(plotId, nameOrFn);
         }
     };
 }
@@ -73,10 +76,10 @@ export function createSaveButton(plotId, defaultName = 'plot') {
 /**
  * Get the standard Plotly modebar configuration.
  * @param {string} plotId - Optional plot ID for custom save button
- * @param {string} defaultName - Optional default filename for save
+ * @param {string|function} nameOrFn - Filename or function returning filename for save
  * @returns {Object} Plotly config object
  */
-export function getPlotConfig(plotId = null, defaultName = 'plot') {
+export function getPlotConfig(plotId = null, nameOrFn = 'plot') {
     const config = {
         displayModeBar: true,
         modeBarButtonsToRemove: ['lasso2d', 'select2d', 'toImage'],
@@ -85,7 +88,7 @@ export function getPlotConfig(plotId = null, defaultName = 'plot') {
 
     // Add custom save button if plotId provided
     if (plotId) {
-        config.modeBarButtonsToAdd = [createSaveButton(plotId, defaultName)];
+        config.modeBarButtonsToAdd = [createSaveButton(plotId, nameOrFn)];
     }
 
     return config;
