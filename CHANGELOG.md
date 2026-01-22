@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - All user-facing error messages now in `defaults.json` under `error_messages` sections (common, launcher, jv, eqe)
 - `getErrorMsg()` helper functions in JavaScript for retrieving error strings from config
 - `get_ui_config()` method added to launcher API for config access
+- Custom "Save as PNG" button on all Plotly plots with proper file save dialog (replaces Plotly's default download behavior which doesn't work well in Qt WebEngine)
+- `savePlotImage()` and `createSaveButton()` functions in `plotly-utils.js` for plot image export
+- `save_plot_image()` Python API method for file dialog and base64 image saving
 
 ### Changed
 - **BREAKING**: Configuration architecture unified into single `defaults.json` file
@@ -32,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hardware parameters (NPLC, source_delay, timeouts, etc.) are no longer exposed to frontend JavaScript
 - Updated EQE end wavelength default from 750nm to 720nm
 - Removed all JavaScript fallback values from `LabConfig.get()` calls (config loading failures now fail visibly instead of silently using stale defaults)
+- Cell number input is now case-insensitive (auto-converts to uppercase for consistent storage)
 
 ## [3.3.1] - 2026-01-15
 

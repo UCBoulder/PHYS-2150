@@ -401,6 +401,44 @@ class JVApi(BaseWebApi):
 
         return json.dumps({"success": False, "message": "Cancelled"})
 
+    @Slot(str, str, result=str)
+    def save_plot_image(self, image_data: str, default_name: str) -> str:
+        """
+        Save a plot image from base64 data.
+
+        Args:
+            image_data: Base64-encoded PNG image data (data URL format)
+            default_name: Default filename for the save dialog
+
+        Returns:
+            JSON string with success status and file path
+        """
+        import base64
+
+        default_path = self._build_save_path(default_name)
+        file_path, _ = QFileDialog.getSaveFileName(
+            self._window,
+            "Save Plot Image",
+            default_path,
+            "PNG files (*.png);;JPEG files (*.jpg)"
+        )
+
+        if file_path:
+            try:
+                # Remove data URL prefix if present
+                if ',' in image_data:
+                    image_data = image_data.split(',')[1]
+                # Decode and save
+                image_bytes = base64.b64decode(image_data)
+                with open(file_path, 'wb') as f:
+                    f.write(image_bytes)
+                self._save_last_directory(file_path)
+                return json.dumps({"success": True, "path": file_path})
+            except Exception as e:
+                return json.dumps({"success": False, "message": str(e)})
+
+        return json.dumps({"success": False, "message": "Cancelled"})
+
     # ========================================================================
     # Measurement Forwarder Methods (worker thread → main thread marshaling)
     # ========================================================================

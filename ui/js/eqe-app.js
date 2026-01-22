@@ -94,8 +94,13 @@ const MAX_CONSOLE_MESSAGES = 500;
 // Live monitor state
 let liveMonitorActive = false;
 
-// Plot configuration (module-scoped, no global conflict)
-const plotConfig = getPlotConfig();
+// Plot configurations for each plot type (with custom save buttons)
+const powerPlotConfig = getPlotConfig('power-plot', 'eqe_power');
+const currentPlotConfig = getPlotConfig('current-plot', 'eqe_current');
+const stabilityTimePlotConfig = getPlotConfig('stability-time-plot', 'eqe_stability');
+const stabilityHistPlotConfig = getPlotConfig('stability-hist-plot', 'eqe_histogram');
+const lockinlabPlotConfig = getPlotConfig('lockinlab-plot', 'lockin_demo');
+const eqePlotConfig = getPlotConfig('eqe-plot', 'eqe_analysis');
 
 // Physical constants for EQE calculation
 const PLANCK = 6.62607015e-34;
@@ -420,14 +425,14 @@ function initPlots() {
         [{ x: [], y: [], mode: 'markers', type: 'scatter', name: 'Power',
            marker: { color: PLOT_COLORS.power, size: 8 } }],
         getPlotLayout(isDark, 'Wavelength (nm)', 'Power (µW)'),
-        plotConfig
+        powerPlotConfig
     ).then(() => attachPowerPlotHover());
 
     Plotly.newPlot('current-plot',
         [{ x: [], y: [], mode: 'markers', type: 'scatter', name: 'Current',
            marker: { color: PLOT_COLORS.current, size: 8 } }],
         getPlotLayout(isDark, 'Wavelength (nm)', 'Current (nA)'),
-        plotConfig
+        currentPlotConfig
     ).then(() => attachCurrentPlotHover());
 }
 
@@ -806,7 +811,7 @@ function onPowerProgress(wavelength, power, percent) {
         [{ x: state.powerData.x, y: state.powerData.y, mode: 'markers', type: 'scatter',
            name: 'Power', marker: { color: state.powerData.colors, size: 8 } }],
         getPlotLayout(isDark, 'Wavelength (nm)', 'Power (µW)'),
-        plotConfig
+        powerPlotConfig
     ).then(() => attachPowerPlotHover());
     updateProgress(percent, `Measuring at ${wavelength.toFixed(0)} nm`);
 }
@@ -834,7 +839,7 @@ function onCurrentProgress(wavelength, current, percent) {
         [{ x: state.currentData.x, y: state.currentData.y, mode: 'markers', type: 'scatter',
            name: 'Current', marker: { color: state.currentData.colors, size: 8 } }],
         getPlotLayout(isDark, 'Wavelength (nm)', 'Current (nA)'),
-        plotConfig
+        currentPlotConfig
     ).then(() => attachCurrentPlotHover());
     updateProgress(percent, `Measuring at ${wavelength.toFixed(0)} nm`);
 }
@@ -952,7 +957,7 @@ function clearPlot(type) {
             [{ x: [], y: [], mode: 'markers', type: 'scatter', name: 'Power',
                marker: { color: PLOT_COLORS.power, size: 8 } }],
             getPlotLayout(isDark, 'Wavelength (nm)', 'Power (µW)'),
-            plotConfig
+            powerPlotConfig
         ).then(() => attachPowerPlotHover());
         resetPowerStatsDisplay();
     } else if (type === 'current') {
@@ -961,7 +966,7 @@ function clearPlot(type) {
             [{ x: [], y: [], mode: 'markers', type: 'scatter', name: 'Current',
                marker: { color: PLOT_COLORS.current, size: 8 } }],
             getPlotLayout(isDark, 'Wavelength (nm)', 'Current (nA)'),
-            plotConfig
+            currentPlotConfig
         ).then(() => attachCurrentPlotHover());
         resetCurrentStatsDisplay();
     }
@@ -1246,7 +1251,7 @@ function initStabilityPlots() {
               line: { color: '#ffb74d', dash: 'dot', width: 1 }, showlegend: false }
         ],
         getPlotLayout(isDark, 'Time (s)', 'Value'),
-        plotConfig
+        stabilityTimePlotConfig
     );
 
     Plotly.newPlot('stability-hist-plot',
@@ -1256,7 +1261,7 @@ function initStabilityPlots() {
             ...getPlotLayout(isDark, 'Value', 'Count'),
             bargap: 0.05
         },
-        plotConfig
+        stabilityHistPlotConfig
     );
 }
 
@@ -1437,7 +1442,7 @@ function updateStabilityPlots() {
               line: { color: '#ffb74d', dash: 'dot', width: 1 }, showlegend: false }
         ],
         timeLayout,
-        plotConfig
+        stabilityTimePlotConfig
     );
 
     const histLayout = getPlotLayout(isDark, yLabel, 'Count');
@@ -1450,7 +1455,7 @@ function updateStabilityPlots() {
            marker: { color: PLOT_COLORS.power },
            nbinsx: Math.min(20, Math.max(5, Math.floor(values.length / 2))) }],
         histLayout,
-        plotConfig
+        stabilityHistPlotConfig
     );
 }
 
@@ -1628,7 +1633,7 @@ function initLockinLabPlots() {
         }]
     };
 
-    Plotly.newPlot('lockinlab-plot', [], layout, plotConfig);
+    Plotly.newPlot('lockinlab-plot', [], layout, lockinlabPlotConfig);
 
     // Clear the legend initially
     updateLockinLegend([]);
@@ -2146,7 +2151,7 @@ function applyLockinProcessingSteps() {
         annotations: []  // Clear placeholder text
     };
 
-    Plotly.react('lockinlab-plot', traces, layout, plotConfig);
+    Plotly.react('lockinlab-plot', traces, layout, lockinlabPlotConfig);
 
     // Update legend
     updateLockinLegend(legendItems);
@@ -2276,7 +2281,7 @@ function initEQEPlot() {
                 range: [0, 100]
             }
         },
-        plotConfig
+        eqePlotConfig
     );
 }
 
@@ -2670,7 +2675,7 @@ function updateEQEPlot() {
                 range: [0, Math.max(100, (metrics?.peakEQE || 0) * 1.1)]
             }
         },
-        plotConfig
+        eqePlotConfig
     );
 }
 

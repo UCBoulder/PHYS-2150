@@ -50,8 +50,10 @@ let consoleVisible = false;
 const consoleMessages = [];
 const MAX_CONSOLE_MESSAGES = 500;
 
-// Plot configuration (module-scoped, no global conflict)
-const plotConfig = getPlotConfig();
+// Plot configurations for each plot type (with custom save buttons)
+const jvPlotConfig = getPlotConfig('jv-plot', 'jv_curve');
+const stabilityPlotConfig = getPlotConfig('stability-plot', 'stability_test');
+const analysisPlotConfig = getPlotConfig('iv-analysis-plot', 'jv_analysis');
 
 // ============================================
 // Helper Functions
@@ -475,7 +477,7 @@ function initStabilityPlot() {
         showlegend: false
     });
 
-    Plotly.newPlot(plotDiv, [trace], layout, plotConfig);
+    Plotly.newPlot(plotDiv, [trace], layout, stabilityPlotConfig);
 }
 
 function startStabilityTest() {
@@ -730,7 +732,7 @@ function clearPlot() {
         { x: [], y: [], mode: 'markers', type: 'scatter', name: 'Forward', marker: { color: PLOT_COLORS.jvForward, size: 8 } },
         { x: [], y: [], mode: 'markers', type: 'scatter', name: 'Reverse', marker: { color: PLOT_COLORS.jvReverse, size: 8 } }
     ];
-    Plotly.newPlot(plotDiv, traces, layout, plotConfig).then(() => attachJVPlotHover());
+    Plotly.newPlot(plotDiv, traces, layout, jvPlotConfig).then(() => attachJVPlotHover());
 }
 
 function updatePlot() {
@@ -740,7 +742,7 @@ function updatePlot() {
         { x: forwardData.x, y: forwardData.y, mode: 'markers', type: 'scatter', name: 'Forward', marker: { color: PLOT_COLORS.jvForward, size: 8 } },
         { x: reverseData.x, y: reverseData.y, mode: 'markers', type: 'scatter', name: 'Reverse', marker: { color: PLOT_COLORS.jvReverse, size: 8 } }
     ];
-    Plotly.newPlot(plotDiv, traces, layout, plotConfig).then(() => attachJVPlotHover());
+    Plotly.newPlot(plotDiv, traces, layout, jvPlotConfig).then(() => attachJVPlotHover());
 }
 
 // Mock measurement for offline mode
@@ -868,7 +870,7 @@ function initAnalysisPlot() {
         { x: [], y: [], mode: 'markers', type: 'scatter', name: 'Isc', marker: { color: PLOT_COLORS.markerIsc, size: 12, symbol: 'diamond' } },
         { x: [], y: [], mode: 'markers', type: 'scatter', name: 'MPP', marker: { color: PLOT_COLORS.markerMPP, size: 14, symbol: 'star' } }
     ];
-    Plotly.newPlot(plotDiv, traces, layout, plotConfig);
+    Plotly.newPlot(plotDiv, traces, layout, analysisPlotConfig);
 }
 
 function updateSessionButton() {
@@ -1249,7 +1251,7 @@ function updateAnalysisPlot(voltages, currents, sweepType, voc, isc, vmpp, impp)
         marker: { color: PLOT_COLORS.markerMPP, size: 14, symbol: 'star' }
     };
 
-    Plotly.newPlot(plotDiv, [fwdTrace, revTrace, vocTrace, iscTrace, mppTrace], layout, plotConfig);
+    Plotly.newPlot(plotDiv, [fwdTrace, revTrace, vocTrace, iscTrace, mppTrace], layout, analysisPlotConfig);
 }
 
 function saveAnalysisResults() {

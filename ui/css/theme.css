@@ -164,9 +164,9 @@ h1 {
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
-.measurement-btn:focus-visible {
-    outline: 3px solid var(--ucb-gold);
-    outline-offset: 2px;
+.measurement-btn:focus {
+    outline: none !important;
+    box-shadow: none;
 }
 
 .measurement-btn .title {

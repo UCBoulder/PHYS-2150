@@ -22,15 +22,73 @@ export function getThemeColors(isDark) {
 }
 
 /**
+ * Save a plot as an image file via Python backend.
+ * @param {string} plotId - The DOM element ID of the plot
+ * @param {string} defaultName - Default filename (without extension)
+ */
+export function savePlotImage(plotId, defaultName = 'plot') {
+    const plotDiv = document.getElementById(plotId);
+    if (!plotDiv) {
+        console.error('Plot not found:', plotId);
+        return;
+    }
+
+    Plotly.toImage(plotDiv, { format: 'png', scale: 2 }).then(function(dataUrl) {
+        const api = window.LabAPI ? window.LabAPI.get() : null;
+        if (api && api.save_plot_image) {
+            api.save_plot_image(dataUrl, defaultName + '.png', function(result) {
+                const r = JSON.parse(result);
+                if (r.success) {
+                    console.log('Plot saved:', r.path);
+                } else if (r.message !== 'Cancelled') {
+                    console.error('Save failed:', r.message);
+                }
+            });
+        } else {
+            // Fallback: trigger browser download
+            const link = document.createElement('a');
+            link.download = defaultName + '.png';
+            link.href = dataUrl;
+            link.click();
+        }
+    });
+}
+
+/**
+ * Create a custom save button for the Plotly modebar.
+ * @param {string} plotId - The DOM element ID of the plot
+ * @param {string} defaultName - Default filename (without extension)
+ * @returns {Object} Modebar button configuration
+ */
+export function createSaveButton(plotId, defaultName = 'plot') {
+    return {
+        name: 'Save as PNG',
+        icon: Plotly.Icons.camera,
+        click: function() {
+            savePlotImage(plotId, defaultName);
+        }
+    };
+}
+
+/**
  * Get the standard Plotly modebar configuration.
+ * @param {string} plotId - Optional plot ID for custom save button
+ * @param {string} defaultName - Optional default filename for save
  * @returns {Object} Plotly config object
  */
-export function getPlotConfig() {
-    return {
+export function getPlotConfig(plotId = null, defaultName = 'plot') {
+    const config = {
         displayModeBar: true,
         modeBarButtonsToRemove: ['lasso2d', 'select2d', 'toImage'],
         displaylogo: false
     };
+
+    // Add custom save button if plotId provided
+    if (plotId) {
+        config.modeBarButtonsToAdd = [createSaveButton(plotId, defaultName)];
+    }
+
+    return config;
 }
 
 /**
