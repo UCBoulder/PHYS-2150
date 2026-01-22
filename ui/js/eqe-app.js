@@ -660,12 +660,12 @@ function getParams() {
         start_wavelength: parseFloat(document.getElementById('start-wavelength').value),
         end_wavelength: parseFloat(document.getElementById('end-wavelength').value),
         step_size: parseFloat(document.getElementById('step-size').value),
-        cell_number: document.getElementById('cell-number').value || '000'
+        cell_number: (document.getElementById('cell-number').value || '000').toUpperCase()
     };
 }
 
 function startPowerMeasurement() {
-    const cell = document.getElementById('cell-number').value;
+    const cell = document.getElementById('cell-number').value.toUpperCase();
     const cellPattern = new RegExp(LabConfig.get('validation.cell_number'));
     if (!cell || !cellPattern.test(cell)) {
         LabModals.showCell((cellNumber) => {
@@ -700,7 +700,7 @@ function startPowerMeasurement() {
 }
 
 function startCurrentMeasurement() {
-    const cell = document.getElementById('cell-number').value;
+    const cell = document.getElementById('cell-number').value.toUpperCase();
     const cellPattern = new RegExp(LabConfig.get('validation.cell_number'));
     if (!cell || !cellPattern.test(cell)) {
         LabModals.showCell((cellNumber) => {
@@ -1077,7 +1077,7 @@ function savePowerData() {
     }
     const api = LabAPI.get();
     if (api && api.save_power_data) {
-        api.save_power_data(csv, document.getElementById('cell-number').value, (result) => {
+        api.save_power_data(csv, document.getElementById('cell-number').value.toUpperCase(), (result) => {
             const r = JSON.parse(result);
             if (r.success) console.log('Saved:', r.path);
             else if (r.message !== 'Cancelled') LabModals.showError(getErrorMsg('save_failed_title'), r.message);
@@ -1100,7 +1100,7 @@ function saveCurrentData() {
     }
     const api = LabAPI.get();
     if (api && api.save_current_data) {
-        api.save_current_data(csv, document.getElementById('cell-number').value, state.currentPixel, (result) => {
+        api.save_current_data(csv, document.getElementById('cell-number').value.toUpperCase(), state.currentPixel, (result) => {
             const r = JSON.parse(result);
             if (r.success) console.log('Saved:', r.path);
             else if (r.message !== 'Cancelled') LabModals.showError(getErrorMsg('save_failed_title'), r.message);

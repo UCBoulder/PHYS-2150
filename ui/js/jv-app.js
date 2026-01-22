@@ -210,7 +210,7 @@ function switchTab(tabName) {
         }, 50);
     } else if (tabName === 'stability') {
         // Sync cell number from measurement tab if stability field is empty
-        const mainCellNumber = document.getElementById('cell-number').value;
+        const mainCellNumber = document.getElementById('cell-number').value.toUpperCase();
         const stabilityCellNumber = document.getElementById('stability-cell-number');
         if (mainCellNumber && !stabilityCellNumber.value) {
             stabilityCellNumber.value = mainCellNumber;
@@ -330,7 +330,7 @@ function toggleMeasurement() {
     if (isMeasuring) {
         stopMeasurement();
     } else {
-        const cellNumber = document.getElementById('cell-number').value;
+        const cellNumber = document.getElementById('cell-number').value.toUpperCase();
         const cellPattern = new RegExp(LabConfig.get('validation.cell_number'));
         if (!cellNumber || !cellPattern.test(cellNumber)) {
             LabModals.showCell((cell) => {
@@ -360,7 +360,7 @@ async function startMeasurement(pixel) {
         start_voltage: parseFloat(document.getElementById('start-voltage').value),
         stop_voltage: parseFloat(document.getElementById('stop-voltage').value),
         step_voltage: parseFloat(document.getElementById('step-voltage').value),
-        cell_number: document.getElementById('cell-number').value,
+        cell_number: document.getElementById('cell-number').value.toUpperCase(),
         pixel: pixel
     };
 
@@ -490,7 +490,7 @@ function startStabilityTest() {
     }
 
     // Check cell number, prompt if needed
-    const cellNumber = document.getElementById('stability-cell-number').value;
+    const cellNumber = document.getElementById('stability-cell-number').value.toUpperCase();
     const cellPattern = new RegExp(LabConfig.get('validation.cell_number'));
     if (!cellNumber || !cellPattern.test(cellNumber)) {
         LabModals.showCell((cell) => {
@@ -511,7 +511,7 @@ function executeStabilityTest(pixel) {
     const targetVoltage = parseFloat(document.getElementById('stability-target-voltage').value);
     const duration = parseFloat(document.getElementById('stability-duration').value);
     const interval = parseFloat(document.getElementById('stability-interval').value);
-    const cellNumber = document.getElementById('stability-cell-number').value;
+    const cellNumber = document.getElementById('stability-cell-number').value.toUpperCase();
 
     // Clear previous data
     stabilityData.timestamps = [];
@@ -574,7 +574,7 @@ function saveStabilityData() {
         return;
     }
 
-    const cellNumber = document.getElementById('stability-cell-number').value || '000';
+    const cellNumber = (document.getElementById('stability-cell-number').value || '000').toUpperCase();
     const pixel = currentPixel || 1;
 
     // Generate CSV
@@ -689,7 +689,7 @@ function updateStabilityStats() {
 // ============================================
 
 function saveData() {
-    const cellNumber = document.getElementById('cell-number').value || '000';
+    const cellNumber = (document.getElementById('cell-number').value || '000').toUpperCase();
     const pixel = currentPixel || 1;
 
     // Get headers from config (raw format with Direction, Voltage, Current, Std, n)
@@ -896,7 +896,7 @@ function useSessionData() {
     }
 
     // Get cell/pixel from measurement tab
-    analysisState.cellNumber = document.getElementById('cell-number').value || null;
+    analysisState.cellNumber = (document.getElementById('cell-number').value || '').toUpperCase() || null;
     analysisState.pixel = currentPixel;
     analysisState.sourceFile = 'Session';
 

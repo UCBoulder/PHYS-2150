@@ -139,7 +139,7 @@ function closeCellModal() {
 function confirmCellNumber() {
     const input = document.getElementById('cell-input');
     const error = document.getElementById('cell-input-error');
-    const value = input.value.trim();
+    const value = input.value.trim().toUpperCase();
 
     // Get pattern from config (with anchors for full match)
     const cellInput = LabConfig.get('validation.cell_input');
@@ -607,7 +607,7 @@ function getCellModalHTML() {
             <div class="modal-body">
                 <div class="input-group mb-0">
                     <label for="cell-input">Cell Number (e.g., ${cellInput.example})</label>
-                    <input type="text" id="cell-input" pattern="${cellInput.pattern}" maxlength="3" placeholder="${cellInput.placeholder}">
+                    <input type="text" id="cell-input" pattern="${cellInput.pattern}" maxlength="3" placeholder="${cellInput.placeholder}" style="text-transform: uppercase">
                     <span class="input-error" id="cell-input-error">${cellInput.error}</span>
                 </div>
             </div>
