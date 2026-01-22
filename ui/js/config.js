@@ -18,7 +18,13 @@ let _configReady = null;
 const FALLBACK_DEFAULTS = {
     // Common validation patterns (both JV and EQE)
     validation: {
-        cell_number: '^\\d{3}$',
+        cell_number: '^[A-Z]\\d{2}$',
+        cell_input: {
+            pattern: '[A-Z][0-9]{2}',
+            placeholder: 'A00',
+            example: 'A12',
+            error: 'Enter a letter + 2 digits (e.g., A03)',
+        },
         pixel_range: [1, 8],
     },
 

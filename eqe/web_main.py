@@ -138,6 +138,7 @@ class EQEApi(BaseWebApi):
             "defaults": dict(DEFAULT_MEASUREMENT_PARAMS),
             "validation": {
                 "cell_number": VALIDATION_PATTERNS.get("cell_number"),
+                "cell_input": VALIDATION_PATTERNS.get("cell_input", {}),
                 "pixel_range": list(VALIDATION_PATTERNS.get("pixel_range", (1, 8))),
             },
             "stability": {

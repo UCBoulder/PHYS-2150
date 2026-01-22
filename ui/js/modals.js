@@ -593,15 +593,23 @@ function closeInfoModal() {
  * @returns {string} Modal HTML
  */
 function getCellModalHTML() {
+    // Get cell input config from config, fallback to defaults
+    const cellInput = LabConfig.get('validation.cell_input', {
+        pattern: '[A-Z][0-9]{2}',
+        placeholder: 'A00',
+        example: 'A12',
+        error: 'Enter a letter + 2 digits (e.g., A03)'
+    });
+
     return `
     <div class="modal-overlay" id="cell-modal">
         <div class="modal">
             <div class="modal-title">Enter Cell Number</div>
             <div class="modal-body">
                 <div class="input-group mb-0">
-                    <label for="cell-input">Cell Number (e.g., 195)</label>
-                    <input type="text" id="cell-input" pattern="[0-9]{3}" maxlength="3" placeholder="000">
-                    <span class="input-error" id="cell-input-error">Please enter a 3-digit cell number</span>
+                    <label for="cell-input">Cell Number (e.g., ${cellInput.example})</label>
+                    <input type="text" id="cell-input" pattern="${cellInput.pattern}" maxlength="3" placeholder="${cellInput.placeholder}">
+                    <span class="input-error" id="cell-input-error">${cellInput.error}</span>
                 </div>
             </div>
             <div class="modal-footer">

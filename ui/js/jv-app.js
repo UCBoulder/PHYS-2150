@@ -96,6 +96,22 @@ function populateFormDefaults() {
         document.getElementById('step-voltage').value = defaults.step_voltage;
     }
 
+    // Cell input configuration from config
+    const cellInput = validation.cell_input || {};
+    const cellInputEl = document.getElementById('cell-input');
+    const cellLabel = document.querySelector('label[for="cell-input"]');
+    const cellError = document.getElementById('cell-input-error');
+    if (cellInputEl && cellInput.pattern) {
+        cellInputEl.pattern = cellInput.pattern;
+        cellInputEl.placeholder = cellInput.placeholder || 'A00';
+    }
+    if (cellLabel && cellInput.example) {
+        cellLabel.textContent = `Cell Number (e.g., ${cellInput.example})`;
+    }
+    if (cellError && cellInput.error) {
+        cellError.textContent = cellInput.error;
+    }
+
     // Pixel modal defaults
     const pixelInput = document.getElementById('pixel-input');
     const pixelLabel = document.querySelector('label[for="pixel-input"]');

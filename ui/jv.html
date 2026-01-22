@@ -362,9 +362,9 @@
             <h2 class="modal-title" id="cell-modal-title">Enter Cell Number</h2>
             <div class="modal-body">
                 <div class="input-group mb-0">
-                    <label for="cell-input">Cell Number (e.g., 195)</label>
-                    <input type="text" id="cell-input" pattern="[0-9]{3}" maxlength="3" placeholder="000" aria-describedby="cell-input-error">
-                    <span class="input-error" id="cell-input-error" role="alert">Please enter a 3-digit cell number</span>
+                    <label for="cell-input">Cell Number (e.g., A12)</label>
+                    <input type="text" id="cell-input" pattern="[A-Z][0-9]{2}" maxlength="3" placeholder="A00" aria-describedby="cell-input-error">
+                    <span class="input-error" id="cell-input-error" role="alert">Enter a letter + 2 digits (e.g., A03)</span>
                 </div>
             </div>
             <div class="modal-footer">
