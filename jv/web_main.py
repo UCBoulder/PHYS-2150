@@ -22,7 +22,7 @@ from .models.jv_measurement import JVMeasurementResult
 from .utils.data_export import JVDataExporter
 from .config.settings import (
     GUI_CONFIG, VALIDATION_PATTERNS, DEFAULT_MEASUREMENT_PARAMS,
-    JV_MEASUREMENT_CONFIG, DATA_EXPORT_CONFIG
+    JV_STABILITY_TEST_CONFIG, DATA_EXPORT_CONFIG
 )
 from common.utils import get_logger, TieredLogger, WebConsoleHandler
 from common.utils.remote_config import get_remote_config, deep_merge
@@ -122,23 +122,33 @@ class JVApi(BaseWebApi):
     @Slot(result=str)
     def get_ui_config(self) -> str:
         """
-        Get UI configuration values, merging remote overrides.
+        Get UI configuration values for the frontend.
 
-        Returns config needed by JavaScript for form defaults and validation.
-        Remote config from GitHub is merged over built-in defaults.
+        Remote config (from GitHub) is the primary source for UI defaults.
+        Built-in settings.py values serve as fallbacks only.
+
+        Note: Hardware/measurement params (NPLC, source_delay, etc.) are NOT
+        exposed to the frontend - those stay in settings.py for Python use only.
         """
-        # Built-in defaults
-        config = {
-            "defaults": dict(DEFAULT_MEASUREMENT_PARAMS),
-            "validation": dict(VALIDATION_PATTERNS),
-            "measurement": dict(JV_MEASUREMENT_CONFIG),
-            "export": dict(DATA_EXPORT_CONFIG),
+        # Remote config is the primary source for UI defaults
+        remote = get_remote_config('jv')
+
+        # Extract stability UI defaults from settings.py (for fallback only)
+        stability_ui_defaults = {
+            "default_target_voltage": JV_STABILITY_TEST_CONFIG["default_target_voltage"],
+            "default_duration_min": JV_STABILITY_TEST_CONFIG["default_duration_min"],
+            "duration_range": list(JV_STABILITY_TEST_CONFIG["duration_range"]),
+            "default_interval_sec": JV_STABILITY_TEST_CONFIG["default_interval_sec"],
+            "interval_range": list(JV_STABILITY_TEST_CONFIG["interval_range"]),
         }
 
-        # Merge remote config (overrides built-in)
-        remote = get_remote_config('jv')
-        if remote:
-            config = deep_merge(config, remote)
+        # Build config with remote values, falling back to settings.py
+        config = {
+            "defaults": remote.get("defaults", dict(DEFAULT_MEASUREMENT_PARAMS)),
+            "validation": remote.get("validation", dict(VALIDATION_PATTERNS)),
+            "stability": remote.get("stability", stability_ui_defaults),
+            "export": dict(DATA_EXPORT_CONFIG),  # Not remotely configurable
+        }
 
         return json.dumps(config)
 
@@ -209,17 +219,19 @@ class JVApi(BaseWebApi):
             self._current_result.pixel_number
         )
 
-        # Show save dialog
+        # Show save dialog with smart directory default
+        default_path = self._build_save_path(default_filename)
         file_path, _ = QFileDialog.getSaveFileName(
             self._window,
             "Save J-V Data",
-            default_filename,
+            default_path,
             "CSV files (*.csv)"
         )
 
         if file_path:
             try:
                 self._exporter.save_measurement(self._current_result, file_path)
+                self._save_last_directory(file_path)
                 return json.dumps({"success": True, "path": file_path})
             except Exception as e:
                 return json.dumps({"success": False, "message": str(e)})
@@ -242,11 +254,12 @@ class JVApi(BaseWebApi):
         # Generate default filename using settings template
         default_filename = self._exporter.generate_filename(cell_number, pixel)
 
-        # Show save dialog
+        # Show save dialog with smart directory default
+        default_path = self._build_save_path(default_filename)
         file_path, _ = QFileDialog.getSaveFileName(
             self._window,
             "Save J-V Data",
-            default_filename,
+            default_path,
             "CSV files (*.csv)"
         )
 
@@ -254,6 +267,7 @@ class JVApi(BaseWebApi):
             try:
                 with open(file_path, 'w', newline='') as f:
                     f.write(csv_content)
+                self._save_last_directory(file_path)
                 return json.dumps({"success": True, "path": file_path})
             except Exception as e:
                 return json.dumps({"success": False, "message": str(e)})
@@ -277,11 +291,12 @@ class JVApi(BaseWebApi):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         default_filename = f"iv_analysis_{timestamp}.csv"
 
-        # Show save dialog
+        # Show save dialog with smart directory default
+        default_path = self._build_save_path(default_filename)
         file_path, _ = QFileDialog.getSaveFileName(
             self._window,
             "Save I-V Analysis",
-            default_filename,
+            default_path,
             "CSV files (*.csv)"
         )
 
@@ -289,6 +304,7 @@ class JVApi(BaseWebApi):
             try:
                 with open(file_path, 'w', newline='') as f:
                     f.write(csv_content)
+                self._save_last_directory(file_path)
                 return json.dumps({"success": True, "path": file_path})
             except Exception as e:
                 return json.dumps({"success": False, "message": str(e)})
@@ -362,11 +378,12 @@ class JVApi(BaseWebApi):
         # Generate default filename using settings template
         default_filename = self._exporter.generate_stability_filename(cell_number, pixel)
 
-        # Show save dialog
+        # Show save dialog with smart directory default
+        default_path = self._build_save_path(default_filename)
         file_path, _ = QFileDialog.getSaveFileName(
             self._window,
             "Save Stability Test Data",
-            default_filename,
+            default_path,
             "CSV files (*.csv)"
         )
 
@@ -374,6 +391,7 @@ class JVApi(BaseWebApi):
             try:
                 with open(file_path, 'w', newline='') as f:
                     f.write(csv_content)
+                self._save_last_directory(file_path)
                 return json.dumps({"success": True, "path": file_path})
             except Exception as e:
                 return json.dumps({"success": False, "message": str(e)})

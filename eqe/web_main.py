@@ -117,32 +117,43 @@ class EQEApi(BaseWebApi):
     @Slot(result=str)
     def get_ui_config(self) -> str:
         """
-        Get UI configuration values, merging remote overrides.
+        Get UI configuration values for the frontend.
 
-        Returns config needed by JavaScript for form defaults and validation.
-        Remote config from GitHub is merged over built-in defaults.
+        Remote config (from GitHub) is the primary source for UI defaults.
+        Built-in settings.py values serve as fallbacks only.
+
+        Note: Hardware/measurement params (timeout_msec, grating thresholds,
+        chopper freq, etc.) are NOT exposed to the frontend - those stay in
+        settings.py for Python use only.
         """
-        # Convert DeviceType enum keys to strings for JSON serialization
-        devices_config = {
-            "monochromator": dict(DEVICE_CONFIGS[DeviceType.MONOCHROMATOR]),
-            "picoscope": dict(DEVICE_CONFIGS[DeviceType.PICOSCOPE_LOCKIN]),
-            "power_meter": dict(DEVICE_CONFIGS[DeviceType.THORLABS_POWER_METER]),
-        }
-
-        # Built-in defaults
-        config = {
-            "defaults": dict(DEFAULT_MEASUREMENT_PARAMS),
-            "validation": dict(VALIDATION_PATTERNS),
-            "devices": devices_config,
-            "stability": dict(STABILITY_TEST_CONFIG),
-            "phase": dict(PHASE_ADJUSTMENT_CONFIG),
-            "export": dict(DATA_EXPORT_CONFIG),
-        }
-
-        # Merge remote config (overrides built-in)
+        # Remote config is the primary source for UI defaults
         remote = get_remote_config('eqe')
-        if remote:
-            config = deep_merge(config, remote)
+
+        # Extract stability UI defaults from settings.py (for fallback only)
+        stability_ui_defaults = {
+            "default_wavelength": STABILITY_TEST_CONFIG["default_wavelength"],
+            "default_duration_min": STABILITY_TEST_CONFIG["default_duration_min"],
+            "duration_range": list(STABILITY_TEST_CONFIG["duration_range"]),
+            "default_interval_sec": STABILITY_TEST_CONFIG["default_interval_sec"],
+            "interval_range": list(STABILITY_TEST_CONFIG["interval_range"]),
+        }
+
+        # Only expose UI-relevant device info (wavelength range for validation)
+        devices_ui_config = {
+            "monochromator": {
+                "wavelength_range": list(DEVICE_CONFIGS[DeviceType.MONOCHROMATOR]["wavelength_range"]),
+            },
+        }
+
+        # Build config with remote values, falling back to settings.py
+        config = {
+            "defaults": remote.get("defaults", dict(DEFAULT_MEASUREMENT_PARAMS)),
+            "validation": remote.get("validation", dict(VALIDATION_PATTERNS)),
+            "stability": remote.get("stability", stability_ui_defaults),
+            "devices": devices_ui_config,  # Only UI-relevant device info
+            "phase": dict(PHASE_ADJUSTMENT_CONFIG),  # Technical, not remotely configurable
+            "export": dict(DATA_EXPORT_CONFIG),  # Not remotely configurable
+        }
 
         return json.dumps(config)
 
@@ -437,10 +448,12 @@ class EQEApi(BaseWebApi):
             date=date_str, cell_number=cell_number
         )
 
+        # Show save dialog with smart directory default
+        default_path = self._build_save_path(default_filename)
         file_path, _ = QFileDialog.getSaveFileName(
             self._window,
             "Save Power Data",
-            default_filename,
+            default_path,
             "CSV files (*.csv)"
         )
 
@@ -448,6 +461,7 @@ class EQEApi(BaseWebApi):
             try:
                 with open(file_path, 'w', newline='') as f:
                     f.write(csv_content)
+                self._save_last_directory(file_path)
                 return json.dumps({"success": True, "path": file_path})
             except Exception as e:
                 return json.dumps({"success": False, "message": str(e)})
@@ -464,10 +478,12 @@ class EQEApi(BaseWebApi):
             date=date_str, cell_number=cell_number, pixel_number=pixel
         )
 
+        # Show save dialog with smart directory default
+        default_path = self._build_save_path(default_filename)
         file_path, _ = QFileDialog.getSaveFileName(
             self._window,
             "Save Current Data",
-            default_filename,
+            default_path,
             "CSV files (*.csv)"
         )
 
@@ -475,6 +491,7 @@ class EQEApi(BaseWebApi):
             try:
                 with open(file_path, 'w', newline='') as f:
                     f.write(csv_content)
+                self._save_last_directory(file_path)
                 return json.dumps({"success": True, "path": file_path})
             except Exception as e:
                 return json.dumps({"success": False, "message": str(e)})
@@ -538,10 +555,12 @@ class EQEApi(BaseWebApi):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         default_filename = f"stability_{test_type}_{wavelength:.0f}nm_{timestamp}.csv"
 
+        # Show save dialog with smart directory default
+        default_path = self._build_save_path(default_filename)
         file_path, _ = QFileDialog.getSaveFileName(
             self._window,
             "Save Stability Test Data",
-            default_filename,
+            default_path,
             "CSV files (*.csv)"
         )
 
@@ -549,6 +568,7 @@ class EQEApi(BaseWebApi):
             try:
                 with open(file_path, 'w', newline='') as f:
                     f.write(csv_content)
+                self._save_last_directory(file_path)
                 return json.dumps({"success": True, "path": file_path})
             except Exception as e:
                 return json.dumps({"success": False, "message": str(e)})
@@ -563,10 +583,12 @@ class EQEApi(BaseWebApi):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         default_filename = f"eqe_analysis_{timestamp}.csv"
 
+        # Show save dialog with smart directory default
+        default_path = self._build_save_path(default_filename)
         file_path, _ = QFileDialog.getSaveFileName(
             self._window,
             "Save EQE Analysis",
-            default_filename,
+            default_path,
             "CSV files (*.csv)"
         )
 
@@ -574,6 +596,7 @@ class EQEApi(BaseWebApi):
             try:
                 with open(file_path, 'w', newline='') as f:
                     f.write(csv_content)
+                self._save_last_directory(file_path)
                 return json.dumps({"success": True, "path": file_path})
             except Exception as e:
                 return json.dumps({"success": False, "message": str(e)})

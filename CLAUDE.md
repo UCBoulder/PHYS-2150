@@ -71,23 +71,37 @@ User clicks "Start" → JS calls Python API via QWebChannel → Model validates 
 → Hardware responds → Data flows back via Qt signals → JS callbacks update UI
 ```
 
-### Configuration Guidelines
+### Configuration Architecture
 
-**`settings.py` is the single source of truth** for all configurable parameters. Never hardcode:
+This project uses a **two-tier configuration system**:
 
-- Validation patterns (cell number regex, pixel range)
-- File naming templates and date formats
-- CSV column headers
-- Window sizes and UI dimensions
-- Measurement parameters (timing, precision, ranges)
-- Error messages
+**`remote-defaults.json`** (fetched from GitHub) - UI defaults that may change per semester:
+- Form field initial values (voltages, wavelengths, step sizes)
+- Validation patterns (cell number regex, pixel ranges)
+- Stability test modal defaults (duration, interval)
 
-When adding new configurable values:
+Update this file on GitHub to change defaults for all lab computers without rebuilding the installer. The remote config is fetched at app startup and cached locally (`~/.phys2150/cache/`).
 
-1. Add the parameter to the appropriate `*/config/settings.py`
-2. Import and use it in Python code
-3. For JavaScript access, pass it via `get_ui_config()` and access via `LabConfig.get()`
-4. Add fallback defaults in `ui/js/config.js` for offline mode
+**`*/config/settings.py`** - Technical configs that should NOT change remotely:
+- Hardware communication (timeouts, USB IDs, SCPI settings)
+- Physical constants (grating thresholds, filter wavelengths, gains)
+- Measurement algorithms (NPLC, lock-in cycles, quality thresholds)
+- GUI rendering (window sizes, fonts, colors)
+- CSV export formats (headers, precision)
+
+**How it works:**
+1. `get_ui_config()` in `web_main.py` fetches remote config first
+2. Remote values override built-in `settings.py` values for UI defaults
+3. Hardware params stay in `settings.py` only - never sent to frontend
+4. Set `PHYS2150_DISABLE_REMOTE_CONFIG=1` to use only local settings.py values
+
+**When adding new configurable values:**
+
+1. Decide: Is this a UI default (might change per semester) or technical config (hardware-specific)?
+2. For UI defaults: Add to `remote-defaults.json` AND `settings.py` (fallback)
+3. For technical configs: Add to `settings.py` only
+4. Update `get_ui_config()` to expose UI values (but never hardware params)
+5. For JavaScript access, use `LabConfig.get()` with fallback defaults in `ui/js/config.js`
 
 ## Project Structure
 

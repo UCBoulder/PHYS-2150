@@ -12,7 +12,7 @@ from collections import deque
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import QObject, Slot
+from PySide6.QtCore import QObject, Slot, QStandardPaths, QSettings
 from PySide6.QtWidgets import QFileDialog
 
 from common.utils import TieredLogger, StdoutCapture
@@ -63,6 +63,59 @@ class BaseWebApi(QObject):
         super().__init__()
         self._window = window
         self._stdout_capture = None
+        self._settings = QSettings("CUBoulder", "PHYS2150")
+
+    def _get_default_save_directory(self) -> str:
+        """
+        Get the default save directory (user's Documents folder).
+
+        Returns:
+            Path to Documents folder, or home directory as fallback.
+        """
+        documents = QStandardPaths.writableLocation(QStandardPaths.DocumentsLocation)
+        if documents:
+            return documents
+        # Fallback to home directory
+        return str(Path.home())
+
+    def _get_last_save_directory(self) -> str:
+        """
+        Get the last used save directory from settings.
+
+        Falls back to Documents folder if no previous save location exists
+        or if the saved location no longer exists.
+
+        Returns:
+            Path to the last used save directory or Documents folder.
+        """
+        last_dir = self._settings.value("last_save_directory", "")
+        if last_dir and os.path.isdir(last_dir):
+            return last_dir
+        return self._get_default_save_directory()
+
+    def _save_last_directory(self, file_path: str) -> None:
+        """
+        Save the directory of the given file path to settings.
+
+        Args:
+            file_path: Full path to a saved file.
+        """
+        directory = os.path.dirname(file_path)
+        if directory:
+            self._settings.setValue("last_save_directory", directory)
+
+    def _build_save_path(self, filename: str) -> str:
+        """
+        Build a full save path combining the last used directory with a filename.
+
+        Args:
+            filename: The default filename for the save dialog.
+
+        Returns:
+            Full path combining directory and filename.
+        """
+        directory = self._get_last_save_directory()
+        return os.path.join(directory, filename)
 
     @Slot(result=str)
     def toggle_debug_mode(self) -> str:
@@ -109,7 +162,8 @@ class BaseWebApi(QObject):
         Show a file save dialog and write content to the selected file.
 
         This is a helper method for subclasses to use when implementing
-        file export functionality.
+        file export functionality. Uses the last save directory or
+        Documents folder as the default location.
 
         Args:
             content: The content to write to the file
@@ -120,10 +174,13 @@ class BaseWebApi(QObject):
         Returns:
             Dict with {"success": bool, "path": str} or {"success": False, "message": str}
         """
+        # Build full path with smart directory default
+        default_path = self._build_save_path(default_name)
+
         file_path, _ = QFileDialog.getSaveFileName(
             self._window,
             title,
-            default_name,
+            default_path,
             file_filter
         )
 
@@ -131,6 +188,8 @@ class BaseWebApi(QObject):
             try:
                 with open(file_path, 'w', newline='') as f:
                     f.write(content)
+                # Remember this directory for next time
+                self._save_last_directory(file_path)
                 return {"success": True, "path": file_path}
             except Exception as e:
                 return {"success": False, "message": str(e)}

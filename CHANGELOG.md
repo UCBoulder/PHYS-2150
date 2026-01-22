@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- File save dialogs now default to user's Documents folder instead of application installation directory
+- Save dialogs remember the last used directory and return to it on subsequent saves (persists across app restarts)
+- Clarified two-tier configuration architecture: `remote-defaults.json` for UI defaults, `settings.py` for technical/hardware configs
+- `get_ui_config()` now prioritizes remote config values over built-in settings.py defaults
+- Hardware parameters (NPLC, source_delay, timeouts, etc.) are no longer exposed to frontend JavaScript
+- Added J-V stability test defaults to `remote-defaults.json` (was missing, causing fallback to settings.py)
+- Updated EQE end wavelength default from 750nm to 720nm in `remote-defaults.json`
+- Updated `remote-defaults.json` version to "2026-spring"
+
 ## [3.3.1] - 2026-01-15
 
 ### Security
