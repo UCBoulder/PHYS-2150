@@ -58,8 +58,8 @@
     --plot-red: #e57373;
 
     /* Quality Badge Colors */
-    --quality-excellent: #2e7d32;
-    --quality-good: #689f38;
+    --quality-excellent: #66bb6a;
+    --quality-good: #2e7d32;
     --quality-fair: #f9a825;
     --quality-check: #e65100;
 }

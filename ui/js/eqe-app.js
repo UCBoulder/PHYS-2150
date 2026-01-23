@@ -833,6 +833,7 @@ function onPowerProgress(wavelength, power, percent) {
         'Excellent': PLOT_COLORS.qualityExcellent,
         'Good': PLOT_COLORS.qualityGood,
         'Fair': PLOT_COLORS.qualityFair,
+        'Low signal': PLOT_COLORS.qualityPoor,
         'Check measurement': PLOT_COLORS.qualityPoor,
         'Check': PLOT_COLORS.qualityPoor
     };
@@ -861,6 +862,7 @@ function onCurrentProgress(wavelength, current, percent) {
         'Excellent': PLOT_COLORS.qualityExcellent,
         'Good': PLOT_COLORS.qualityGood,
         'Fair': PLOT_COLORS.qualityFair,
+        'Low signal': PLOT_COLORS.qualityPoor,
         'Check measurement': PLOT_COLORS.qualityPoor,
         'Check': PLOT_COLORS.qualityPoor  // alias for mock mode
     };
