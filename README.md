@@ -4,7 +4,7 @@ A comprehensive solar cell characterization system for the CU Boulder PHYS 2150 
 
 | Measurement | Purpose | Key Equipment |
 |-------------|---------|---------------|
-| **J-V Characterization** | Power conversion efficiency, fill factor, Voc, Jsc | Keithley 2450 SMU + Solar Simulator |
+| **I-V Characterization** | Power conversion efficiency, fill factor, Voc, Isc | Keithley 2450 SMU + Solar Simulator |
 | **EQE (External Quantum Efficiency)** | Spectral response across wavelengths | PicoScope + Monochromator + Power Meter |
 
 ## Quick Start
@@ -26,23 +26,23 @@ uv run python launcher.py
 ### Running the Applications
 
 ```bash
-# Unified launcher (select EQE or J-V)
+# Unified launcher (select EQE or I-V)
 uv run python launcher.py
 
 # Run directly
 uv run python -m eqe
-uv run python -m jv
+uv run python -m jv   # I-V measurement
 
 # Offline mode (GUI testing without hardware)
 uv run python -m eqe --offline
-uv run python -m jv --offline
+uv run python -m jv --offline   # I-V offline
 ```
 
 > **Staff Tip:** In the launcher, press `Ctrl+Shift+D` to toggle offline mode without command-line flags.
 
 ## Hardware Requirements
 
-### J-V Measurement System
+### I-V Measurement System
 
 | Component | Model | Connection | Purpose |
 |-----------|-------|------------|---------|
@@ -76,22 +76,23 @@ See [docs/hardware-setup.md](docs/hardware-setup.md) for detailed installation i
 
 ```
 PHYS 2150/
-├── launcher.py              # Unified launcher - select EQE or J-V
+├── launcher.py              # Unified launcher - select EQE or I-V
 ├── pyproject.toml           # Project dependencies (uv sync)
 ├── requirements.txt         # Alternative pip dependencies
 ├── defaults.json            # All configuration (fetched from GitHub, bundled with app)
 │
 ├── ui/                      # Web UI (shared by all apps)
 │   ├── eqe.html            # EQE measurement interface
-│   ├── jv.html             # J-V measurement interface
+│   ├── jv.html             # I-V measurement interface
 │   ├── launcher.html       # Application launcher
 │   ├── css/                # Stylesheets (theme.css, components.css, layout.css)
 │   └── js/                 # JavaScript modules (api.js, plotly-utils.js, etc.)
 │
-├── jv/                      # J-V Measurement Application
+├── jv/                      # I-V Measurement Application
 │   ├── web_main.py         # Qt WebEngine app, Python-JS bridge
 │   ├── controllers/        # Keithley 2450 communication
 │   ├── models/             # Sweep logic, experiment orchestration
+│   ├── utils/              # I-V data export utilities
 │   └── config/             # Measurement parameters
 │
 ├── eqe/                     # EQE Measurement Application
@@ -99,10 +100,13 @@ PHYS 2150/
 │   ├── controllers/        # Device controllers
 │   ├── models/             # Measurement logic
 │   ├── drivers/            # PicoScope software lock-in
+│   ├── validation/         # Lock-in testing and verification tools
 │   └── config/             # Settings
 │
 ├── common/                  # Shared Infrastructure
+│   ├── config/             # Centralized config loader (defaults.json)
 │   ├── drivers/            # Thorlabs power meter driver
+│   ├── ui/                 # Shared web window and API base classes
 │   └── utils/              # Data export, logging, error messages
 │
 ├── assets/                  # Application resources
@@ -110,7 +114,8 @@ PHYS 2150/
 │   └── cu_logo.png         # CU Boulder logo
 │
 ├── scripts/                 # Utility scripts
-│   └── test_measurement_parameters.py
+│   ├── test_measurement_parameters.py
+│   └── optimize_lockin_cycles.py
 │
 ├── build/                   # Build Configuration
 │   ├── phys2150.spec       # PyInstaller spec
@@ -118,36 +123,36 @@ PHYS 2150/
 │
 ├── docs/                    # Documentation (see table below)
 │
-└── tests/                   # Test Suite (201 tests)
+└── tests/                   # Test Suite (221 tests)
     ├── unit/               # Pure function tests
     ├── models/             # Model tests with mocks
     ├── integration/        # Workflow tests
     └── mocks/              # Mock hardware controllers
 ```
 
-## J-V Measurement
+## I-V Measurement
 
-The J-V (current density vs. voltage) measurement characterizes solar cell performance under illumination.
+The I-V (current vs. voltage) measurement characterizes solar cell performance under illumination.
 
-### J-V Capabilities
+### I-V Capabilities
 
 - Forward and reverse voltage sweeps (hysteresis analysis)
 - Configurable voltage range and step size
-- Real-time J-V curve plotting
+- Real-time I-V curve plotting
 - Automatic data export to CSV
 - Cell/pixel tracking for multi-device substrates
 
-### J-V Parameters
+### I-V Parameters
 
 - **Voltage Range:** -0.2V to 1.5V (configurable)
 - **Step Size:** 0.02V (configurable)
 - **Dwell Time:** 500ms per point (configurable)
 - **4-Wire Sensing:** Enabled for accuracy
 
-### J-V Output
+### I-V Output
 
 - CSV file with forward and reverse scan data
-- Filename format: `YYYY_MM_DD_JV_cell{N}_pixel{P}.csv`
+- Filename format: `YYYY_MM_DD_IV_cell{N}_pixel{P}.csv`
 
 ## EQE Measurement
 
@@ -210,13 +215,13 @@ uv run pytest tests/integration/    # Workflow tests
 
 | Directory | Tests | Purpose |
 |-----------|-------|---------|
-| `tests/unit/` | 86 | Math utilities, data handling, statistics |
+| `tests/unit/` | 106 | Math utilities, data handling, statistics |
 | `tests/models/` | 74 | Measurement models with mock controllers |
 | `tests/integration/` | 41 | End-to-end measurement workflows |
 
 ### What's Tested
 
-- **Measurement models** (74-86% coverage): J-V sweeps, EQE current/power/phase
+- **Measurement models** (74-86% coverage): I-V sweeps, EQE current/power/phase
 - **Data export** (56-100%): CSV generation, filename formatting
 - **Parameter validation**: Cell numbers, pixel ranges, voltage/wavelength limits
 - **Stability test**: Power and current stability measurements
@@ -259,16 +264,17 @@ To update defaults for all users, edit `defaults.json` in the repo root and push
 | [hardware-setup.md](docs/hardware-setup.md) | Driver installation and hardware connections |
 | [developer-setup.md](docs/developer-setup.md) | Development environment, offline mode, controller API |
 | [architecture.md](docs/architecture.md) | MVC pattern and code organization |
-| [jv-measurement.md](docs/jv-measurement.md) | J-V measurement theory and workflow |
+| [jv-measurement.md](docs/jv-measurement.md) | I-V measurement theory and workflow |
 | [eqe-measurement.md](docs/eqe-measurement.md) | EQE measurement theory, workflow, and stability test |
 | [software-lockin.md](docs/software-lockin.md) | PicoScope software lock-in implementation |
 | [staff-guide.md](docs/staff-guide.md) | Keyboard shortcuts, diagnostic modes, common student issues |
+| [offline-testing.md](docs/offline-testing.md) | Testing the GUI without hardware |
 | [CHANGELOG.md](CHANGELOG.md) | Version history and release notes |
 | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | Common issues and solutions |
 
 ## Performance
 
-### J-V Performance
+### I-V Performance
 
 - Full forward+reverse sweep: ~30 seconds
 - Voltage resolution: 0.001V
