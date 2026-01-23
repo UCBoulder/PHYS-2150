@@ -716,20 +716,51 @@ function saveData() {
     const cellNumber = (document.getElementById('cell-number').value || '000').toUpperCase();
     const pixel = currentPixel || 1;
 
-    // Get headers from config (raw format with Direction, Voltage, Current, Std, n)
-    const headersRaw = LabConfig.get('export.headers_raw');
-    let csv = `${headersRaw.direction},${headersRaw.voltage},${headersRaw.current},${headersRaw.std},${headersRaw.n}\n`;
+    // Get headers from config (pivoted format with forward/reverse columns)
+    const headers = LabConfig.get('export.headers');
 
+    // Build header row
+    let csv = [
+        headers.voltage,
+        headers.forward_current,
+        headers.forward_std,
+        headers.forward_n,
+        headers.reverse_current,
+        headers.reverse_std,
+        headers.reverse_n
+    ].join(',') + '\n';
+
+    // Create voltage-indexed maps for forward data
+    const forwardMap = {};
     for (let i = 0; i < forwardData.x.length; i++) {
-        const std = forwardData.stats[i] ? forwardData.stats[i].std_dev.toFixed(6) : '0';
-        const n = forwardData.stats[i] ? forwardData.stats[i].n : '1';
-        csv += `Forward,${forwardData.x[i].toFixed(4)},${forwardData.y[i].toFixed(6)},${std},${n}\n`;
+        const v = forwardData.x[i].toFixed(4);
+        forwardMap[v] = {
+            current: forwardData.y[i].toFixed(6),
+            std: forwardData.stats[i] ? forwardData.stats[i].std_dev.toFixed(6) : '0',
+            n: forwardData.stats[i] ? forwardData.stats[i].n : '1'
+        };
     }
 
+    // Create voltage-indexed maps for reverse data
+    const reverseMap = {};
     for (let i = 0; i < reverseData.x.length; i++) {
-        const std = reverseData.stats[i] ? reverseData.stats[i].std_dev.toFixed(6) : '0';
-        const n = reverseData.stats[i] ? reverseData.stats[i].n : '1';
-        csv += `Reverse,${reverseData.x[i].toFixed(4)},${reverseData.y[i].toFixed(6)},${std},${n}\n`;
+        const v = reverseData.x[i].toFixed(4);
+        reverseMap[v] = {
+            current: reverseData.y[i].toFixed(6),
+            std: reverseData.stats[i] ? reverseData.stats[i].std_dev.toFixed(6) : '0',
+            n: reverseData.stats[i] ? reverseData.stats[i].n : '1'
+        };
+    }
+
+    // Get all unique voltages and sort numerically
+    const allVoltages = [...new Set([...Object.keys(forwardMap), ...Object.keys(reverseMap)])];
+    allVoltages.sort((a, b) => parseFloat(a) - parseFloat(b));
+
+    // Build CSV rows with forward and reverse on same line
+    for (const v of allVoltages) {
+        const fwd = forwardMap[v] || { current: '', std: '', n: '' };
+        const rev = reverseMap[v] || { current: '', std: '', n: '' };
+        csv += `${v},${fwd.current},${fwd.std},${fwd.n},${rev.current},${rev.std},${rev.n}\n`;
     }
 
     const api = LabAPI.get();
@@ -978,13 +1009,16 @@ function parseIVCSV(content) {
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
-        if (!line || line.startsWith('#') || line.toLowerCase().startsWith('direction') ||
-            line.toLowerCase().startsWith('voltage')) continue;
+        if (!line || line.startsWith('#')) continue;
+
+        // Skip header lines
+        const lowerLine = line.toLowerCase();
+        if (lowerLine.startsWith('direction') || lowerLine.startsWith('voltage')) continue;
 
         const parts = line.split(',');
 
         if (parts.length >= 3 && (parts[0] === 'Forward' || parts[0] === 'Reverse')) {
-            // Format: Direction,Voltage,Current
+            // Legacy format: Direction,Voltage,Current[,Std,n]
             const v = parseFloat(parts[1]);
             const c = parseFloat(parts[2]);
             if (!isNaN(v) && !isNaN(c)) {
@@ -996,8 +1030,23 @@ function parseIVCSV(content) {
                     reverse.currents.push(c);
                 }
             }
+        } else if (parts.length >= 5 && !isNaN(parseFloat(parts[0]))) {
+            // Pivoted format: Voltage,FwdCurrent,FwdStd,FwdN,RevCurrent,RevStd,RevN
+            const v = parseFloat(parts[0]);
+            const fwdC = parseFloat(parts[1]);
+            const revC = parseFloat(parts[4]);
+            if (!isNaN(v)) {
+                if (!isNaN(fwdC) && parts[1] !== '') {
+                    forward.voltages.push(v);
+                    forward.currents.push(fwdC);
+                }
+                if (!isNaN(revC) && parts[4] !== '') {
+                    reverse.voltages.push(v);
+                    reverse.currents.push(revC);
+                }
+            }
         } else if (parts.length >= 2) {
-            // Format: Voltage,Current (assume forward only)
+            // Simple format: Voltage,Current (assume forward only)
             const v = parseFloat(parts[0]);
             const c = parseFloat(parts[1]);
             if (!isNaN(v) && !isNaN(c)) {

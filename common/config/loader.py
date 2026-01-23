@@ -25,6 +25,11 @@ from typing import Any, Dict, Optional
 
 _logger = logging.getLogger(__name__)
 
+
+class ConfigurationError(Exception):
+    """Raised when configuration cannot be loaded."""
+    pass
+
 # Use certifi for SSL certificates (required for PyInstaller frozen builds)
 try:
     import certifi
@@ -167,7 +172,8 @@ def load_full_config(timeout: float = 5.0) -> Dict[str, Any]:
     1. Fresh fetch from GitHub
     2. Cached config from local file
     3. Bundled config (packaged with exe)
-    4. Empty dict (use hardcoded defaults)
+
+    Raises ConfigurationError if no config source is available.
 
     Set PHYS2150_DISABLE_REMOTE_CONFIG=1 to skip remote config entirely.
 
@@ -176,6 +182,9 @@ def load_full_config(timeout: float = 5.0) -> Dict[str, Any]:
 
     Returns:
         Full config dict
+
+    Raises:
+        ConfigurationError: If no configuration source is available
     """
     global _config_cache
 
@@ -186,8 +195,11 @@ def load_full_config(timeout: float = 5.0) -> Dict[str, Any]:
     # Check if remote config is disabled
     if os.environ.get('PHYS2150_DISABLE_REMOTE_CONFIG'):
         _logger.info("Remote config disabled via PHYS2150_DISABLE_REMOTE_CONFIG")
-        # Still try bundled for local defaults
-        config = load_bundled_config() or {}
+        config = load_bundled_config()
+        if not config:
+            raise ConfigurationError(
+                "No configuration available. Bundled defaults.json not found."
+            )
         _config_cache = config
         return config
 
@@ -207,8 +219,9 @@ def load_full_config(timeout: float = 5.0) -> Dict[str, Any]:
             if config:
                 _logger.info("Using bundled config")
             else:
-                _logger.warning("No config available - using empty defaults")
-                config = {}
+                raise ConfigurationError(
+                    "No configuration available. Check that defaults.json exists."
+                )
 
     _config_cache = config
     return config
@@ -243,195 +256,58 @@ class JVConfig:
     Type-safe accessor for JV configuration values.
 
     All properties lazily load from the singleton config cache.
-    Provides backward-compatible access to all JV settings.
+    Requires defaults.json to be available (no hardcoded fallbacks).
     """
 
     @staticmethod
     def _get_jv() -> Dict[str, Any]:
         """Get the jv section of config."""
-        return get_config().get("jv", {})
+        return get_config()["jv"]
 
-    # Default measurement parameters
     @property
     def defaults(self) -> Dict[str, Any]:
         """Default measurement parameters for GUI initialization."""
-        return self._get_jv().get("defaults", {
-            "start_voltage": -0.2,
-            "stop_voltage": 1.5,
-            "step_voltage": 0.02,
-            "cell_number": "",
-            "pixel_number": 1,
-        })
+        return self._get_jv()["defaults"]
 
-    # Measurement configuration
     @property
     def measurement(self) -> Dict[str, Any]:
         """JV measurement timing and acquisition parameters."""
-        return self._get_jv().get("measurement", {
-            "num_measurements": 10,
-            "source_delay_s": 0.05,
-            "nplc": 1.0,
-            "averaging_count": 1,
-            "averaging_filter": "REPEAT",
-            "initial_stabilization_s": 2.0,
-            "inter_sweep_delay_s": 2.0,
-            "plot_update_interval": 1,
-            "current_range": 10,
-            "voltage_range": 2,
-            "current_compliance": 1,
-            "remote_sensing": True,
-            "voltage_decimals": 2,
-            "current_quantize_precision": "0.00001",
-        })
+        return self._get_jv()["measurement"]
 
-    # Stability test configuration
     @property
     def stability_test(self) -> Dict[str, Any]:
         """JV stability test parameters."""
-        return self._get_jv().get("stability_test", {
-            "default_target_voltage": 0.5,
-            "default_duration_min": 5,
-            "duration_range": [1, 60],
-            "default_interval_sec": 2,
-            "interval_range": [0.5, 60],
-            "target_stabilization_s": 5.0,
-            "num_measurements": 10,
-            "nplc": 1.0,
-            "averaging_count": 1,
-            "averaging_filter": "REPEAT",
-            "source_delay_s": 0.05,
-            "current_range": 10,
-            "voltage_range": 2,
-            "current_compliance": 1,
-            "remote_sensing": True,
-        })
+        return self._get_jv()["stability_test"]
 
-    # Quality thresholds
     @property
     def quality_thresholds(self) -> Dict[str, float]:
         """SEM% thresholds for measurement quality assessment."""
-        return self._get_jv().get("quality_thresholds", {
-            "excellent": 0.1,
-            "good": 0.5,
-            "fair": 2.0,
-        })
+        return self._get_jv()["quality_thresholds"]
 
-    # Device configuration
     @property
     def device(self) -> Dict[str, Any]:
         """Keithley 2450 device configuration."""
-        return self._get_jv().get("device", {
-            "timeout_ms": 30000,
-            "usb_id_pattern": "USB0::0x05E6::0x2450",
-            "write_termination": "\n",
-            "read_termination": "\n",
-        })
+        return self._get_jv()["device"]
 
-    # GUI configuration
     @property
     def gui(self) -> Dict[str, Any]:
         """GUI appearance and behavior settings."""
-        return self._get_jv().get("gui", {
-            "window_title": "PHYS 2150 J-V Characterization",
-            "window_size": [1200, 800],
-            "window_min_size": [800, 600],
-            "input_panel_width_fraction": 0.1,
-            "plot_figsize": [14, 14],
-            "plot_dpi": 100,
-            "plot_min_size": [525, 525],
-            "plot_max_size": [700, 700],
-            "font_sizes": {
-                "label": 14,
-                "button": 14,
-                "input": 14,
-                "plot_title": 10,
-                "plot_axis": 10,
-                "plot_tick": 8,
-                "plot_legend": 10,
-            },
-            "colors": {
-                "forward_scan": "#0077BB",
-                "reverse_scan": "#EE7733",
-                "start_button": "#CCDDAA",
-                "stop_button": "#FFCCCC",
-            },
-        })
+        return self._get_jv()["gui"]
 
-    # Export configuration
     @property
     def export(self) -> Dict[str, Any]:
         """Data export settings."""
-        return self._get_jv().get("export", {
-            "default_format": "csv",
-            "csv_delimiter": ",",
-            "voltage_precision": 2,
-            "current_precision": 5,
-            "date_format": "%Y_%m_%d",
-            "file_template": "{date}_IV_cell{cell_number}_pixel{pixel_number}.csv",
-            "headers": {
-                "voltage": "Voltage (V)",
-                "forward_current": "Forward Scan (mA)",
-                "forward_std": "Forward Std (mA)",
-                "forward_n": "Forward n",
-                "reverse_current": "Reverse Scan (mA)",
-                "reverse_std": "Reverse Std (mA)",
-                "reverse_n": "Reverse n",
-            },
-            "headers_raw": {
-                "direction": "Direction",
-                "voltage": "Voltage (V)",
-                "current": "Current (mA)",
-                "std": "Std (mA)",
-                "n": "n",
-            },
-            "stability_file_template": "{date}_IV_stability_cell{cell_number}_pixel{pixel_number}.csv",
-            "headers_stability": {
-                "timestamp": "Timestamp (s)",
-                "voltage": "Voltage (V)",
-                "current": "Current (mA)",
-            },
-        })
+        return self._get_jv()["export"]
 
-    # Validation patterns
     @property
     def validation(self) -> Dict[str, Any]:
         """Input validation patterns."""
-        return self._get_jv().get("validation", {
-            "cell_number": r'^[A-Z]\d{2}$',
-            "pixel_range": [1, 8],
-            "voltage_bounds": {
-                "min_start": -1.0,
-                "max_stop": 2.0,
-                "min_step": 0.001,
-                "max_step": 0.5,
-            },
-        })
+        return self._get_jv()["validation"]
 
-    # Error messages
     @property
     def error_messages(self) -> Dict[str, str]:
         """User-facing error messages."""
-        return self._get_jv().get("error_messages", {
-            "device_not_found": (
-                "Keithley 2450 device not found. "
-                "Please connect and power on the device and try again."
-            ),
-            "invalid_voltages": (
-                "Please enter valid numerical values for voltages and step size."
-            ),
-            "invalid_cell_number": (
-                "Cell number must be a letter + 2 digits (e.g., A03, R26)."
-            ),
-            "invalid_pixel_number": (
-                "Pixel number must be between {min} and {max}."
-            ),
-            "measurement_failed": (
-                "Measurement failed. Please check device connections."
-            ),
-            "file_save_failed": (
-                "Failed to save file. Please check permissions and disk space."
-            ),
-        })
+        return self._get_jv()["error_messages"]
 
 
 class EQEConfig:
@@ -439,218 +315,88 @@ class EQEConfig:
     Type-safe accessor for EQE configuration values.
 
     All properties lazily load from the singleton config cache.
-    Provides backward-compatible access to all EQE settings.
+    Requires defaults.json to be available (no hardcoded fallbacks).
     """
 
     @staticmethod
     def _get_eqe() -> Dict[str, Any]:
         """Get the eqe section of config."""
-        return get_config().get("eqe", {})
+        return get_config()["eqe"]
 
-    # Default measurement parameters
     @property
     def defaults(self) -> Dict[str, Any]:
         """Default measurement parameters for GUI initialization."""
-        return self._get_eqe().get("defaults", {
-            "start_wavelength": 350.0,
-            "end_wavelength": 720.0,
-            "step_size": 10.0,
-            "cell_number": "",
-            "pixel_number": 1,
-        })
+        return self._get_eqe()["defaults"]
 
-    # Power measurement configuration
     @property
     def power_measurement(self) -> Dict[str, Any]:
         """Power measurement parameters."""
-        return self._get_eqe().get("power_measurement", {
-            "num_measurements": 200,
-            "correction_factor": 2.0,
-            "stabilization_time": 0.2,
-        })
+        return self._get_eqe()["power_measurement"]
 
-    # Current measurement configuration
     @property
     def current_measurement(self) -> Dict[str, Any]:
         """Current measurement parameters."""
-        return self._get_eqe().get("current_measurement", {
-            "num_measurements": 5,
-            "transimpedance_gain": 1e-6,
-            "stabilization_time": 0.2,
-            "initial_stabilization_time": 1.0,
-        })
+        return self._get_eqe()["current_measurement"]
 
-    # Phase adjustment configuration
     @property
     def phase_adjustment(self) -> Dict[str, Any]:
         """Phase adjustment parameters."""
-        return self._get_eqe().get("phase_adjustment", {
-            "alignment_wavelength": 532,
-            "min_r_squared": 0.90,
-            "num_visualization_points": 37,
-            "stabilization_time": 1.0,
-        })
+        return self._get_eqe()["phase_adjustment"]
 
-    # Stability test configuration
     @property
     def stability_test(self) -> Dict[str, Any]:
         """EQE stability test parameters."""
-        return self._get_eqe().get("stability_test", {
-            "initial_stabilization_time": 2.0,
-            "outlier_rejection_std": 2.0,
-            "default_wavelength": 550,
-            "default_duration_min": 5,
-            "duration_range": [1, 60],
-            "default_interval_sec": 2,
-            "interval_range": [1, 60],
-        })
+        return self._get_eqe()["stability_test"]
 
-    # Quality thresholds
     @property
     def quality_thresholds(self) -> Dict[str, Any]:
         """SEM% thresholds for measurement quality assessment."""
-        return self._get_eqe().get("quality_thresholds", {
-            "power": {
-                "excellent": 1.5,
-                "good": 2.5,
-                "fair": 4.0,
-                "low_signal_threshold": None,
-            },
-            "current": {
-                "excellent": 0.5,
-                "good": 2.0,
-                "fair": 15.0,
-                "low_signal_threshold": 5e-9,
-            }
-        })
+        return self._get_eqe()["quality_thresholds"]
 
-    # Device configurations (raw - for string key access)
     @property
     def devices_raw(self) -> Dict[str, Any]:
         """Device configurations with string keys."""
-        return self._get_eqe().get("devices", {
-            "thorlabs_power_meter": {"timeout": 5.0},
-            "monochromator": {
-                "interface": "usb",
-                "timeout_msec": 29000,
-                "grating_wavelength_threshold": 685,
-                "wavelength_range": [200, 1200],
-            },
-            "picoscope_lockin": {
-                "default_chopper_freq": 81,
-                "chopper_freq_tolerance": 0.15,
-                "min_reference_amplitude": 1.0,
-                "default_num_cycles": 12,
-                "fast_measurement_cycles": 5,
-                "num_measurements": 5,
-                "saturation_threshold_v": 0.95,
-                "signal_quality_reference_v": 0.1,
-                "correction_factor": 0.5,
-            }
-        })
+        return self._get_eqe()["devices"]
 
-    # Filter configuration
     @property
     def filter(self) -> Dict[str, Any]:
         """Filter wheel configuration."""
-        return self._get_eqe().get("filter", {
-            "threshold_lower": 420,
-            "threshold_upper": 800,
-            "positions": {
-                "1": {"name": "400 nm filter"},
-                "2": {"name": "780 nm filter"},
-                "3": {"name": "no filter"},
-            }
-        })
+        return self._get_eqe()["filter"]
 
     @property
     def filter_threshold_lower(self) -> int:
         """Lower filter threshold wavelength (nm)."""
-        return self.filter.get("threshold_lower", 420)
+        return self.filter["threshold_lower"]
 
     @property
     def filter_threshold_upper(self) -> int:
         """Upper filter threshold wavelength (nm)."""
-        return self.filter.get("threshold_upper", 800)
+        return self.filter["threshold_upper"]
 
-    # Lock-in Lab configuration
     @property
     def lockinlab(self) -> Dict[str, Any]:
         """Lock-in Lab visualization settings."""
-        return self._get_eqe().get("lockinlab", {
-            "waveform_display_points": 10000,
-            "fft_max_frequency": 200,
-        })
+        return self._get_eqe()["lockinlab"]
 
-    # GUI configuration
     @property
     def gui(self) -> Dict[str, Any]:
         """GUI appearance and behavior settings."""
-        return self._get_eqe().get("gui", {
-            "window_title": "PHYS 2150 EQE Measurement - MVC Architecture",
-            "window_size": [1400, 750],
-            "window_min_size": [1000, 600],
-            "plot_size": [300, 300],
-            "plot_max_size": [400, 400],
-            "live_monitor_interval_ms": 500,
-            "font_sizes": {
-                "label": 14,
-                "button": 14,
-                "plot_title": 10,
-                "plot_axis": 10,
-                "plot_tick": 8,
-            },
-            "colors": {
-                "start_button": "#CCDDAA",
-                "stop_button": "#FFCCCC",
-                "plot_line": "#0077BB",
-            },
-            "prompt_phase_data_save": False,
-        })
+        return self._get_eqe()["gui"]
 
-    # Export configuration
     @property
     def export(self) -> Dict[str, Any]:
         """Data export settings."""
-        return self._get_eqe().get("export", {
-            "default_format": "csv",
-            "csv_delimiter": ",",
-            "precision": 6,
-            "include_measurement_stats": True,
-            "date_format": "%Y_%m_%d",
-            "power_file_template": "{date}_power_cell{cell_number}.csv",
-            "current_file_template": "{date}_current_cell{cell_number}_pixel{pixel_number}.csv",
-            "phase_file_template": "{date}_phase_cell{cell_number}.csv",
-            "headers": {
-                "power": ["Wavelength (nm)", "Power (uW)"],
-                "power_with_stats": ["Wavelength (nm)", "Power_mean (uW)", "Power_std (uW)", "n"],
-                "current": ["Wavelength (nm)", "Current (nA)"],
-                "current_with_stats": ["Wavelength (nm)", "Current_mean (nA)", "Current_std (nA)", "n"],
-                "phase": ["Pixel #", "Set Angle", "Signal", "R^2 Value"],
-            }
-        })
+        return self._get_eqe()["export"]
 
-    # Validation patterns
     @property
     def validation(self) -> Dict[str, Any]:
         """Input validation patterns."""
-        return self._get_eqe().get("validation", {
-            "cell_number": r'^[A-Z]\d{2}$',
-            "pixel_range": [1, 8],
-        })
+        return self._get_eqe()["validation"]
 
-    # Error messages
     @property
     def error_messages(self) -> Dict[str, str]:
         """User-facing error messages."""
-        return self._get_eqe().get("error_messages", {
-            "device_not_found": "Device not found. Please check the connection.",
-            "invalid_cell_number": "Cell number must be a letter + 2 digits (e.g., A03, R26).",
-            "invalid_pixel_number": "Pixel number must be between {min} and {max}.",
-            "measurement_failed": "Measurement failed. Please check device connections.",
-            "file_save_failed": "Failed to save file. Please check permissions and disk space.",
-            "low_r_squared": "Is the lamp on? If it is, pixel {pixel} might be dead. Check in with a TA.",
-        })
+        return self._get_eqe()["error_messages"]
 
 
 # Singleton instances for convenience
