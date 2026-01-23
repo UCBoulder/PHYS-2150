@@ -145,7 +145,7 @@ The driver automatically optimizes parameters based on the PicoScope model:
 | Decimation | 1024 | ~97.6 kHz sampling rate |
 | Samples/cycle | ~1205 | Excellent Hilbert transform resolution |
 | Max samples | 200,000 | Large buffer allows many cycles |
-| Typical cycles | 100 | ~1.2 seconds integration |
+| Default cycles | 12 | Configurable in defaults.json |
 
 **Why These Values (5242D):**
 
@@ -154,51 +154,68 @@ The driver automatically optimizes parameters based on the PicoScope model:
 - At 81 Hz chopper: 97,656 ÷ 81 ≈ 1205 samples/cycle
 - Hilbert transform needs ~10+ samples/cycle for accuracy
 - 1205 samples/cycle provides excellent resolution
+- With 12 cycles: ~14,460 samples captured in ~148 ms
 
 ### PicoScope 2204A Parameters
 
 | Parameter | Value | Rationale |
 |-----------|-------|-----------|
-| Timebase | 12 | ~24.4 kHz sample rate (40960 ns/sample) |
-| Samples/cycle | ~301 | Adequate for Hilbert transform |
+| Timebase | Dynamic | Calculated to fit requested cycles |
 | Max samples | 2000 | Limited buffer in dual-channel mode |
-| Typical cycles | 6 | ~82 ms of data per acquisition |
+| Min samples/cycle | 20 | Minimum for accurate lock-in |
+| Default cycles | 12 | Configurable in defaults.json |
 
-**Why These Values (2204A):**
+**Dynamic Timebase Calculation (2204A):**
+
+Unlike the 5242D which uses fixed decimation, the 2204A dynamically calculates the timebase to fit the requested number of cycles within its limited 2000-sample buffer:
+
+```python
+# Target samples per cycle based on requested cycles
+target_samples_per_cycle = max_samples / num_cycles  # 2000 / 12 ≈ 167
+
+# Calculate required sample rate
+fs_needed = target_samples_per_cycle * reference_freq  # 167 * 81 ≈ 13.5 kHz
+
+# Calculate timebase (formula for timebase >= 8)
+# interval_ns = 40960 * 2^(timebase - 12)
+timebase = 12 + log2(interval_ns / 40960)  # Rounded up
+```
+
+With the default 12 cycles at 81 Hz, this typically results in:
+- Timebase ~13, sample rate ~12.2 kHz
+- ~150 samples/cycle (adequate for Hilbert transform)
+- ~1800 samples captured in ~148 ms
+
+**2204A Limitations:**
 
 - The 2204A has limited buffer memory (~8 KB total, ~4 KB per channel)
 - With both channels enabled, max samples ≈ 4000 per channel
 - We use 2000 to stay safely within limits
-- Timebase 12 provides slower sampling to capture more cycles
-- At 81 Hz chopper: 24,414 ÷ 81 ≈ 301 samples/cycle
-- Still sufficient for accurate Hilbert transform (needs ~10+)
-
-**2204A Limitations:**
-
 - Fewer samples per acquisition means less averaging per measurement
-- The EQE controller compensates by taking multiple acquisitions
+- The EQE controller compensates by taking multiple acquisitions (default: 5)
 - CV is slightly higher than 5242D but still adequate for measurements
 
 **2204A Visualization Mode (Lock-in Lab):**
 
-The Lock-in Lab tab uses a different timebase to capture more cycles for educational visualization:
+The Lock-in Lab tab uses a fixed slower timebase to capture more cycles for educational visualization:
 
 | Parameter | Measurement Mode | Visualization Mode |
 |-----------|------------------|-------------------|
-| Timebase | 12 | 15 |
-| Sample rate | ~24.4 kHz | ~3.05 kHz |
-| Samples/cycle | ~301 | ~38 |
-| Cycles captured | ~6 | ~50 |
+| Timebase | Dynamic (~13) | Fixed at 15 |
+| Sample rate | ~12.2 kHz | ~3.05 kHz |
+| Samples/cycle | ~150 | ~38 |
+| Cycles captured | ~12 | ~50 |
 
-Visualization mode trades samples-per-cycle for more cycles, allowing students to see the averaging effect across many periods. This mode is only used by the Lock-in Lab tab; actual EQE measurements use the standard timebase 12 for best signal resolution.
+Visualization mode trades samples-per-cycle for more cycles, allowing students to see the averaging effect across many periods. This mode is only used by the Lock-in Lab tab; actual EQE measurements use the dynamic timebase for optimal signal resolution.
 
 ### Common Parameters
 
 **Cycles Integration:**
 
 - More cycles = better noise averaging
-- PicoScope 5242D: ~100 cycles at 81 Hz = 1.23 seconds
-- PicoScope 2204A: ~6 cycles at 81 Hz = 74 ms (driver takes multiple readings)
+- Default: 12 cycles (configurable in `defaults.json` under `eqe.devices.picoscope_lockin.default_num_cycles`)
+- At 81 Hz chopper: 12 cycles = ~148 ms per acquisition
+- Each wavelength averages 5 acquisitions (configurable via `num_measurements`)
 - Balances accuracy vs measurement time
 
 ## Phase-Locked Triggering
@@ -223,11 +240,16 @@ By triggering on the reference signal's rising edge at a fixed threshold (2.5V),
 
 ### Trigger Configuration
 
+Both PicoScope models trigger on Channel B (reference) at the midpoint of the TTL signal:
+
 ```python
 # Trigger on Channel B (reference) at 2.5V rising edge
-threshold_mV = 2500  # Midpoint of 0-5V TTL
+threshold = 2500 mV  # Midpoint of 0-5V TTL
 direction = "RISING"
+auto_trigger_ms = 1000  # Fallback if no trigger
 ```
+
+This ensures phase-locked acquisition - every capture starts at the same phase of the chopper cycle.
 
 Without phase-locked triggering, random starting phases cause ~5× worse stability.
 
@@ -249,14 +271,16 @@ For a square wave, this normalization introduces a 2× scaling that the 0.5 fact
 
 ### Configuration
 
-The correction factor is set in `eqe/config/settings.py`:
+The correction factor is set in `defaults.json`:
 
-```python
-DeviceType.PICOSCOPE_LOCKIN: {
-    "correction_factor": 0.5,  # Validated via AWG testing
-    # ...
+```json
+"picoscope_lockin": {
+    "correction_factor": 0.5,
+    ...
 }
 ```
+
+This value is loaded via `eqe/config/settings.py` and passed to the lock-in algorithm.
 
 ### Comparison to SR510
 
@@ -316,11 +340,12 @@ Both provide ±20V input range - no clipping issues.
 PicoScope
 ├── Channel A: Solar cell signal
 │   └── via transimpedance amplifier
-│   └── Range: ±20V (auto-ranging)
+│   └── Range: ±2V (2204A) or ±20V (5242D)
 │
 └── Channel B: Chopper reference
     └── TTL square wave (0-5V)
-    └── Trigger source
+    └── Range: ±5V (2204A) or ±20V (5242D)
+    └── Trigger source (2.5V rising edge)
 ```
 
 ## Performance Validation
@@ -418,7 +443,8 @@ eqe/
 ├── drivers/
 │   └── picoscope_driver.py           # Low-level SDK interface
 │       └── software_lockin()         # Main lock-in algorithm
-│       └── _acquire_block_5000()     # PS5242D acquisition
+│       └── _lockin_hilbert()         # Hilbert transform processing
+│       └── _acquire_block_5000a()    # PS5242D acquisition
 │       └── _acquire_block_2000()     # PS2204A acquisition
 │
 └── controllers/

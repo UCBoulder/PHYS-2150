@@ -376,9 +376,9 @@ class PicoScopeDriver:
             # ps2000_set_channel(handle, channel, enabled, coupling, range)
             # channel: 0=A, 1=B
             # coupling: 0=AC, 1=DC
-            # range: 1=50mV, 2=100mV, 3=200mV, 4=500mV, 5=1V, 6=2V, 7=5V, 8=10V, 9=20V
-            chA_range = 7  # PS2000_2V - 2204A max is 20V but 2V is good for signals
-            chB_range = 7  # PS2000_2V
+            # range: 1=20mV, 2=50mV, 3=100mV, 4=200mV, 5=500mV, 6=1V, 7=2V, 8=5V, 9=10V, 10=20V
+            chA_range = 7  # PS2000_2V (±2V) - good for TIA output signals
+            chB_range = 8  # PS2000_5V (±5V) - for 0-5V TTL reference
 
             # Channel A (signal)
             self.status["setChA"] = ps.ps2000_set_channel(
@@ -406,7 +406,7 @@ class PicoScopeDriver:
             self.chA_range = chA_range
             self.chB_range = chB_range
 
-            _logger.debug("Channels configured: 2V range, DC coupling")
+            _logger.debug("Channels configured: Ch A ±2V (signal), Ch B ±5V (reference)")
 
         elif self.device_type == '5000a':
             # PS5000a setup
@@ -1125,17 +1125,17 @@ class PicoScopeDriver:
             )
             self.assert_pico_ok(self.status["getTimebase"])
 
-            # Set up trigger with auto-trigger
+            # Set up trigger on Channel B (reference) for phase-locked acquisition
             # ps2000_set_trigger(handle, source, threshold, direction, delay, auto_trigger_ms)
-            # Use short auto-trigger since we're free-running (signal is continuous)
-            # 100ms is enough to capture several cycles at 81 Hz if trigger doesn't fire
+            # Trigger at 2.5V (midpoint of 0-5V TTL) on rising edge
+            # Channel B is set to ±5V range, so 2.5V = 0.5 * 32767 ≈ 16384 ADC counts
             self.status["trigger"] = ps.ps2000_set_trigger(
                 self.chandle,
-                0,     # trigger on Channel A (signal)
-                64,    # threshold in ADC counts
+                1,     # trigger on Channel B (reference)
+                16384, # threshold ~2.5V in ±5V range
                 0,     # direction: rising
                 0,     # delay
-                100    # auto-trigger after 100ms (was 1000ms)
+                1000   # auto-trigger after 1000ms if no trigger
             )
             self.assert_pico_ok(self.status["trigger"])
 
