@@ -115,7 +115,7 @@ Always use 4-wire sensing for accurate J-V measurements.
 
 When the application starts:
 
-1. Searches for Keithley 2450 via USB (VISA pattern: `USB0::0x05E6::0x2450::*`)
+1. Searches for Keithley 2450 via USB (VISA pattern configured in `defaults.json`)
 2. Resets device to known state
 3. Configures for voltage sourcing, current measurement
 4. Enables 4-wire sensing
@@ -124,119 +124,115 @@ When the application starts:
 
 The system tracks which cell and pixel is being measured:
 
-- **Cell number**: 3-digit identifier (e.g., "195")
+- **Cell number**: Letter + 2 digits (e.g., "A03", "R26")
 - **Pixel number**: 1-8 (substrates have 8 individual pixels)
 
 This information is embedded in the output filename for data organization.
 
 ### 3. Parameter Setup
 
-Configure the voltage sweep:
+Configure the voltage sweep (defaults are defined in `defaults.json`):
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| Start voltage | -0.2 V | Reverse bias starting point |
-| Stop voltage | 1.5 V | Forward bias endpoint |
-| Step size | 0.02 V | Voltage increment |
-| Dwell time | 500 ms | Stabilization time per point |
+| Parameter | Description |
+|-----------|-------------|
+| Start voltage | Reverse bias starting point |
+| Stop voltage | Forward bias endpoint |
+| Step size | Voltage increment |
 
 ### 4. Measurement Sequence
 
 ```
 1. Set initial voltage (start_voltage)
-2. Wait for initial stabilization (2 seconds)
+2. Wait for initial stabilization
 3. FORWARD SWEEP:
    For each voltage from start → stop:
      a. Set voltage
-     b. Wait dwell time
-     c. Measure current
-     d. Record (V, I) point
-     e. Update plot
+     b. Wait source delay (device-native settling time)
+     c. Take multiple current readings
+     d. Calculate mean and standard deviation
+     e. Record (V, I_mean, I_std, n) point
+     f. Update plot
 
-4. Wait inter-sweep delay (2 seconds)
+4. Wait inter-sweep delay
 
 5. REVERSE SWEEP:
    For each voltage from stop → start:
      a. Set voltage
-     b. Wait dwell time
-     c. Measure current
-     d. Record (V, I) point
-     e. Update plot
+     b. Wait source delay
+     c. Take multiple current readings
+     d. Calculate mean and standard deviation
+     e. Record (V, I_mean, I_std, n) point
+     f. Update plot
 
 6. Turn off output
 7. Save data to CSV
 ```
 
+Timing parameters (stabilization delays, source delay, number of measurements per point) are configured in `defaults.json`.
+
 ### 5. Data Export
 
-Output CSV format:
+Output CSV format (includes measurement statistics):
 
 ```csv
-Voltage (V),Forward Scan (mA),Reverse Scan (mA)
--0.20,12.45,12.48
--0.18,12.44,12.47
+Voltage (V),Forward Scan (mA),Forward Std (mA),Forward n,Reverse Scan (mA),Reverse Std (mA),Reverse n
+-0.20,12.450,0.012,10,12.480,0.015,10
+-0.18,12.440,0.011,10,12.470,0.013,10
 ...
-1.10,0.15,0.18
+1.10,0.150,0.008,10,0.180,0.009,10
 ```
 
-Filename format: `YYYY_MM_DD_JV_cell{N}_pixel{P}.csv`
+- **Std (mA)**: Standard deviation of the multiple measurements at each point
+- **n**: Number of measurements averaged
 
-Example: `2025_03_15_JV_cell195_pixel3.csv`
+Filename format: `YYYY_MM_DD_IV_cell{cell}_pixel{pixel}.csv`
+
+Example: `2025_03_15_IV_cellA03_pixel3.csv`
 
 ## Configuration
 
-All parameters are defined in `jv/config/settings.py`:
+All parameters are defined in `defaults.json` at the repository root. The file `jv/config/settings.py` re-exports these values for use in Python code.
 
 ### Measurement Timing
 
-```python
-JV_MEASUREMENT_CONFIG = {
-    # Time after voltage change before measuring
-    "dwell_time_ms": 500,
+Key timing parameters in `defaults.json` under `jv.measurement`:
 
-    # Stabilization at start voltage before sweep
-    "initial_stabilization_s": 2.0,
+| Parameter | Description |
+|-----------|-------------|
+| `source_delay_s` | Device-native delay after voltage change before measuring |
+| `initial_stabilization_s` | Stabilization time at start voltage before sweep begins |
+| `inter_sweep_delay_s` | Pause between forward and reverse sweeps |
+| `num_measurements` | Number of current readings averaged per voltage point |
+| `nplc` | Integration time as Number of Power Line Cycles (at 60 Hz: NPLC 1 = 16.7ms) |
 
-    # Pause between forward and reverse sweeps
-    "inter_sweep_delay_s": 2.0,
-}
-```
-
-**Dwell time considerations:**
-- Too short: Cell hasn't stabilized, noisy data
-- Too long: Measurement takes excessively long
-- Perovskites may need longer dwell times (500-1000 ms)
+**Timing considerations:**
+- Too short delays: Cell hasn't stabilized, noisy data
+- Too long delays: Measurement takes excessively long
+- Perovskites may need longer settling times due to ion migration
 
 ### Device Configuration
 
-```python
-DEVICE_CONFIG = {
-    "timeout_ms": 30000,                    # VISA communication timeout
-    "usb_id_pattern": "USB0::0x05E6::0x2450",  # Device identifier
-}
+Key device parameters in `defaults.json` under `jv.device` and `jv.measurement`:
 
-JV_MEASUREMENT_CONFIG = {
-    "voltage_range": 2,       # Volts (auto-ranges if exceeded)
-    "current_range": 10,      # mA scale
-    "current_compliance": 1,  # Amps - safety limit
-    "remote_sensing": True,   # 4-wire sensing
-}
-```
+| Parameter | Description |
+|-----------|-------------|
+| `timeout_ms` | VISA communication timeout |
+| `usb_id_pattern` | Device identifier for USB discovery |
+| `voltage_range` | Voltage range in Volts (auto-ranges if exceeded) |
+| `current_range` | Current range in mA |
+| `current_compliance` | Safety limit in Amps |
+| `remote_sensing` | Enable 4-wire sensing for accuracy |
 
 ### Validation Bounds
 
-Physics-informed limits prevent obviously wrong parameters:
+Physics-informed limits in `defaults.json` under `jv.validation.voltage_bounds` prevent obviously wrong parameters:
 
-```python
-VALIDATION_PATTERNS = {
-    "voltage_bounds": {
-        "min_start": -1.0,   # Extreme reverse bias
-        "max_stop": 2.0,     # Extreme forward bias
-        "min_step": 0.001,   # Minimum resolution
-        "max_step": 0.5,     # Maximum step size
-    },
-}
-```
+| Bound | Description |
+|-------|-------------|
+| `min_start` | Minimum allowed start voltage (extreme reverse bias) |
+| `max_stop` | Maximum allowed stop voltage (extreme forward bias) |
+| `min_step` | Minimum voltage step resolution |
+| `max_step` | Maximum voltage step size |
 
 ## Interpreting Results
 
@@ -284,7 +280,7 @@ Keithley 2450 device not found.
 **Symptoms:** Noisy current measurements, inconsistent values
 
 **Solutions:**
-1. Increase dwell time
+1. Increase `num_measurements` for more averaging
 2. Check probe contacts
 3. Shield from light fluctuations
 4. Verify 4-wire connections
@@ -321,6 +317,8 @@ Keithley 2450 device not found.
 ## Code Structure
 
 ```
+defaults.json               # All configuration parameters (single source of truth)
+
 ui/
 ├── jv.html                 # J-V web interface
 ├── css/                    # Stylesheets
@@ -332,9 +330,10 @@ jv/
 │   └── keithley_2450.py    # SCPI communication
 ├── models/
 │   ├── jv_experiment.py    # Experiment orchestration
-│   └── jv_measurement.py   # Sweep logic
+│   ├── jv_measurement.py   # Sweep logic
+│   └── jv_stability_test.py # Stability test at fixed voltage
 ├── config/
-│   └── settings.py         # All parameters
+│   └── settings.py         # Re-exports from defaults.json
 └── utils/
     └── data_export.py      # CSV handling
 ```

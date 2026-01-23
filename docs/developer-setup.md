@@ -64,6 +64,7 @@ PHYS-2150/
 │   ├── controllers/       # Device controllers
 │   ├── models/            # Experiment logic
 │   ├── drivers/           # EQE-specific drivers (PicoScope)
+│   ├── validation/        # Hardware validation scripts
 │   ├── config/            # Settings
 │   └── utils/             # EQE utilities
 │
@@ -625,7 +626,7 @@ controller.close_shutter()
 
 # Direct control
 controller.set_wavelength(600.0)
-controller.set_filter_position(1)  # 1=400nm filter, 2=780nm filter, 3=no filter
+controller.set_filter(1)  # 1=400nm filter, 2=780nm filter, 3=no filter
 
 controller.disconnect()
 ```
@@ -663,10 +664,8 @@ controller = Keithley2450Controller()
 controller.connect()
 
 # Configuration
-controller.configure_source_voltage()
-controller.set_voltage_range(2.0)
-controller.set_current_compliance(1.0)
-controller.enable_remote_sensing(True)  # 4-wire mode
+controller.configure_voltage_source(voltage_range=2.0, current_limit=1.0)
+controller.configure_current_measurement(current_range=10, remote_sensing=True)
 
 # Measurement
 controller.set_voltage(0.5)

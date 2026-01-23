@@ -88,11 +88,14 @@ print(rm.list_resources())
 
 **Solutions:**
 
-- Increase dwell time in `jv/config/settings.py`:
+- Increase measurement settling time in `defaults.json` under `jv.measurement`:
 
-  ```python
-  "dwell_time_ms": 1000,  # Increase from 500
+  ```json
+  "source_delay_s": 0.1,
+  "nplc": 2.0
   ```
+
+  Higher `nplc` = longer integration time, less noise. Higher `source_delay_s` = more settling time.
 
 - Use 4-wire sensing (enabled by default)
 - Check for ground loops
@@ -102,14 +105,14 @@ print(rm.list_resources())
 
 **Symptoms:** Current plateaus at unexpected value
 
-**Cause:** Cell current exceeds safety limit (default 1A)
+**Cause:** Cell current exceeds the safety limit set in `defaults.json` under `jv.measurement.current_compliance`
 
 **Solutions:**
 
-1. Increase compliance in config (carefully):
+1. Increase compliance in `defaults.json` (carefully):
 
-   ```python
-   "current_compliance": 2,  # Amps
+   ```json
+   "current_compliance": <higher value in Amps>
    ```
 
 2. Reduce illumination intensity
@@ -127,8 +130,8 @@ print(rm.list_resources())
 
 **Solutions:**
 
-- Increase dwell time (500ms → 1000ms)
-- Increase inter-sweep delay
+- Increase `source_delay_s` or `nplc` in `defaults.json` under `jv.measurement`
+- Increase `inter_sweep_delay_s` in `defaults.json`
 - Let cell stabilize before measurement
 - Check cell condition
 
@@ -242,7 +245,7 @@ num_samples = min(num_samples, 2000)
 **Diagnostic steps:**
 
 1. **Check trigger threshold** - Should be 2500 mV for 0-5V TTL reference
-2. **Verify reference signal** - Clean 0-5V square wave at 81 Hz
+2. **Verify reference signal** - Clean 0-5V square wave at configured chopper frequency (see `default_chopper_freq` in `defaults.json`)
 3. **Check lamp** - Warmed up 15+ minutes?
 4. **Check connections** - All cables secure?
 
@@ -302,7 +305,7 @@ num_samples = min(num_samples, 2000)
 
 - Recalibrate power at sample position
 - Block stray light
-- Check `transimpedance_gain` in settings
+- Check `transimpedance_gain` in `defaults.json` under `eqe.current_measurement`
 - Verify using same wavelength range
 
 ---
@@ -346,7 +349,7 @@ print([p.device for p in serial.tools.list_ports.comports()])
 
 1. Chopper powered on
 2. TTL output connected to PicoScope CH B
-3. Speed set to 81 Hz
+3. Speed matches `default_chopper_freq` in `defaults.json`
 
 **Solutions:**
 
@@ -473,9 +476,10 @@ python -m eqe --offline
 
 | File | Purpose |
 |------|---------|
-| `jv/config/settings.py` | J-V parameters |
-| `eqe/config/settings.py` | EQE parameters |
-| `eqe/drivers/picoscope_driver.py` | PicoScope settings |
+| `defaults.json` | All configuration (single source of truth) |
+| `jv/config/settings.py` | J-V Python exports (reads from defaults.json) |
+| `eqe/config/settings.py` | EQE Python exports (reads from defaults.json) |
+| `eqe/drivers/picoscope_driver.py` | PicoScope low-level driver |
 
 ### Report Issues
 

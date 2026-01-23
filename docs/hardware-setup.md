@@ -11,8 +11,7 @@ The PHYS 2150 Measurement Suite communicates with several pieces of laboratory e
 | Keithley 2450 SMU | NI-VISA Runtime | J-V measurements |
 | PicoScope 5242D/2204A | PicoScope SDK | EQE lock-in amplifier |
 | Thorlabs PM100USB | Thorlabs OPM | Reference power measurement |
-| Newport CS130B Monochromator | NI-VISA Runtime | Wavelength selection (SCPI over serial) |
-| Newport USFW-100 Filter Wheel | NI-VISA Runtime | Order-sorting filters (SCPI over serial) |
+| Newport CS130B Monochromator + USFW-100 Filter Wheel | NI-VISA Runtime | Wavelength selection and order-sorting filters |
 
 ## Driver Installation
 
@@ -240,7 +239,7 @@ If the Thorlabs power meter isn't detected:
 #### Newport USFW-100 Filter Wheel
 
 - Positions: 6 filter positions
-- Interface: USB-Serial
+- Interface: Data cable to CS130B monochromator (controlled via monochromator SCPI commands)
 - Used for: Order-sorting filters
 
 ##### Filter Configuration
@@ -249,9 +248,9 @@ The filter wheel is configured with order-sorting filters to block second-order 
 
 | Position | Filter | Wavelength Range | Purpose |
 |----------|--------|------------------|---------|
-| 1 | 400 nm longpass | 420-800 nm | Blocks UV second-order |
-| 2 | 780 nm longpass | 800+ nm | Blocks visible second-order |
-| 3 | No filter (open) | 0-420 nm | UV/blue measurements |
+| 1 | 400 nm longpass | Lower threshold to upper threshold | Blocks UV second-order |
+| 2 | 780 nm longpass | Above upper threshold | Blocks visible second-order |
+| 3 | No filter (open) | Below lower threshold | UV/blue measurements |
 
 **Why order-sorting filters are needed:**
 
@@ -261,20 +260,26 @@ Diffraction gratings produce multiple orders. At 800 nm (1st order), the grating
 
 **Automatic filter switching:**
 
-The software automatically selects the appropriate filter based on wavelength:
-- λ < 420 nm → Position 3 (no filter)
-- 420 nm ≤ λ < 800 nm → Position 1 (400 nm longpass)
-- λ ≥ 800 nm → Position 2 (780 nm longpass)
+The software automatically selects the appropriate filter based on wavelength thresholds defined in `defaults.json`:
+- λ < `threshold_lower` → Position 3 (no filter)
+- `threshold_lower` ≤ λ < `threshold_upper` → Position 1 (400 nm longpass)
+- λ ≥ `threshold_upper` → Position 2 (780 nm longpass)
 
-**Configuration location:** `eqe/config/settings.py`
+**Configuration location:** `defaults.json` (section `eqe.filter`)
 
-```python
-FILTER_CONFIG = {
-    1: {"name": "400 nm filter", "wavelength_range": (420, 800)},
-    2: {"name": "780 nm filter", "wavelength_range": (800, float('inf'))},
-    3: {"name": "no filter", "wavelength_range": (0, 420)},
+```json
+"filter": {
+  "threshold_lower": 420,
+  "threshold_upper": 800,
+  "positions": {
+    "1": {"name": "400 nm filter"},
+    "2": {"name": "780 nm filter"},
+    "3": {"name": "no filter"}
+  }
 }
 ```
+
+The `eqe/config/settings.py` module re-exports these values as `FILTER_THRESHOLD_LOWER`, `FILTER_THRESHOLD_UPPER`, and `FILTER_CONFIG` for use in Python code.
 
 #### PicoScope 5242D (~$1,500)
 

@@ -188,9 +188,9 @@ PHYS-2150/
 │
 ├── eqe/                         # EQE Measurement Application
 │   ├── controllers/
-│   │   ├── picoscope_lockin.py    # Lock-in controller
-│   │   ├── monochromator.py       # Wavelength control
-│   │   └── power_meter.py         # Reference power
+│   │   ├── picoscope_lockin.py     # Lock-in controller
+│   │   ├── monochromator.py        # Wavelength control
+│   │   └── thorlabs_power_meter.py # Reference power
 │   ├── models/
 │   │   ├── eqe_experiment.py      # Experiment orchestration
 │   │   ├── current_measurement.py # Lock-in measurement

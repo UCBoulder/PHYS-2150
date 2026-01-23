@@ -51,7 +51,7 @@ A typical silicon solar cell EQE spectrum:
 
 The solar cell produces a very small AC signal buried in noise. Lock-in detection extracts this signal:
 
-1. **Chopper** modulates the light at known frequency (81 Hz)
+1. **Chopper** modulates the light at a known frequency (configured in `defaults.json`)
 2. **Solar cell** produces AC current at chopper frequency
 3. **Lock-in amplifier** multiplies signal by reference, filters noise
 4. **Result**: Only signal at chopper frequency remains
@@ -71,11 +71,11 @@ Our system uses a **software lock-in** implemented on PicoScope - no external lo
 | Component | Model | Purpose |
 |-----------|-------|---------|
 | Light source | Xenon arc lamp | Broadband illumination |
-| Chopper | Optical chopper | Modulate light at 81 Hz |
+| Chopper | Optical chopper | Modulate light at configured frequency |
 | Monochromator | Newport Cornerstone 130 | Select wavelength |
 | Reference detector | Thorlabs PM100D | Measure incident power |
 | Test detector | Solar cell under test | Generate photocurrent |
-| Signal acquisition | PicoScope 5242D | Software lock-in |
+| Signal acquisition | PicoScope 2204A or 5242D | Software lock-in |
 
 ### Connection Diagram
 
@@ -177,7 +177,7 @@ Measures the incident optical power at each wavelength using a calibrated refere
 
 **Procedure:**
 1. Position reference detector in beam
-2. Scan wavelength range (e.g., 350-750 nm)
+2. Scan the configured wavelength range
 3. At each wavelength:
    - Wait for monochromator to settle
    - Record power reading
@@ -218,30 +218,34 @@ Where:
 
 ## Configuration
 
-All parameters are in `eqe/config/settings.py`:
+All parameters are defined in `defaults.json` (the single source of truth) and re-exported via `eqe/config/settings.py` for backward compatibility. See [CLAUDE.md](../CLAUDE.md) for the configuration architecture.
 
 ### Wavelength Range
 
 ```python
 DEFAULT_MEASUREMENT_PARAMS = {
-    "start_wavelength": 350.0,  # nm
-    "end_wavelength": 750.0,    # nm
-    "step_size": 10.0,          # nm
+    "start_wavelength": ...,  # nm (see defaults.json)
+    "end_wavelength": ...,    # nm (see defaults.json)
+    "step_size": ...,         # nm (see defaults.json)
 }
 ```
+
+> **Note:** Default values are defined in `defaults.json` under `eqe.defaults` and may change between semesters.
 
 ### Lock-in Settings
 
 ```python
 DEVICE_CONFIGS = {
     DeviceType.PICOSCOPE_LOCKIN: {
-        "default_chopper_freq": 81,    # Hz
-        "default_num_cycles": 100,     # Integration cycles
-        "num_measurements": 5,         # Averages per point
-        "correction_factor": 0.5,      # Validated via AWG testing
+        "default_chopper_freq": ...,   # Hz (must match physical chopper)
+        "default_num_cycles": ...,     # Integration cycles
+        "num_measurements": ...,       # Averages per point
+        "correction_factor": 0.5,      # Validated via AWG testing (don't change)
     }
 }
 ```
+
+> **Note:** Device settings are in `defaults.json` under `eqe.devices.picoscope_lockin`. The correction factor (0.5) is validated and should not be changed without re-validation.
 
 See [software-lockin.md](software-lockin.md) for details on the correction factor and validation.
 
@@ -261,13 +265,13 @@ The monochromator uses order-sorting filters:
 
 ```python
 FILTER_CONFIG = {
-    1: {"name": "400 nm filter", "wavelength_range": (420, 800)},
-    2: {"name": "780 nm filter", "wavelength_range": (800, float('inf'))},
-    3: {"name": "no filter", "wavelength_range": (0, 420)},
+    1: {"name": "400 nm filter", "wavelength_range": (threshold_lower, threshold_upper)},
+    2: {"name": "780 nm filter", "wavelength_range": (threshold_upper, infinity)},
+    3: {"name": "no filter", "wavelength_range": (0, threshold_lower)},
 }
 ```
 
-Filters prevent second-order diffraction from contaminating measurements.
+Filter thresholds are configured in `defaults.json` under `eqe.filter.threshold_lower` and `eqe.filter.threshold_upper`. Filters prevent second-order diffraction from contaminating measurements.
 
 ## Performance Specifications
 
@@ -280,19 +284,33 @@ Filters prevent second-order diffraction from contaminating measurements.
 
 ### Acquisition Parameters
 
-| Parameter | Value |
-|-----------|-------|
-| Sampling rate | 97,656 Hz |
-| Samples per measurement | ~120,563 |
-| Lock-in cycles | 100 |
-| Measurements per point | 5 |
-| Time per wavelength | ~6 seconds |
+The system supports two PicoScope models with different characteristics:
+
+| Parameter | PicoScope 5242D | PicoScope 2204A |
+|-----------|-----------------|-----------------|
+| Sampling rate | 97,656 Hz | ~24 kHz (dynamic) |
+| Signal input range | ±20V | ±2V |
+| Reference input range | ±20V | ±5V |
+| Resolution | 15-bit | 8-bit |
+| Buffer size | 200,000 samples | 2,000 samples |
+
+| Parameter | Source |
+|-----------|--------|
+| Lock-in cycles | `eqe.devices.picoscope_lockin.default_num_cycles` |
+| Measurements per point | `eqe.devices.picoscope_lockin.num_measurements` |
 
 ### Input Range
 
-- **PicoScope range:** ±20V
-- **Resolution:** 15-bit (2-channel mode)
-- **No clipping** up to ±20V signals
+**PicoScope 5242D:**
+- Signal & reference range: ±20V
+- Resolution: 15-bit (2-channel mode)
+- No clipping up to ±20V signals
+
+**PicoScope 2204A:**
+- Signal range: ±2V (optimized for TIA output)
+- Reference range: ±5V (for TTL chopper signal)
+- Resolution: 8-bit
+- Dynamic timebase adjustment for optimal cycles/samples tradeoff
 
 ## Troubleshooting
 
@@ -339,10 +357,21 @@ See [TROUBLESHOOTING.md](../TROUBLESHOOTING.md) for comprehensive troubleshootin
 
 ### Power Calibration File
 
+Power measurements are saved in **microwatts (µW)** with optional statistics:
+
 ```csv
-Wavelength (nm),Power (W)
-350.0,1.234e-6
-360.0,1.456e-6
+Wavelength (nm),Power_mean (uW),Power_std (uW),n
+350.0,1.234,0.045,200
+360.0,1.456,0.052,200
+...
+```
+
+Or in simple format (when statistics are disabled):
+
+```csv
+Wavelength (nm),Power (uW)
+350.0,1.234
+360.0,1.456
 ...
 ```
 
@@ -351,10 +380,10 @@ Wavelength (nm),Power (W)
 Current measurements are saved in **nanoamps (nA)** with measurement statistics for uncertainty analysis:
 
 ```csv
-Wavelength (nm),Current_mean (nA),Current_std (nA),n,CV_percent
-350.0,4.24,1.78,5,42.0
-400.0,24.60,2.52,5,10.2
-550.0,276.00,2.21,5,0.8
+Wavelength (nm),Current_mean (nA),Current_std (nA),n
+350.0,4.240,1.780,5
+400.0,24.600,2.520,5
+550.0,276.000,2.210,5
 ...
 ```
 
@@ -363,11 +392,10 @@ Wavelength (nm),Current_mean (nA),Current_std (nA),n,CV_percent
 | `Current_mean (nA)` | Average of n lock-in measurements |
 | `Current_std (nA)` | Standard deviation of measurements |
 | `n` | Number of measurements averaged |
-| `CV_percent` | Coefficient of variation (std/mean × 100) |
 
-This format teaches students that **uncertainty is part of every measurement**, not separate from it. High CV% at band edge wavelengths (350nm, 750nm) is expected due to low signal-to-noise ratio.
+This format teaches students that **uncertainty is part of every measurement**, not separate from it. High standard deviation at band edge wavelengths (near the start and end of the scan range) is expected due to low signal-to-noise ratio.
 
-> **Note:** Statistics export can be disabled in `eqe/config/settings.py` by setting `DATA_EXPORT_CONFIG["include_measurement_stats"] = False`, which reverts to a simpler two-column format.
+> **Note:** Statistics export can be disabled in `defaults.json` by setting `eqe.export.include_measurement_stats` to `false`, which reverts to a simpler two-column format.
 
 ### File Naming Convention
 
@@ -381,7 +409,13 @@ This format teaches students that **uncertainty is part of every measurement**, 
 ui/
 ├── eqe.html                   # EQE web interface
 ├── css/                       # Stylesheets
+│   ├── theme.css              # Color themes
+│   ├── components.css         # Reusable components
+│   └── eqe-layout.css         # EQE-specific layout
 └── js/                        # JavaScript modules
+    ├── eqe-app.js             # Main application logic
+    ├── config.js              # Configuration loader
+    └── plotly-utils.js        # Plot helpers
 
 eqe/
 ├── web_main.py                # Qt WebEngine app, Python-JS bridge
@@ -393,11 +427,14 @@ eqe/
 │   ├── eqe_experiment.py      # Experiment orchestration
 │   ├── current_measurement.py # Lock-in measurements
 │   ├── power_measurement.py   # Power calibration
-│   └── phase_adjustment.py    # Phase optimization
+│   ├── phase_adjustment.py    # Phase optimization
+│   └── stability_test.py      # Stability test model
 ├── drivers/
-│   └── picoscope_driver.py    # Low-level PicoScope SDK
+│   └── picoscope_driver.py    # Low-level PicoScope SDK (2204A & 5242D)
+├── utils/
+│   └── data_handling.py       # CSV export and validation
 └── config/
-    └── settings.py            # All parameters
+    └── settings.py            # Re-exports from defaults.json
 ```
 
 See [architecture.md](architecture.md) for MVC pattern details.
@@ -422,13 +459,13 @@ The stability test is available as a separate tab in the EQE application GUI.
 
 ### Test Parameters
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| Test Type | Current | Power test (lamp) or Current test (lock-in) |
-| Wavelength | 550 nm | Fixed wavelength for all measurements |
-| Duration | 5 min | Total test duration |
-| Interval | 2 s | Time between measurements |
-| Pixel # | 1 | Pixel number (current test only) |
+| Parameter | Description |
+|-----------|-------------|
+| Test Type | Power test (lamp) or Current test (lock-in) |
+| Wavelength | Fixed wavelength for all measurements (see `eqe.stability_test.default_wavelength`) |
+| Duration | Total test duration (see `eqe.stability_test.default_duration_min`) |
+| Interval | Time between measurements (see `eqe.stability_test.default_interval_sec`) |
+| Pixel # | Pixel number (current test only) |
 
 ### Interpreting Results
 
@@ -488,4 +525,5 @@ Run a stability test when:
 - "Solar Cell Device Physics" - Fonash
 - Thorlabs PM100D Manual
 - Newport Cornerstone 130 Manual
-- PicoScope 5000 Series Manual
+- PicoScope 5000 Series Programmer's Guide
+- PicoScope 2000 Series Programmer's Guide
