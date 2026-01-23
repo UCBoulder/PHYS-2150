@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `save_plot_image()` Python API method for file dialog and base64 image saving
 
 ### Changed
+- EQE quality indicator colors: "Low signal" now displays in red, swapped excellent/good green shades (excellent=lighter, good=darker)
 - **BREAKING**: Configuration architecture unified into single `defaults.json` file
   - All JV config (measurement params, device settings, GUI, export, error messages) now in JSON
   - All EQE config (measurement params, device settings, GUI, export, error messages) now in JSON
