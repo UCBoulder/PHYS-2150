@@ -206,13 +206,12 @@
         document.addEventListener('DOMContentLoaded', function() {
             // Initialize shared modules
             LabTheme.init();
-            LabAPI.init();
 
-            // Load config and version after API is ready
-            setTimeout(function() {
-                LabConfig.init();
+            // Initialize API, then load config and version after connection is ready
+            LabAPI.init().then(function() {
+                LabConfig.load();
                 loadVersion();
-            }, 100);
+            });
         });
     </script>
 </body>
