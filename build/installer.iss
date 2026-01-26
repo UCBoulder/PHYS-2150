@@ -124,6 +124,8 @@ end;
 ; Clean up application data on uninstall (optional)
 Type: filesandordirs; Name: "{app}\logs"
 Type: filesandordirs; Name: "{app}\cache"
+; Force removal of all files to prevent metadata caching issues
+Type: filesandordirs; Name: "{app}"
 
 [Messages]
 ; Custom messages
