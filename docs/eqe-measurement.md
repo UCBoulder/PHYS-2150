@@ -240,7 +240,7 @@ DEVICE_CONFIGS = {
         "default_chopper_freq": ...,   # Hz (must match physical chopper)
         "default_num_cycles": ...,     # Integration cycles
         "num_measurements": ...,       # Averages per point
-        "correction_factor": 0.5,      # Validated via AWG testing (don't change)
+        "correction_factor": 1.0,      # Peak amplitude for asymmetric signals (see software-lockin.md)
     }
 }
 ```

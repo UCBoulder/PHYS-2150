@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **EQE measurements now report correct values** - Lock-in correction_factor changed from 0.5 to 1.0. The original 0.5 factor was validated with symmetric AWG test signals (±V), but actual EQE measurements use asymmetric signals (0 to V from chopped light). This caused all EQE values to be reported at 50% of their true value. Comparison with NLR calibrated instruments confirmed the factor-of-2 discrepancy.
+
 ## [4.0.0] - 2026-01-26
 
 ### Added

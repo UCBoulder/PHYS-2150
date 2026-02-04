@@ -789,8 +789,8 @@ class PicoScopeDriver:
         Lock-in algorithm using Hilbert transform for quadrature generation.
 
         The Hilbert transform generates a quadrature reference from the actual
-        chopper signal. A correction factor of 0.5 is typically needed due to
-        RMS normalization of square wave reference - pass this from config.
+        chopper signal. A correction factor of 1.0 is used to report peak amplitude
+        for asymmetric chopped signals (0 to V). See docs/software-lockin.md.
 
         Args:
             signal_data: Signal channel data (volts)
@@ -830,7 +830,7 @@ class PicoScopeDriver:
         X = 2 * np.mean(mixed_cos)  # In-phase component (factor of 2 for RMS)
         Y = 2 * np.mean(mixed_sin)  # Quadrature component
 
-        # Apply correction factor (validated via AWG testing)
+        # Apply correction factor (1.0 for peak amplitude of asymmetric signals)
         X *= correction_factor
         Y *= correction_factor
 

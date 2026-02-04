@@ -52,8 +52,8 @@ class PicoScopeController:
         self._saturation_threshold_v = config["saturation_threshold_v"]
         self._signal_quality_reference_v = config["signal_quality_reference_v"]
         self._transimpedance_gain = CURRENT_MEASUREMENT_CONFIG["transimpedance_gain"]
-        # Correction factor compensates for RMS normalization in Hilbert algorithm
-        # Value of 0.5 validated via AWG testing - see docs/lockin_validation_handoff.md
+        # Correction factor for asymmetric chopped signals (1.0 gives peak amplitude)
+        # See docs/software-lockin.md for explanation of why 1.0 instead of 0.5
         self._correction_factor = config["correction_factor"]
         
     def connect(self) -> bool:
@@ -145,7 +145,7 @@ class PicoScopeController:
         Get the correction factor for lock-in amplitude scaling.
 
         Returns:
-            float: Correction factor (typically 0.5 for Hilbert algorithm)
+            float: Correction factor (1.0 for asymmetric chopped signals)
         """
         return self._correction_factor
 

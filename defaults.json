@@ -223,7 +223,7 @@
         "num_measurements": 5,
         "saturation_threshold_v": 0.95,
         "signal_quality_reference_v": 0.1,
-        "correction_factor": 0.5
+        "correction_factor": 1.0
       }
     },
     "filter": {
@@ -321,6 +321,6 @@
     "jv.quality_thresholds": "SEM% thresholds: <excellent = excellent, <good = good, <fair = fair, else check measurement",
     "eqe.filter.threshold_lower": "Below this wavelength: no filter needed (no 2nd order overlap)",
     "eqe.filter.threshold_upper": "Above this wavelength: use 780nm longpass filter",
-    "eqe.devices.picoscope_lockin.correction_factor": "Amplitude correction for Hilbert transform algorithm (0.5 compensates for RMS normalization)"
+    "eqe.devices.picoscope_lockin.correction_factor": "Amplitude correction: 1.0 gives peak signal for asymmetric chopped waveforms (0 to V). Original 0.5 was validated with symmetric AWG signals but underreports by 2x for actual EQE measurements."
   }
 }

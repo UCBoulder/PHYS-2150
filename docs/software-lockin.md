@@ -255,19 +255,50 @@ Without phase-locked triggering, random starting phases cause ~5× worse stabili
 
 ## Correction Factor
 
-### Why 0.5 Correction Factor?
+### Why 1.0 Correction Factor?
 
-The software lock-in requires a **0.5 correction factor** to report accurate amplitudes. This was validated through AWG testing (see Validation Results below).
+The software lock-in uses a **1.0 correction factor** to correctly report the photocurrent amplitude from chopped monochromator light.
 
-The correction compensates for the RMS normalization in the Hilbert algorithm:
+#### The EQE Signal
 
-```python
-# In the algorithm, reference is normalized to unit RMS
-ref_rms = np.sqrt(np.mean(ref_normalized**2))
-ref_normalized = ref_normalized / ref_rms
+In actual EQE measurements, the solar cell signal is a square wave riding on a DC offset:
+- When chopper is open: DC + A (background light + monochromator light)
+- When chopper is closed: DC (background light only)
+- Peak-to-peak amplitude: A (the photocurrent from monochromator light - what we want)
+
+After DC removal in the lock-in algorithm, this becomes a **symmetric** ±A/2 square wave.
+
+#### Lock-in Processing
+
+The algorithm processes this signal as follows:
+
+1. **DC removal**: Signal becomes ±A/2 (symmetric around zero)
+2. **Reference normalization**: 0-5V TTL becomes ±1 (unit RMS)
+3. **Mixing**: signal × reference, average = A/2
+4. **RMS compensation**: multiply by 2 → A
+5. **Correction factor**: multiply by 1.0 → A ✓
+
+With correction_factor = 1.0, we correctly get A (the photocurrent from the chopped light).
+
+#### Why the Original 0.5 Factor Was Wrong
+
+The 0.5 factor was validated using AWG testing where the **same signal** was fed to both channels:
+
+```
+AWG Test Setup:
+AWG Out → BNC Tee → Ch A (signal) AND Ch B (reference)
 ```
 
-For a square wave, this normalization introduces a 2× scaling that the 0.5 factor corrects.
+In this setup, the signal and reference are identical, which changes the math. The 0.5 factor correctly reported the AWG amplitude, but this test didn't match the actual EQE configuration where the signal (cell current) and reference (chopper TTL) are different waveforms.
+
+| Setup | Signal | Reference | With 0.5 | With 1.0 |
+|-------|--------|-----------|----------|----------|
+| AWG test | ±V square | Same as signal | V ✓ | 2V ✗ |
+| EQE | DC±A/2 | 0-5V TTL | A/2 ✗ | A ✓ |
+
+#### The Fix (February 2026)
+
+Changed correction_factor from 0.5 to 1.0. Comparison with NLR calibrated instruments confirmed that EQE values were exactly half of expected, consistent with this factor-of-2 error.
 
 ### Configuration
 
@@ -275,7 +306,7 @@ The correction factor is set in `defaults.json`:
 
 ```json
 "picoscope_lockin": {
-    "correction_factor": 0.5,
+    "correction_factor": 1.0,
     ...
 }
 ```
@@ -284,7 +315,7 @@ This value is loaded via `eqe/config/settings.py` and passed to the lock-in algo
 
 ### Comparison to SR510
 
-The previous SR510 analog lock-in required a 0.45 correction factor for a different reason - it used a sine wave reference with a square wave signal, losing harmonic content. Our software lock-in uses the actual square wave reference, but still requires correction due to the RMS normalization math.
+The previous SR510 analog lock-in required a 0.45 correction factor for a different reason - it used a sine wave reference with a square wave signal, losing harmonic content. Our software lock-in uses the actual square wave reference.
 
 ## Measurement Averaging
 

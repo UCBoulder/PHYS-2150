@@ -78,7 +78,7 @@ DEVICE_CONFIGS = {
     DeviceType.PICOSCOPE_LOCKIN: {
         "default_chopper_freq": 81,    # Hz
         "default_num_cycles": 100,     # Integration cycles
-        "correction_factor": 0.45,
+        "correction_factor": 1.0,      # Peak amplitude for asymmetric signals
     },
     # ... other device settings
 }

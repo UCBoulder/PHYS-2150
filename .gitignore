@@ -57,3 +57,6 @@ htmlcov/
 # Measurement data (keep out of repo)
 # Uncomment if you want to ignore CSV data files:
 # *.csv
+
+# NLR comparison data (internal calibration analysis)
+Measurement Comparison/
