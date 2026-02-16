@@ -478,7 +478,7 @@ class StabilityTestModel:
         
         values_array = np.array(values)
         mean = np.mean(values_array)
-        std = np.std(values_array)
+        std = np.std(values_array, ddof=1) if len(values_array) > 1 else 0.0
         cv_percent = (std / mean * 100) if mean != 0 else 0.0
         
         return {

@@ -156,7 +156,7 @@ def measure_dc_voltage(scope, num_samples=1000, settle_time=0.5):
         return None, None
 
     mean_v = np.mean(signal_data)
-    std_v = np.std(signal_data)
+    std_v = np.std(signal_data, ddof=1) if len(signal_data) > 1 else 0.0
 
     return mean_v, std_v
 
@@ -285,7 +285,7 @@ def run_tia_gain_test():
         if results:
             gains = [r['gain'] for r in results]
             mean_gain = np.mean(gains)
-            std_gain = np.std(gains)
+            std_gain = np.std(gains, ddof=1) if len(gains) > 1 else 0.0
 
             print(f"  Mean gain:      {mean_gain/1e6:.4f} MΩ")
             print(f"  Std deviation:  {std_gain/1e6:.4f} MΩ ({std_gain/mean_gain*100:.2f}%)")

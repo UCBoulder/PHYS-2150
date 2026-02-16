@@ -191,7 +191,7 @@ class StabilityTest:
                 # Display with statistics
                 if len(power_values) > 1:
                     mean = np.mean(power_values)
-                    std = np.std(power_values)
+                    std = np.std(power_values, ddof=1)
                     cv = (std / mean * 100) if mean > 0 else 0
                     note = f"CV: {cv:.2f}%"
                 else:
@@ -280,7 +280,7 @@ class StabilityTest:
                 # Display with statistics
                 if len(current_values) > 1:
                     mean = np.mean(current_values)
-                    std = np.std(current_values)
+                    std = np.std(current_values, ddof=1)
                     cv = (std / mean * 100) if mean > 0 else 0
                     note = f"CV: {cv:.2f}%"
                 else:
@@ -312,7 +312,7 @@ class StabilityTest:
         values_array = np.array(values)
         
         mean = np.mean(values_array)
-        std = np.std(values_array)
+        std = np.std(values_array, ddof=1) if len(values_array) > 1 else 0.0
         min_val = np.min(values_array)
         max_val = np.max(values_array)
         cv = (std / mean * 100) if mean > 0 else 0
@@ -353,7 +353,7 @@ class StabilityTest:
             
             if values:
                 mean = np.mean(values)
-                std = np.std(values)
+                std = np.std(values, ddof=1) if len(values) > 1 else 0.0
                 cv = (std / mean * 100) if mean > 0 else 0
                 writer.writerow([f"# Mean: {mean:.6e}"])
                 writer.writerow([f"# Std Dev: {std:.6e}"])
@@ -400,7 +400,7 @@ class StabilityTest:
         
         # Add mean and ±1σ lines
         mean = np.mean(v_scaled)
-        std = np.std(v_scaled)
+        std = np.std(v_scaled, ddof=1) if len(v_scaled) > 1 else 0.0
         ax1.axhline(mean, color='r', linestyle='--', label=f'Mean: {mean:.3f} {unit}')
         ax1.axhline(mean + std, color='orange', linestyle=':', alpha=0.7, label=f'+1σ: {mean+std:.3f} {unit}')
         ax1.axhline(mean - std, color='orange', linestyle=':', alpha=0.7, label=f'-1σ: {mean-std:.3f} {unit}')

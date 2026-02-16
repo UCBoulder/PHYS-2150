@@ -284,7 +284,7 @@ class LockinSimulator:
             'intercept': intercept,
             'r_squared': r_squared,
             'mean_scaling': np.mean([r['scaling'] for r in results]),
-            'scaling_std': np.std([r['scaling'] for r in results])
+            'scaling_std': np.std([r['scaling'] for r in results], ddof=1) if len(results) > 1 else 0.0
         }
 
     def run_noise_test(self, frequency: float = 81.0, amplitude: float = 0.1,
@@ -324,8 +324,8 @@ class LockinSimulator:
                     'noise_level': noise,
                     'snr_db': 20 * np.log10(amplitude / noise) if noise > 0 else float('inf'),
                     'mean_R': np.mean(trial_Rs),
-                    'std_R': np.std(trial_Rs),
-                    'cv_percent': 100 * np.std(trial_Rs) / np.mean(trial_Rs) if np.mean(trial_Rs) > 0 else 0
+                    'std_R': np.std(trial_Rs, ddof=1) if len(trial_Rs) > 1 else 0.0,
+                    'cv_percent': 100 * np.std(trial_Rs, ddof=1) / np.mean(trial_Rs) if len(trial_Rs) > 1 and np.mean(trial_Rs) > 0 else 0
                 })
 
         return {'results': results}

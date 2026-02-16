@@ -191,7 +191,7 @@ class LockinTester:
             'intercept': intercept,
             'r_squared': r_squared,
             'mean_scaling': np.mean([r['scaling'] for r in results]),
-            'scaling_std': np.std([r['scaling'] for r in results])
+            'scaling_std': np.std([r['scaling'] for r in results], ddof=1) if len(results) > 1 else 0.0
         }
 
     def run_frequency_test(self, amplitude_vpp: float = 2.0,
@@ -228,7 +228,7 @@ class LockinTester:
         return {
             'results': results,
             'mean_scaling': np.mean([r['scaling'] for r in results]),
-            'scaling_std': np.std([r['scaling'] for r in results])
+            'scaling_std': np.std([r['scaling'] for r in results], ddof=1) if len(results) > 1 else 0.0
         }
 
     def run_noise_floor_test(self, frequency: float = 81.0,
@@ -261,7 +261,7 @@ class LockinTester:
 
         return {
             'mean_R': np.mean(Rs),
-            'std_R': np.std(Rs),
+            'std_R': np.std(Rs, ddof=1) if len(Rs) > 1 else 0.0,
             'min_R': np.min(Rs),
             'max_R': np.max(Rs),
             'measurements': Rs

@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **EQE measurements now report correct values** - Lock-in correction_factor changed from 0.5 to 1.0. The original 0.5 factor was validated with symmetric AWG test signals (±V), but actual EQE measurements use asymmetric signals (0 to V from chopped light). This caused all EQE values to be reported at 50% of their true value. Comparison with NLR calibrated instruments confirmed the factor-of-2 discrepancy.
+- Standard deviation calculations now consistently use Bessel's correction (`ddof=1`, dividing by N-1) across the entire codebase. EQE code, scripts, validation tools, and mock controllers were using population std dev (N), while J-V code correctly used sample std dev (N-1). Z-score normalization and outlier detection retain population std dev as appropriate for data transformations.
 
 ## [4.0.0] - 2026-01-26
 

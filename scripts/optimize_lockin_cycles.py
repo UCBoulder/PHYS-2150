@@ -215,11 +215,11 @@ def measure_at_cycles(picoscope, num_cycles, num_measurements, transimpedance_ga
         current_array = R_array * transimpedance_gain  # Convert to current
 
         mean_R = np.mean(R_array)
-        std_R = np.std(R_array)
+        std_R = np.std(R_array, ddof=1) if len(R_array) > 1 else 0.0
         cv_percent = 100 * std_R / mean_R if mean_R > 0 else 0
 
         mean_current = np.mean(current_array)
-        std_current = np.std(current_array)
+        std_current = np.std(current_array, ddof=1) if len(current_array) > 1 else 0.0
 
         avg_time = np.mean(times)
 

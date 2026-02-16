@@ -121,14 +121,14 @@ def run_lockin_live_test():
             freq_vals = [r['freq'] for r in results]
 
             R_mean = np.mean(R_vals)
-            R_std = np.std(R_vals)
+            R_std = np.std(R_vals, ddof=1) if len(R_vals) > 1 else 0.0
             R_cv = (R_std / R_mean * 100) if R_mean > 0 else 0
 
             phase_mean = np.mean(phase_vals)
-            phase_std = np.std(phase_vals)
+            phase_std = np.std(phase_vals, ddof=1) if len(phase_vals) > 1 else 0.0
 
             freq_mean = np.mean(freq_vals)
-            freq_std = np.std(freq_vals)
+            freq_std = np.std(freq_vals, ddof=1) if len(freq_vals) > 1 else 0.0
 
             print()
             print("=" * 60)

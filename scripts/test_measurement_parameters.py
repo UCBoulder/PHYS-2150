@@ -59,7 +59,7 @@ def measure_with_params(lockin: PicoScopeController,
             # Same algorithm as production code
             median_signal = np.median(R_array)
             deviations = np.abs(R_array - median_signal)
-            threshold = 2 * np.std(deviations)
+            threshold = 2 * np.std(deviations, ddof=1)
             mask = deviations <= threshold
             if np.sum(mask) >= 3:
                 R_used = R_array[mask]
@@ -69,7 +69,7 @@ def measure_with_params(lockin: PicoScopeController,
             R_used = R_array
 
         mean_val = np.mean(R_used)
-        std_val = np.std(R_used)
+        std_val = np.std(R_used, ddof=1) if len(R_used) > 1 else 0.0
         cv = 100 * std_val / mean_val if mean_val > 0 else 0
 
         # Convert to current (nA) for readability

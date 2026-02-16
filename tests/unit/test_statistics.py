@@ -31,8 +31,8 @@ class TestCalculateStatistics:
         values = [2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0]
         stats = StabilityTestModel.calculate_statistics(values)
 
-        # numpy std (population std dev)
-        expected_std = np.std(values)
+        # numpy std with Bessel's correction (sample std dev, ddof=1)
+        expected_std = np.std(values, ddof=1)
         assert_almost_equal(stats['std'], expected_std, decimal=5)
 
     def test_cv_percent(self):
@@ -45,7 +45,7 @@ class TestCalculateStatistics:
         # With variation
         values = [90.0, 100.0, 110.0]  # mean=100, some variation
         stats = StabilityTestModel.calculate_statistics(values)
-        expected_cv = (np.std(values) / np.mean(values)) * 100
+        expected_cv = (np.std(values, ddof=1) / np.mean(values)) * 100
         assert_almost_equal(stats['cv_percent'], expected_cv, decimal=5)
 
     def test_empty_list_returns_zeros(self):

@@ -99,7 +99,7 @@ def analyze_reference_signal():
             # Calculate periods between crossings
             periods = np.diff(crossings) / fs  # Convert to seconds
             freq_from_crossings = 1.0 / np.mean(periods)
-            freq_std = np.std(1.0 / periods)
+            freq_std = np.std(1.0 / periods, ddof=1) if len(periods) > 1 else 0.0
 
             print(f"  Rising edges detected: {len(crossings)}")
             print(f"  Complete cycles: {len(crossings) - 1}")

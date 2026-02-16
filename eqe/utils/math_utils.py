@@ -136,7 +136,7 @@ class MathUtils:
         """
         return {
             'mean': np.mean(data),
-            'std': np.std(data),
+            'std': np.std(data, ddof=1) if len(data) > 1 else 0.0,
             'min': np.min(data),
             'max': np.max(data),
             'median': np.median(data),

@@ -142,7 +142,7 @@ class MockPicoScopeController:
         mean_current = float(np.mean(measurements))
 
         if return_stats:
-            std_dev = float(np.std(measurements))
+            std_dev = float(np.std(measurements, ddof=1)) if len(measurements) > 1 else 0.0
             cv_percent = (std_dev / abs(mean_current) * 100) if mean_current != 0 else 0
             return {
                 'current': mean_current,
@@ -334,7 +334,7 @@ class MockPowerMeterController:
         """Measure power with statistics (mean and standard deviation)."""
         powers = [self.measure_power() for _ in range(num_measurements)]
         mean = float(np.mean(powers))
-        std_dev = float(np.std(powers))
+        std_dev = float(np.std(powers, ddof=1)) if len(powers) > 1 else 0.0
         return {
             'mean': mean * correction_factor,
             'std_dev': std_dev * correction_factor,

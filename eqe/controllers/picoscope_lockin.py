@@ -365,7 +365,7 @@ class PicoScopeController:
             # wavelengths teaches them about SNR, not something to hide
             R_array = np.array(R_values)
             average_signal = np.mean(R_array)
-            std_signal = np.std(R_array)
+            std_signal = np.std(R_array, ddof=1) if len(R_array) > 1 else 0.0
 
             # Calculate coefficient of variation for quality metric
             cv = 100 * std_signal / average_signal if average_signal > 0 else 0
