@@ -4,13 +4,34 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-PHYS 2150 Measurement Suite is a solar cell characterization system for CU Boulder Physics 2150 lab. It provides two measurement applications:
+This repository hosts resources for CU Boulder PHYS 2150. The primary component is the **Measurement Suite** (`app/`), a solar cell characterization system providing:
 - **J-V Characterization**: Current-voltage curves using Keithley 2450 SMU
 - **EQE (External Quantum Efficiency)**: Spectral response using PicoScope with software lock-in amplifier
 
+## Repository Structure
+
+```
+app/                     # Measurement Suite application
+├── launcher.py          # Entry point
+├── pyproject.toml       # Python package config
+├── defaults.json        # Bundled configuration defaults
+├── eqe/                 # EQE application
+├── jv/                  # J-V application
+├── common/              # Shared code
+├── ui/                  # Web UI (HTML/CSS/JS)
+├── build/               # PyInstaller spec, Inno Setup installer
+├── tests/               # Unit and integration tests
+├── scripts/             # Utility scripts
+└── docs/                # Developer documentation
+```
+
 ## Commands
 
+All app commands run from the `app/` directory:
+
 ```bash
+cd app
+
 # Run applications
 python launcher.py          # Unified launcher GUI
 python -m jv               # J-V measurement directly
@@ -52,15 +73,15 @@ View (Web UI via Qt WebEngine) → Model (experiment logic) → Controller (hard
 
 ### Layer Responsibilities
 
-- **Controllers** (`*/controllers/`): ONLY hardware communication (SCPI commands, SDK calls). No experiment logic.
-- **Models** (`*/models/`): Experiment workflows, parameter validation, orchestration. Uses controllers but never touches GUI.
-- **Views** (`ui/`): Web-based UI (HTML/CSS/JS) served via Qt WebEngine. Communicates with Python via QWebChannel.
+- **Controllers** (`app/*/controllers/`): ONLY hardware communication (SCPI commands, SDK calls). No experiment logic.
+- **Models** (`app/*/models/`): Experiment workflows, parameter validation, orchestration. Uses controllers but never touches GUI.
+- **Views** (`app/ui/`): Web-based UI (HTML/CSS/JS) served via Qt WebEngine. Communicates with Python via QWebChannel.
 
 ### Key Patterns
 
 - **Thread Safety**: Long-running measurements use QThread workers with Qt signals for GUI updates
 - **Offline Mode**: Controllers return mock data when `settings.OFFLINE_MODE = True`
-- **Configuration**: All measurement parameters centralized in `*/config/settings.py`
+- **Configuration**: All measurement parameters centralized in `app/*/config/settings.py`
 - **Web Bridge**: `web_main.py` exposes Python API to JavaScript via QWebChannel
 
 ### Data Flow Example
@@ -75,7 +96,7 @@ User clicks "Start" → JS calls Python API via QWebChannel → Model validates 
 
 This project uses a **centralized JSON configuration system**:
 
-**`defaults.json`** (repo root) - Single source of truth for ALL configuration:
+**`app/defaults.json`** - Bundled copy of configuration. Remote source of truth hosted at `UCBoulder/PHYS-Lab-Config`:
 - Form field defaults (voltages, wavelengths, step sizes)
 - Validation patterns (cell number regex, pixel ranges)
 - Stability test defaults (duration, interval)
@@ -89,7 +110,7 @@ This project uses a **centralized JSON configuration system**:
 **How it works at runtime:**
 ```
 1. Fetch from GitHub (5 sec timeout)  → FRESH UPDATES
-         │
+         │                               (UCBoulder/PHYS-Lab-Config)
          ▼ (if fetch fails)
 2. Local Cache (~/.phys2150/cache/)   → LAST KNOWN GOOD
          │
@@ -97,7 +118,7 @@ This project uses a **centralized JSON configuration system**:
 3. Bundled Copy (packaged with exe)   → RELEASE DEFAULTS
 ```
 
-**`*/config/settings.py`** - Thin wrappers that re-export from JSON:
+**`app/*/config/settings.py`** - Thin wrappers that re-export from JSON:
 - Import values from `common.config.loader`
 - Convert JSON types to Python (lists→tuples, string keys→enum keys)
 - Provide backward-compatible exports for existing imports
@@ -108,48 +129,49 @@ Set `PHYS2150_DISABLE_REMOTE_CONFIG=1` to use only bundled defaults.json values.
 **When adding new configurable values:**
 
 1. Add to `defaults.json` with appropriate section (jv/eqe/common)
-2. Update the loader class (`JVConfig` or `EQEConfig`) in `common/config/loader.py`
-3. Re-export from `*/config/settings.py` for backward compatibility
-4. If needed for JavaScript, expose via `get_ui_config()` in `web_main.py`
-5. For JavaScript access, use `LabConfig.get()` with fallback defaults in `ui/js/config.js`
+2. Update the loader class (`JVConfig` or `EQEConfig`) in `app/common/config/loader.py`
+3. Re-export from `app/*/config/settings.py` for backward compatibility
+4. If needed for JavaScript, expose via `get_ui_config()` in `app/*/web_main.py`
+5. For JavaScript access, use `LabConfig.get()` with fallback defaults in `app/ui/js/config.js`
 
-## Project Structure
+## App Structure
 
 ```
-ui/                      # Web UI (shared by all apps)
-├── eqe.html             # EQE measurement interface
-├── jv.html              # J-V measurement interface
-├── launcher.html        # Application launcher
-├── css/                 # Stylesheets (theme.css, components.css)
-└── js/                  # JavaScript modules
-
-jv/                      # J-V Application
-├── controllers/         # Keithley 2450 SCPI communication
-├── models/              # JVExperimentModel, JVMeasurementModel
-├── web_main.py          # Qt WebEngine app, Python-JS bridge
-└── config/settings.py   # J-V measurement parameters
-
-eqe/                     # EQE Application
-├── controllers/         # PicoScope lock-in, monochromator
-├── models/              # EQEExperimentModel, measurement models
-├── drivers/             # Low-level PicoScope SDK wrapper
-├── web_main.py          # Qt WebEngine app, Python-JS bridge
-└── config/settings.py   # EQE measurement parameters
-
-common/                  # Shared code
-├── config/              # Centralized config loader (loads defaults.json)
-├── drivers/             # Thorlabs power meter (TLPMX.py)
-└── utils/               # Logging, data export, error messages
+app/
+├── ui/                      # Web UI (shared by all apps)
+│   ├── eqe.html             # EQE measurement interface
+│   ├── jv.html              # J-V measurement interface
+│   ├── launcher.html        # Application launcher
+│   ├── css/                 # Stylesheets (theme.css, components.css)
+│   └── js/                  # JavaScript modules
+│
+├── jv/                      # J-V Application
+│   ├── controllers/         # Keithley 2450 SCPI communication
+│   ├── models/              # JVExperimentModel, JVMeasurementModel
+│   ├── web_main.py          # Qt WebEngine app, Python-JS bridge
+│   └── config/settings.py   # J-V measurement parameters
+│
+├── eqe/                     # EQE Application
+│   ├── controllers/         # PicoScope lock-in, monochromator
+│   ├── models/              # EQEExperimentModel, measurement models
+│   ├── drivers/             # Low-level PicoScope SDK wrapper
+│   ├── web_main.py          # Qt WebEngine app, Python-JS bridge
+│   └── config/settings.py   # EQE measurement parameters
+│
+└── common/                  # Shared code
+    ├── config/              # Centralized config loader (loads defaults.json)
+    ├── drivers/             # Thorlabs power meter (TLPMX.py)
+    └── utils/               # Logging, data export, error messages
 ```
 
 ## Key Files
 
-- `launcher.py`: Entry point - Qt WebEngine launcher for EQE or J-V
-- `defaults.json`: Single source of truth for ALL configuration (fetched from GitHub)
-- `common/config/loader.py`: Config loading with fallback chain (GitHub→cache→bundled)
-- `jv/web_main.py`: JVWebApplication class, QWebChannel API
-- `eqe/web_main.py`: EQEWebApplication class, QWebChannel API
-- `*/config/settings.py`: Thin wrappers re-exporting values from defaults.json
+- `app/launcher.py`: Entry point - Qt WebEngine launcher for EQE or J-V
+- `app/defaults.json`: Bundled configuration (remote source: UCBoulder/PHYS-Lab-Config)
+- `app/common/config/loader.py`: Config loading with fallback chain (GitHub→cache→bundled)
+- `app/jv/web_main.py`: JVWebApplication class, QWebChannel API
+- `app/eqe/web_main.py`: EQEWebApplication class, QWebChannel API
+- `app/*/config/settings.py`: Thin wrappers re-exporting values from defaults.json
 
 ## Hardware Dependencies
 
@@ -165,9 +187,9 @@ Each layer has custom exceptions:
 
 ## Adding New Measurements
 
-1. Create model in `*/models/new_measurement.py`
-2. Add UI elements in `ui/*.html` and corresponding CSS/JS
-3. Expose API methods in `*/web_main.py` via `@Slot` decorators
+1. Create model in `app/*/models/new_measurement.py`
+2. Add UI elements in `app/ui/*.html` and corresponding CSS/JS
+3. Expose API methods in `app/*/web_main.py` via `@Slot` decorators
 4. Reuse existing controllers - don't duplicate hardware logic
 
 ## Swapping Hardware
@@ -220,7 +242,7 @@ Follow [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/):
 - Use ISO 8601 dates (YYYY-MM-DD)
 - Mark breaking changes with **BREAKING** prefix
 - Keep [Unreleased] section at top for in-progress work
-- Add comparison links at bottom of CHANGELOG.md
+- Add comparison links at bottom of app/CHANGELOG.md
 
 ### Creating Releases
 
@@ -230,8 +252,8 @@ When ready to release a new version:
 
 **CRITICAL:** The version number must be updated in multiple places for it to display correctly throughout the application:
 
-- **`pyproject.toml`**: `[project].version = "X.Y.Z"` - Python package version
-- **`build/installer.iss`**: `#define MyAppVersion "X.Y.Z"` - Installer metadata
+- **`app/pyproject.toml`**: `[project].version = "X.Y.Z"` - Python package version
+- **`app/build/installer.iss`**: `#define MyAppVersion "X.Y.Z"` - Installer metadata
 
 The launcher reads the version from `importlib.metadata.version("phys2150")`, which gets embedded by PyInstaller from `pyproject.toml`. You **must rebuild the PyInstaller executable** after updating `pyproject.toml`, not just the installer.
 
@@ -251,12 +273,12 @@ The launcher reads the version from `importlib.metadata.version("phys2150")`, wh
 
 3. **Update version numbers**
    ```bash
-   # Edit pyproject.toml: set version = "X.Y.Z"
-   # Edit build/installer.iss: set MyAppVersion "X.Y.Z"
-   git add pyproject.toml build/installer.iss
+   # Edit app/pyproject.toml: set version = "X.Y.Z"
+   # Edit app/build/installer.iss: set MyAppVersion "X.Y.Z"
+   git add app/pyproject.toml app/build/installer.iss
    ```
 
-4. **Update CHANGELOG.md**
+4. **Update app/CHANGELOG.md**
    - Move [Unreleased] content to new version section `## [X.Y.Z] - YYYY-MM-DD`
    - Add release date (ISO 8601 format)
    - Update comparison links at bottom:
@@ -268,7 +290,7 @@ The launcher reads the version from `importlib.metadata.version("phys2150")`, wh
 
 5. **Commit version changes and create tag**
    ```bash
-   git add CHANGELOG.md
+   git add app/CHANGELOG.md
    git commit -m "Release vX.Y.Z"
    git tag -a vX.Y.Z -m "Version X.Y.Z - brief description"
    git push origin main --tags
@@ -281,9 +303,11 @@ The launcher reads the version from `importlib.metadata.version("phys2150")`, wh
 
 7. **Build and upload installer**
 
-   **Important:** Build PyInstaller executable FIRST (to embed correct version metadata), THEN build the installer:
+   **Important:** Build PyInstaller executable FIRST (to embed correct version metadata), THEN build the installer. Run from the `app/` directory:
 
    ```bash
+   cd app
+
    # Step 1: Build PyInstaller executable (embeds version from pyproject.toml)
    rm -rf dist/PHYS2150
    uv run pyinstaller build/phys2150.spec
@@ -313,7 +337,7 @@ The launcher reads the version from `importlib.metadata.version("phys2150")`, wh
    ```bash
    # Check if uv.lock was updated during the build
    git status
-   git add uv.lock
+   git add app/uv.lock
    git commit -m "Update uv.lock for vX.Y.Z"
    git push origin develop
    git checkout main
@@ -330,7 +354,7 @@ Before finalizing a release, verify the version appears correctly in:
 - [ ] Launcher app bottom-left corner (from `pyproject.toml` via PyInstaller metadata)
 - [ ] Windows "Add/Remove Programs" list (from `installer.iss`)
 - [ ] GitHub Release page
-- [ ] CHANGELOG.md
+- [ ] app/CHANGELOG.md
 
 #### Known Issue: Metadata Caching on Upgrade
 

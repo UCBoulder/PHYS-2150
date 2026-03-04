@@ -38,7 +38,7 @@ except ImportError:
     _SSL_CONTEXT = None
 
 # GitHub raw URL for remote config
-REMOTE_CONFIG_URL = "https://raw.githubusercontent.com/UCBoulder/PHYS-2150/main/defaults.json"
+REMOTE_CONFIG_URL = "https://raw.githubusercontent.com/UCBoulder/PHYS-Lab-Config/main/phys2150/defaults.json"
 
 # Singleton cache for loaded config
 _config_cache: Optional[Dict[str, Any]] = None

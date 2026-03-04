@@ -18,7 +18,7 @@ dist/
 *.whl
 
 # PyInstaller intermediate files (but keep build/*.spec and build/*.iss)
-build/phys2150/
+app/build/phys2150/
 *.manifest
 *.spec.bak
 

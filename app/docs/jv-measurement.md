@@ -191,7 +191,7 @@ Example: `2025_03_15_IV_cellA03_pixel3.csv`
 
 ## Configuration
 
-All parameters are defined in `defaults.json` at the repository root. The file `jv/config/settings.py` re-exports these values for use in Python code.
+All parameters are defined in `defaults.json` (remote source: [PHYS-Lab-Config](https://github.com/UCBoulder/PHYS-Lab-Config)). The file `jv/config/settings.py` re-exports these values for use in Python code.
 
 ### Measurement Timing
 

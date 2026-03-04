@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.1] - 2026-03-04
+
+### Changed
+- Moved application into `app/` subdirectory to support multi-purpose repo structure
+- Remote configuration now fetched from [PHYS-Lab-Config](https://github.com/UCBoulder/PHYS-Lab-Config) repo instead of this repo
+
 ### Fixed
 - **EQE measurements now report correct values** - Lock-in correction_factor changed from 0.5 to 1.0. The original 0.5 factor was validated with symmetric AWG test signals (±V), but actual EQE measurements use asymmetric signals (0 to V from chopped light). This caused all EQE values to be reported at 50% of their true value. Comparison with NLR calibrated instruments confirmed the factor-of-2 discrepancy.
 - Standard deviation calculations now consistently use Bessel's correction (`ddof=1`, dividing by N-1) across the entire codebase. EQE code, scripts, validation tools, and mock controllers were using population std dev (N), while J-V code correctly used sample std dev (N-1). Z-score normalization and outlier detection retain population std dev as appropriate for data transformations.
@@ -393,6 +399,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Key Changes |
 |---------|------|-------------|
+| 4.0.1 | 2026-03-04 | Move app to subdirectory, remote config via PHYS-Lab-Config repo |
 | 4.0.0 | 2026-01-26 | Centralized JSON config architecture, cell naming convention update, PNG export |
 | 3.3.1 | 2026-01-15 | Security: Update fonttools to 4.61.1 (CVE-2025-66034) |
 | 3.3.0 | 2026-01-15 | J-V stability test, measurement statistics, EQE uncertainty visualization, performance improvements |
@@ -406,7 +413,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 | 1.0.0 | 2025-04-22 | Filter wheel automation, improved workflows |
 | 0.1.0 | 2024-09-06 | Initial development release with SR510 lock-in |
 
-[Unreleased]: https://github.com/UCBoulder/PHYS-2150/compare/v4.0.0...HEAD
+[Unreleased]: https://github.com/UCBoulder/PHYS-2150/compare/v4.0.1...HEAD
+[4.0.1]: https://github.com/UCBoulder/PHYS-2150/compare/v4.0.0...v4.0.1
 [4.0.0]: https://github.com/UCBoulder/PHYS-2150/compare/v3.3.1...v4.0.0
 [3.3.1]: https://github.com/UCBoulder/PHYS-2150/compare/v3.3.0...v3.3.1
 [3.3.0]: https://github.com/UCBoulder/PHYS-2150/compare/v3.2.0...v3.3.0

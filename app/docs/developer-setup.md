@@ -23,7 +23,7 @@ pip install uv
 
 # Clone the repository
 git clone https://github.com/UCBoulder/PHYS-2150.git
-cd PHYS-2150
+cd PHYS-2150/app
 
 # Create environment and install dependencies
 uv sync
@@ -490,7 +490,7 @@ When `--offline` is passed on the command line, the flag is set to `True` before
 
 ## Centralized Configuration
 
-All configuration is centralized in `defaults.json` at the repo root. This file contains ALL configuration values for both JV and EQE applications, including:
+All configuration is centralized in `defaults.json`. The remote source of truth is hosted in the [PHYS-Lab-Config](https://github.com/UCBoulder/PHYS-Lab-Config) repo; a bundled copy ships with the app. This file contains ALL configuration values for both JV and EQE applications, including:
 - Form field defaults (voltages, wavelengths, step sizes)
 - Validation patterns (cell number regex, pixel ranges)
 - Hardware settings (timeouts, USB IDs, SCPI parameters)
@@ -510,7 +510,7 @@ The config loader uses a fallback chain:
 
 To change defaults for all users (e.g., new semester cell naming):
 
-1. Edit `defaults.json` in the repository root
+1. Edit `phys2150/defaults.json` in the [PHYS-Lab-Config](https://github.com/UCBoulder/PHYS-Lab-Config) repo
 2. Push to `main` branch
 3. Users get new defaults on next app launch (no rebuild needed)
 
