@@ -1,0 +1,19 @@
+description: Please reflect on the course this week and answer the following questions.
+questions:
+- text: Did you find discussing the excerpts as a lab group to be helpful for increasing your understanding of the science
+    background of the project?
+  type: multiple_choice
+  answers:
+  - Very Helpful
+  - Helpful
+  - Not very helpful
+  - Not helpful
+- text: Based on your group discussion, describe one thing you would like to learn more about this semester.
+  type: text_only
+- text: After working on the Python/Colab tutorial, how confident are you with coding/programming for this course?
+  type: multiple_choice
+  answers:
+  - Very confident
+  - Confident
+  - Not very confident
+  - Not confident at all

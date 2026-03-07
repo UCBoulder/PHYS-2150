@@ -1,0 +1,27 @@
+description: Please reflect on the course this week and answer the following questions.
+questions:
+- text: 'Now that you have just submitted your team’s project proposal, please answer the following:'
+  type: multiple_choice
+  answers:
+  - Strongly agree
+  - Slightly agree
+  - Neither agree or disagree
+  - Slightly disagree
+  - Strongly disagree
+- text: 'Enter your team research question here:'
+  type: multiple_choice
+  answers:
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''
+- text: List all of the reasons your team chose this research question. (e.g., curiosity, real-world relevance, challenge
+    level, testability, or group interest)
+  type: multiple_choice
+  answers:
+  - ''
+  - ''
+  - ''
+  - ''
+  - ''

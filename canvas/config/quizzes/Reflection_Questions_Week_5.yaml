@@ -1,0 +1,11 @@
+description: Please reflect on the course this week and answer the following questions.
+questions:
+- text: 'Now that you have worked with both apparatus, what did you find the most challenging working with:'
+  type: essay
+- text: 'J-V Apparatus:'
+  type: essay
+- text: 'EQE Apparatus:'
+  type: essay
+- text: Thinking about the challenges you listed, what suggestions do you have for ways to support students making measurements
+    going forward?
+  type: essay

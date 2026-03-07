@@ -1,0 +1,111 @@
+description: Please reflect on the course this week and answer the following questions.
+questions:
+- text: When thinking about teamwork this semester, how important are the following things to you?
+  type: text_only
+- text: Get the highest possible grades
+  type: multiple_choice
+  answers:
+  - Not important at all
+  - Slightly important
+  - Moderately important
+  - Very important
+  - Extremely important
+- text: Make sure my grade is not going to be low because of the team
+  type: multiple_choice
+  answers:
+  - Not important at all
+  - Somewhat important
+  - Moderately important
+  - Very important
+  - Extremely important
+- text: Learn as much as possible from others
+  type: multiple_choice
+  answers:
+  - Not important at all
+  - Slightly important
+  - Moderately important
+  - Very important
+  - Extremely important
+- text: Get new ideas from the team
+  type: multiple_choice
+  answers:
+  - Not important at all
+  - Somewhat important
+  - Moderately important
+  - Very important
+  - Extremely important
+- text: Avoid being stressed
+  type: multiple_choice
+  answers:
+  - Not important at all
+  - Slightly important
+  - Moderately important
+  - Very important
+  - Extremely important
+- text: Not let the team down
+  type: multiple_choice
+  answers:
+  - Not important at all
+  - Slightly important
+  - Moderately important
+  - Very important
+  - Extremely important
+- text: Avoid looking incompetent
+  type: multiple_choice
+  answers:
+  - Not important at all
+  - Slightly important
+  - Moderately important
+  - Very important
+  - Extremely important
+- text: Have a good time, enjoy the experience
+  type: multiple_choice
+  answers:
+  - Not important at all
+  - Slightly important
+  - Moderately important
+  - Very important
+  - Extremely important
+- text: Make new friends, socialize with other students
+  type: multiple_choice
+  answers:
+  - Not important at all
+  - Slightly important
+  - Moderately important
+  - Very important
+  - Extremely important
+- text: Take personal responsibility for the work
+  type: multiple_choice
+  answers:
+  - Not important at all
+  - Slightly important
+  - Moderately important
+  - Very important
+  - Extremely important
+- text: Make sure I did not do more than others
+  type: multiple_choice
+  answers:
+  - Not important at all
+  - Slightly important
+  - Moderately important
+  - Very important
+  - Extremely important
+- text: Make sure everyone in the team contributed equally
+  type: multiple_choice
+  answers:
+  - Not important at all
+  - Slightly important
+  - Moderately important
+  - Very important
+  - Extremely important
+- text: Take the opportunity to practice my leadership skills
+  type: multiple_choice
+  answers:
+  - Not important at all
+  - Slightly important
+  - Moderately important
+  - Very important
+  - Extremely important
+- text: What insights from the Reports of Previous Researchers did you find most helpful for understanding the key aspects
+    of how this course works?
+  type: essay

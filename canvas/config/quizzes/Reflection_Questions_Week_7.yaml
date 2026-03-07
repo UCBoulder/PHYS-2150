@@ -1,0 +1,23 @@
+description: Please reflect on the course this week and answer the following questions.
+questions:
+- text: 'Rate the degree to which you agree or disagree with the following statement:'
+  type: text_only
+- text: Our team has communicated effectively so far during the project.
+  type: multiple_choice
+  answers:
+  - Strongly agree
+  - Slightly agree
+  - Neither agree or disagree
+  - Slightly disagree
+  - Strongly disagree
+- text: I have felt heard and valued during team discussions.
+  type: multiple_choice
+  answers:
+  - Strongly agree
+  - Slightly agree
+  - Neither agree or disagree
+  - Slightly disagree
+  - Strongly disagree
+- text: Do you think your team has been working together successfully so far? If yes, what has been successful? If no, what
+    could be improved?
+  type: essay

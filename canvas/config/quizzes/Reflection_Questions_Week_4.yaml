@@ -1,0 +1,12 @@
+description: Please reflect on the course this week and answer the following questions.
+questions:
+- text: Which apparatus did you work with this week in lab?
+  type: multiple_choice
+  answers:
+  - J-V Apparatus
+  - EQE Apparatus
+- text: What is one part of the experimental setup that you understand better now after using it? Describe what this part
+    of the apparatus does.
+  type: essay
+- text: What is one part of the experimental setup that still confuses you? What specific question do you have about it?
+  type: essay

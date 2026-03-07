@@ -1,0 +1,1037 @@
+# =============================================================================
+# PHYS 2150 — Canvas Course Configuration
+# =============================================================================
+# This file drives canvas_setup_course.py to create/update all Canvas course
+# structure: assignment groups, assignments, quizzes, styled wiki pages, and
+# per-section due date overrides.
+# =============================================================================
+
+# --- Canvas connection ---
+canvas:
+  domain: canvas.colorado.edu
+  # Sandbox for testing — change to real course ID for production
+  course_id: 86214
+
+# --- Page release schedule ---
+# Controls when each week's page becomes available to students.
+# Relative to the Monday that starts each week.
+# Example: days_before: 3, hour: 20 = Friday at 8 PM before the week starts
+page_release:
+  days_before: 3   # 3 = Friday, 2 = Saturday, 1 = Sunday, 0 = Monday
+  hour: 20         # 24h format, in term timezone
+
+# --- Term info ---
+term:
+  name: "Spring 2026"
+  start: "2026-01-12"       # Monday of Week 1
+  timezone: "America/Denver"
+
+# --- Lab guide URLs ---
+# Placeholder for future external website hosting lab guides, notebooks, etc.
+# Update these URLs once the website is launched.
+lab_guides:
+  base_url: "https://example.com/phys2150/labs"  # TODO: Update when website launches
+
+# --- External content URLs ---
+# Placeholder links for content that will be served from the lab website.
+# These are used in week page templates and can be updated per-semester.
+external_links:
+  colab_tutorial: "https://example.com/phys2150/notebooks/tutorial"  # TODO
+  jv_apparatus_guide: "https://example.com/phys2150/guides/jv-apparatus"  # TODO
+  eqe_apparatus_guide: "https://example.com/phys2150/guides/eqe-apparatus"  # TODO
+  troubleshooting_guide: "https://example.com/phys2150/guides/troubleshooting"  # TODO
+  future_researchers_guide: "https://example.com/phys2150/guides/future-researchers"  # TODO
+  summary_slide_guide: "https://example.com/phys2150/guides/summary-slide"  # TODO
+  memo_guide: "https://example.com/phys2150/guides/team-memo"  # TODO
+  proposal_guide: "https://example.com/phys2150/guides/team-proposal"  # TODO
+
+# --- Lecture schedule ---
+# PHYS 2150 has weekly lectures (Wednesdays, 1:25-2:15 PM, Duane G1B20).
+# Update weeks and topics each semester.
+lectures:
+  - { number: 1, week: 1, topic: "Introduction" }
+  - { number: 2, week: 2, topic: "Teamwork & Lab Intro" }
+  - { number: 3, week: 3, topic: "Solar Cells & Photovoltaics" }
+  - { number: 4, week: 4, topic: "J-V Characterization" }
+  - { number: 5, week: 5, topic: "EQE & Quantum Efficiency" }
+  - { number: 6, week: 6, topic: "Data Analysis" }
+  - { number: 7, week: 7, topic: "Stressors & Degradation" }
+  - { number: 8, week: 8, topic: "Research Proposals" }
+  - { number: 9, week: 9, topic: "Project Planning" }
+
+# --- Lab issue reporting form (Microsoft Forms) ---
+report_issue_url: "https://forms.office.com/r/wdkTZqnDkQ"  # TODO: Update with actual form URL
+
+# --- Feedback form ---
+feedback_url: ""  # TODO: Update if applicable
+
+# --- Assignment groups with grade weights ---
+# Groups are organizational only (no weighted grading). Point totals are
+# computed from assignments and shown on the syllabus grade table.
+assignment_groups:
+  - name: Assignments
+  - name: Assessments/Surveys
+  - name: Colab Notebooks
+  - name: Final Research Project
+  - name: Lab Participation
+  - name: Reflection Questions
+
+# --- Instructor contact info ---
+instructors:
+  - name: "Dr. Bethany Wilcox"
+    title: "Associate Professor"
+    email: "bethany.wilcox@colorado.edu"
+    office_hours: "By appointment via email"
+    zoom_link: "https://cuboulder.zoom.us/j/9548331913"
+    photo: "bethany_wilcox_web_cropped.png"
+
+# --- Principal Investigator ---
+pi:
+  name: "Dr. Joe Berry"
+  title: "Principal Investigator (scientific group leader)"
+  email: ""  # PI contact handled through course coordinator
+  affiliations:
+    - "National Laboratory of the Rockies (NLR)"
+    - "Department of Physics, University of Colorado"
+  photo: "joseph-berry_cropped.png"
+
+# --- Technical staff ---
+technical_staff:
+  - name: "Kristopher Bunker"
+    title: "Director of Undergraduate Laboratories"
+    email: "kristopher.bunker@colorado.edu"
+    office: "Duane F1025"
+    phone: "303-735-0534"
+    office_hours: ""
+    photo: "bunkerk-web-medium_cropped.png"
+
+# --- Help sessions ---
+# TA help sessions held in PHYS 2150 lab room (Duane G2B83).
+# Students can attend any TA's session, not just their own.
+help_sessions:
+  - ta: "Prithwiraj Ganguly"
+    day: "Monday"
+    time: "12:00 PM"
+  - ta: "Jonan-Rohi Plueger"
+    day: "Monday"
+    time: "2:00 PM"
+  - ta: "Xinrong Chen"
+    day: "Friday"
+    time: "12:00 PM"
+
+# --- Teaching assistants ---
+# Loaded from tas.csv (one row per TA).
+# Columns: first_name, last_name, email, section1, section2, section3
+# Leave unused section columns empty. No quoting needed.
+# Example:
+#   first_name,last_name,email,section1,section2,section3
+#   Alice,Smith,alice.smith@colorado.edu,102,107,
+#   Bob,Jones,bob.jones@colorado.edu,103,108,
+
+# --- Lab sections ---
+# Loaded from sections.csv (one row per section).
+# Columns: name, day, hour
+# - name: Full Canvas section name (e.g. "PHYS 2150-102")
+# - day: Day name (Tuesday, Thursday)
+# - hour: Rounded start hour (10, 12, 14)
+# Example:
+#   name,day,hour
+#   PHYS 2150-102,Tuesday,10
+#   PHYS 2150-107,Thursday,10
+
+# --- Navigation tabs ---
+navigation:
+  - Announcements
+  - Grades
+  - People
+
+# =============================================================================
+# Assignments
+# =============================================================================
+# PHYS 2150 does not use the PHYS 1140 "labs" structure (prelab/notebook/attendance).
+# Instead, assignments are defined directly in categories below.
+#
+# Each assignment needs:
+#   name              (str, required)  — exact Canvas name
+#   group             (str, required)  — assignment group (must match assignment_groups)
+#   points            (int, required)  — points possible
+#   submission_types  (list, optional) — ["online_upload"], ["online_quiz"], ["none"]
+#   allowed_extensions (list, optional) — e.g. ["pdf", "ipynb"]
+#   due_date          (str, optional)  — ISO 8601 datetime
+#   description       (str, optional)  — HTML description
+# =============================================================================
+
+special_assignments:
+  # =========================================================================
+  # Assessments/Surveys
+  # =========================================================================
+  # Assessment survey URLs are semester-specific Qualtrics links.
+  # Update these URLs each semester.
+  - name: "Pre-Course Survey"
+    group: "Assessments/Surveys"
+    points: 2
+    submission_types: ["online_quiz"]
+    due_date: "2026-01-16T23:00:00-07:00"  # Friday of Week 1
+    no_banner: true
+    description: >
+      <p><span>Physics 2150 is an research experience where you will get to learn about experimental physics by engaging in actual experimental physics research!</span><br><br><span>This semester, we'll be working with perovskite solar cells fabricated at the National Laboratory of the Rockies (NLR). We will study the impact of environmental stressors on the external quantum efficiency of the solar cells to produce research results that will add to the scientific community's knowledge of perovskite solar cells. You will work collaboratively with your classmates, instructors, TAs, technical staff, and an outside science mentor to study a new class of photovoltaics (solar cells). You will participate in hands on work with the solar cells. Your group will be responsible for collecting and analyzing data to quantify the impact of the stressors on your solar cell using python and Google Colab.</span><br><br><span>Please answer the questions below so we can make sure to get you what you need to be successful in this course.</span></p>
+    quiz_settings:
+      quiz_type: "graded_survey"
+      shuffle_answers: false
+      time_limit: null
+      allowed_attempts: 1
+      show_correct_answers: false
+      one_question_at_a_time: false
+
+  - name: "Assessment Survey 1 (Pre)"
+    group: "Assessments/Surveys"
+    points: 2
+    submission_types: ["none"]
+    due_date: "2026-01-19T23:00:00-07:00"
+    banner_title: "Assessment 1"
+    description: >
+      <p>Take <a class="inline_disabled" href="https://cuboulder.qualtrics.com/jfe/form/TODO_ASSESSMENT1_PRE" target="_blank">the assessment here for completion points</a>.</p>
+      <p><span style="font-size: 14pt;"><strong>Note: Your grade will not appear automatically. We will upload it manually and notify the class when the grades are available.</strong></span></p>
+
+  - name: "Assessment Survey 2 (Pre)"
+    group: "Assessments/Surveys"
+    points: 2
+    submission_types: ["none"]
+    due_date: "2026-01-19T23:00:00-07:00"
+    banner_title: "Assessment 2"
+    description: >
+      <p>Take <a class="inline_disabled" href="https://cuboulder.qualtrics.com/jfe/form/TODO_ASSESSMENT2_PRE" target="_blank">the assessment here for completion points</a>.</p>
+      <p><span style="font-size: 14pt;"><strong>Note: Your grade will not appear automatically. We will upload it manually and notify the class when the grades are available.</strong></span></p>
+
+  - name: "Assessment Survey 1 (Post)"
+    group: "Assessments/Surveys"
+    points: 2
+    submission_types: ["none"]
+    due_date: "2026-04-13T23:00:00-06:00"
+    banner_title: "Assessment 1 (Post)"
+    description: >
+      <p>Take <a class="inline_disabled" href="https://cuboulder.qualtrics.com/jfe/form/TODO_ASSESSMENT1_POST" target="_blank">the assessment survey here for completion points</a>.</p>
+      <p><span style="font-size: 14pt;"><strong>Note: your grade will not appear automatically. We will upload it manually and notify the class when the grades have been input.</strong></span></p>
+
+  - name: "Assessment Survey 2 (Post)"
+    group: "Assessments/Surveys"
+    points: 2
+    submission_types: ["none"]
+    due_date: "2026-04-20T23:00:00-06:00"
+    banner_title: "Assessment 2 (Post)"
+    description: >
+      <p>Take <a class="inline_disabled" href="https://cuboulder.qualtrics.com/jfe/form/TODO_ASSESSMENT2_POST" target="_blank">the assessment survey here for completion points</a>.</p>
+      <p><span style="font-size: 14pt;"><strong>Note: your grade will not appear automatically. We will upload it manually and notify the class when the grades have been input.</strong></span></p>
+
+  - name: "Post Course Survey"
+    group: "Assessments/Surveys"
+    points: 2
+    submission_types: ["none"]
+    due_date: "2026-04-20T23:00:00-06:00"
+    banner_title: "Week 16 - Post Course Survey"
+    description: >
+      <p><a class="inline_disabled" href="https://cuboulder.qualtrics.com/jfe/form/TODO_POST_SURVEY" target="_blank">Take the post course survey here for completion points.</a></p>
+      <p><span style="font-size: 14pt;"><strong>Note: your grade will not appear automatically. We will upload it manually after the assignment closes and notify the class when the grades have been input.</strong></span></p>
+
+  # =========================================================================
+  # Assignments (general)
+  # =========================================================================
+  - name: "Teamwork Strategies"
+    group: "Assignments"
+    points: 5
+    submission_types: ["online_upload"]
+    allowed_extensions: ["pdf", "docx"]
+    due_date: "2026-01-19T23:00:00-07:00"
+    description: >
+      <p>Upload your teamwork strategies document here.</p>
+      <p>Recall: This is a team assignment. <strong>Each person in your team must upload a copy of the assignment (even though they will be identical).</strong></p>
+      <p>The document must be saved as a PDF.</p>
+
+  - name: "Questions for PI"
+    group: "Assignments"
+    points: 10
+    submission_types: ["online_upload"]
+    allowed_extensions: ["pdf", "docx"]
+    due_date: "2026-01-26T23:00:00-07:00"
+    description: >
+      <p>Upload your Questions for PI document here.</p>
+      <p>Recall: This is a team assignment. <strong>Each person in your team must upload a copy of the assignment (even though they will be identical).</strong></p>
+      <p>The document must be saved as a PDF.</p>
+
+  - name: "Apparatus Walkthrough"
+    group: "Assignments"
+    points: 5
+    submission_types: ["none"]
+    due_date: "2026-01-29T14:15:00-07:00"
+    no_banner: true
+    description: >
+      <p><span>Please watch the apparatus video and answer embedded questions before your next lab session.</span></p>
+
+  # =========================================================================
+  # Colab Notebooks
+  # =========================================================================
+  - name: "Colab Tutorial Notebook"
+    group: "Colab Notebooks"
+    points: 15
+    submission_types: ["online_upload"]
+    allowed_extensions: ["pdf", "ipynb"]
+    due_date: "2026-01-26T23:00:00-07:00"
+    description: >
+      <p>Upload your Introductory Colab Notebook documents here.</p>
+      <p>You need to <strong>upload BOTH the .ipynb file and a PDF</strong>.</p>
+
+  - name: "Baseline Measurement Colab Notebook 1"
+    group: "Colab Notebooks"
+    points: 15
+    submission_types: ["online_upload"]
+    allowed_extensions: ["pdf", "ipynb"]
+    due_date: "2026-02-02T23:00:00-07:00"
+    banner_title: "Baseline Data Measurement 1"
+    description: >
+      <p>Upload your Baseline Data Measurement Notebook .ipynb file and PDF here.</p>
+      <p>Recall: This is a team assignment. <strong>Each person in your team must upload a copy of the assignment (even though they will be identical).</strong></p>
+      <p>You need to <strong>upload BOTH the .ipynb file and a PDF</strong>.</p>
+
+  - name: "Baseline Measurement Colab Notebook 2"
+    group: "Colab Notebooks"
+    points: 15
+    submission_types: ["online_upload"]
+    allowed_extensions: ["pdf", "ipynb"]
+    due_date: "2026-02-09T23:00:00-07:00"
+    banner_title: "Baseline Data Measurement 2"
+    description: >
+      <p>Upload your Baseline Data Measurement Notebook .ipynb file and PDF here.</p>
+      <p>Recall: This is a team assignment. <strong>Each person in your team must upload a copy of the assignment (even though they will be identical).</strong></p>
+      <p>You need to <strong>upload BOTH the .ipynb file and a PDF</strong>.</p>
+
+  - name: "Stressor LED Spectrum Colab Notebook"
+    group: "Colab Notebooks"
+    points: 5
+    submission_types: ["online_upload"]
+    allowed_extensions: ["pdf", "ipynb"]
+    due_date: "2026-02-09T23:00:00-07:00"
+    description: >
+      <p>Upload your Stressor Calibration Notebook .ipynb file and PDF here.</p>
+      <p>Recall: This is a team assignment. <strong>Each person in your team must upload a copy of the assignment (even though they will be identical).</strong></p>
+      <p>You need to <strong>upload BOTH the .ipynb file and a PDF</strong>.</p>
+
+  - name: "Data Collection 1 Colab Notebook"
+    group: "Colab Notebooks"
+    points: 15
+    submission_types: ["online_upload"]
+    allowed_extensions: ["pdf", "ipynb"]
+    due_date: "2026-02-16T23:00:00-07:00"
+    description: >
+      <p>Data Collection 1 notebook .ipynb file and PDF here.</p>
+      <p>Recall: This is a team assignment. <strong>Each person in your team must upload a copy of the assignment (even though they will be identical).</strong></p>
+      <p>You need to <strong>upload BOTH the .ipynb file and a PDF</strong>.</p>
+
+  - name: "Data Collection Colab Notebook 2"
+    group: "Colab Notebooks"
+    points: 15
+    submission_types: ["online_upload"]
+    allowed_extensions: ["pdf", "ipynb"]
+    due_date: "2026-02-23T23:00:00-07:00"
+    description: >
+      <p>Upload your Data Collection 2 notebook .ipynb file and PDF here.</p>
+      <p>Recall: This is a team assignment. <strong>Each person in your team must upload a copy of the assignment (even though they will be identical).</strong></p>
+      <p>You need to <strong>upload BOTH the .ipynb file and a PDF</strong>.</p>
+
+  - name: "Data Collection Colab Notebook 3"
+    group: "Colab Notebooks"
+    points: 15
+    submission_types: ["online_upload"]
+    allowed_extensions: ["pdf", "ipynb"]
+    due_date: "2026-03-09T23:00:00-06:00"
+    description: >
+      <p>Upload your Data Collection 3 notebook .ipynb file and PDF here.</p>
+      <p>Recall: This is a team assignment. <strong>Each person in your team must upload a copy of the assignment (even though they will be identical).</strong></p>
+      <p>You need to <strong>upload BOTH the .ipynb file and a PDF</strong>.</p>
+
+  - name: "Data Collection Colab Notebook 4"
+    group: "Colab Notebooks"
+    points: 15
+    submission_types: ["online_upload"]
+    allowed_extensions: ["pdf", "ipynb"]
+    due_date: "2026-03-16T23:00:00-06:00"
+    description: >
+      <p>Upload your Data Collection 4 .ipynb file and PDF here.</p>
+      <p>Recall: This is a team assignment. <strong>Each person in your team must upload a copy of the assignment (even though they will be identical).</strong></p>
+      <p>You need to <strong>upload BOTH the .ipynb file and a PDF</strong>.</p>
+
+  - name: "Data Collection Colab Notebook 5"
+    group: "Colab Notebooks"
+    points: 15
+    submission_types: ["online_upload"]
+    allowed_extensions: ["pdf", "ipynb"]
+    due_date: "2026-03-30T23:00:00-06:00"
+    description: >
+      <p>Upload your Data Collection 5 notebook .ipynb file and PDF here.</p>
+      <p>Recall: This is a team assignment. <strong>Each person in your team must upload a copy of the assignment (even though they will be identical).</strong></p>
+      <p>You need to <strong>upload BOTH the .ipynb file and a PDF</strong>.</p>
+
+  # =========================================================================
+  # Final Research Project
+  # =========================================================================
+  - name: "Data Management Plan"
+    group: "Assignments"
+    points: 5
+    submission_types: ["online_upload"]
+    allowed_extensions: ["pdf", "docx"]
+    due_date: "2026-02-02T23:00:00-07:00"
+    description: >
+      <p>Upload your Data Management Plan document here.</p>
+      <p>Recall: This is a team assignment. <strong>Each person in your team must upload a copy of the assignment (even though they will be identical).</strong></p>
+      <p>The document must be saved as a PDF.</p>
+
+  - name: "Team Research Proposal (Version 1)"
+    group: "Assignments"
+    points: 10
+    submission_types: ["online_upload"]
+    allowed_extensions: ["pdf", "docx"]
+    due_date: "2026-03-06T23:00:00-07:00"
+    description: >
+      <p>Upload your Team Research Proposal (Version 1) document here.</p>
+      <p>Recall: This is a team assignment. <strong>Each person in your team must upload a copy of the assignment (even though they will be identical).</strong></p>
+      <p>The document must be saved as a PDF.</p>
+
+  - name: "Team Research Proposal (Version 2)"
+    group: "Assignments"
+    points: 5
+    submission_types: ["online_upload"]
+    allowed_extensions: ["pdf", "docx"]
+    due_date: "2026-03-13T23:00:00-06:00"
+    description: >
+      <p>Upload your Team Research Proposal (Version 2) document here.</p>
+      <p>Recall: This is a team assignment. <strong>Each person in your team must upload a copy of the assignment (even though they will be identical).</strong></p>
+      <p>The document must be saved as a PDF.</p>
+
+  - name: "Team Project Colab Notebook"
+    group: "Final Research Project"
+    points: 20
+    submission_types: ["online_upload"]
+    allowed_extensions: ["pdf", "ipynb"]
+    due_date: "2026-04-20T23:00:00-06:00"
+    description: >
+      <p>Upload your team project Colab notebook .ipynb file and PDF here.</p>
+      <p>Recall: This is a team assignment. <strong>Each person in your team must upload a copy of the assignment (even though they will be identical).</strong></p>
+      <p>You need to <strong>upload BOTH the .ipynb file and a PDF</strong>.</p>
+
+  - name: "Team Project Memo"
+    group: "Final Research Project"
+    points: 25
+    submission_types: ["online_upload"]
+    allowed_extensions: ["pdf", "docx"]
+    due_date: "2026-04-20T23:00:00-06:00"
+    description: >
+      <p>Upload a PDF file of your team project memo here.</p>
+      <p>Recall: This is a team assignment. <strong>Each person in your team must upload a copy of the assignment (even though they will be identical).</strong></p>
+
+  - name: "Team Project Summary Slide"
+    group: "Final Research Project"
+    points: 10
+    submission_types: ["online_upload"]
+    allowed_extensions: ["pdf"]
+    due_date: "2026-04-14T12:00:00-06:00"
+    description: >
+      <p>Upload a PDF file of your team project summary slide here.</p>
+      <p>Recall: This is a team assignment. <strong>Each person in your team must upload a copy of the assignment (even though they will be identical).</strong></p>
+
+  - name: "Report to Future Researchers"
+    group: "Assignments"
+    points: 10
+    submission_types: ["online_upload"]
+    allowed_extensions: ["pdf", "docx"]
+    due_date: "2026-04-20T23:00:00-06:00"
+    description: >
+      <p>Upload a PDF file of your Report to Future Researchers here.</p>
+      <p>Recall: This is an individual assignment. <strong>The writing needs to be your own and you must not use AI at all.</strong></p>
+
+  - name: "Final Lab Meeting"
+    group: "Assignments"
+    points: 0
+    submission_types: ["none"]
+    due_date: "2026-04-20T23:00:00-06:00"
+    description: >
+      <p>Please watch the video to the end and answer embedded question. If you attended the final lecture on Zoom, you do not need to complete this assignment.</p>
+
+  # =========================================================================
+  # Lab Participation
+  # =========================================================================
+  # All participation assignments share the same description text.
+  - name: "Week 2 - Lab Participation"
+    group: "Lab Participation"
+    points: 5
+    submission_types: ["none"]
+    description: >
+      <p>Lab participation is scored on honest effort and engagement.</p>
+      <p>Note: because this course involves a great deal of work in teams, your classmates are depending you and unexcused absences hurt the whole group. If you are between 10-20 minutes late to your lab, you will receive a penalty on the lab participation. If you arrive more than 20 minutes late, you will not be able to complete that lab and receive a zero for participation and for any other work completed that week.</p>
+
+  - name: "Week 3 - Lab Participation"
+    group: "Lab Participation"
+    points: 5
+    submission_types: ["none"]
+    description: >
+      <p>Lab participation is scored on honest effort and engagement.</p>
+      <p>Note: because this course involves a great deal of work in teams, your classmates are depending you and unexcused absences hurt the whole group. If you are between 10-20 minutes late to your lab, you will receive a penalty on the lab participation. If you arrive more than 20 minutes late, you will not be able to complete that lab and receive a zero for participation and for any other work completed that week.</p>
+
+  - name: "Week 4 - Lab Participation"
+    group: "Lab Participation"
+    points: 5
+    submission_types: ["none"]
+    description: >
+      <p>Lab participation is scored on honest effort and engagement.</p>
+      <p>Note: because this course involves a great deal of work in teams, your classmates are depending you and unexcused absences hurt the whole group. If you are between 10-20 minutes late to your lab, you will receive a penalty on the lab participation. If you arrive more than 20 minutes late, you will not be able to complete that lab and receive a zero for participation and for any other work completed that week.</p>
+
+  - name: "Week 5 - Lab Participation"
+    group: "Lab Participation"
+    points: 5
+    submission_types: ["none"]
+    description: >
+      <p>Lab participation is scored on honest effort and engagement.</p>
+      <p>Note: because this course involves a great deal of work in teams, your classmates are depending you and unexcused absences hurt the whole group. If you are between 10-20 minutes late to your lab, you will receive a penalty on the lab participation. If you arrive more than 20 minutes late, you will not be able to complete that lab and receive a zero for participation and for any other work completed that week.</p>
+
+  - name: "Week 6 - Lab Participation"
+    group: "Lab Participation"
+    points: 5
+    submission_types: ["none"]
+    description: >
+      <p>Lab participation is scored on honest effort and engagement.</p>
+      <p>Note: because this course involves a great deal of work in teams, your classmates are depending you and unexcused absences hurt the whole group. If you are between 10-20 minutes late to your lab, you will receive a penalty on the lab participation. If you arrive more than 20 minutes late, you will not be able to complete that lab and receive a zero for participation and for any other work completed that week.</p>
+
+  - name: "Week 7 - Lab Participation"
+    group: "Lab Participation"
+    points: 5
+    submission_types: ["none"]
+    description: >
+      <p>Lab participation is scored on honest effort and engagement.</p>
+      <p>Note: because this course involves a great deal of work in teams, your classmates are depending you and unexcused absences hurt the whole group. If you are between 10-20 minutes late to your lab, you will receive a penalty on the lab participation. If you arrive more than 20 minutes late, you will not be able to complete that lab and receive a zero for participation and for any other work completed that week.</p>
+
+  - name: "Week 9 - Lab Participation"
+    group: "Lab Participation"
+    points: 5
+    submission_types: ["none"]
+    description: >
+      <p>Lab participation is scored on honest effort and engagement.</p>
+      <p>Note: because this course involves a great deal of work in teams, your classmates are depending you and unexcused absences hurt the whole group. If you are between 10-20 minutes late to your lab, you will receive a penalty on the lab participation. If you arrive more than 20 minutes late, you will not be able to complete that lab and receive a zero for participation and for any other work completed that week.</p>
+
+  - name: "Week 10 - Lab Participation"
+    group: "Lab Participation"
+    points: 5
+    submission_types: ["none"]
+    description: >
+      <p>Lab participation is scored on honest effort and engagement.</p>
+      <p>Note: because this course involves a great deal of work in teams, your classmates are depending you and unexcused absences hurt the whole group. If you are between 10-20 minutes late to your lab, you will receive a penalty on the lab participation. If you arrive more than 20 minutes late, you will not be able to complete that lab and receive a zero for participation and for any other work completed that week.</p>
+
+  - name: "Week 11 - Lab Participation"
+    group: "Lab Participation"
+    points: 5
+    submission_types: ["none"]
+    description: >
+      <p>Lab participation is scored on honest effort and engagement.</p>
+      <p>Note: because this course involves a great deal of work in teams, your classmates are depending you and unexcused absences hurt the whole group. If you are between 10-20 minutes late to your lab, you will receive a penalty on the lab participation. If you arrive more than 20 minutes late, you will not be able to complete that lab and receive a zero for participation and for any other work completed that week.</p>
+
+  - name: "Week 12 - Lab Participation"
+    group: "Lab Participation"
+    points: 10
+    submission_types: ["none"]
+    description: >
+      <p>Lab participation is scored on honest effort and engagement.</p>
+      <p>Note: because this course involves a great deal of work in teams, your classmates are depending you and unexcused absences hurt the whole group. If you are between 10-20 minutes late to your lab, you will receive a penalty on the lab participation. If you arrive more than 20 minutes late, you will not be able to complete that lab and receive a zero for participation and for any other work completed that week.</p>
+
+  - name: "Week 13 - Lab Participation"
+    group: "Lab Participation"
+    points: 10
+    submission_types: ["none"]
+    description: >
+      <p>Lab participation is scored on honest effort and engagement.</p>
+      <p>Note: because this course involves a great deal of work in teams, your classmates are depending you and unexcused absences hurt the whole group. If you are between 10-20 minutes late to your lab, you will receive a penalty on the lab participation. If you arrive more than 20 minutes late, you will not be able to complete that lab and receive a zero for participation and for any other work completed that week.</p>
+
+  - name: "Week 14 - Lab Participation"
+    group: "Lab Participation"
+    points: 10
+    submission_types: ["none"]
+    description: >
+      <p>Lab participation is scored on honest effort and engagement.</p>
+      <p>Note: because this course involves a great deal of work in teams, your classmates are depending you and unexcused absences hurt the whole group. If you are between 10-20 minutes late to your lab, you will receive a penalty on the lab participation. If you arrive more than 20 minutes late, you will not be able to complete that lab and receive a zero for participation and for any other work completed that week.</p>
+
+  - name: "Week 16 - Lab Participation"
+    group: "Lab Participation"
+    points: 5
+    submission_types: ["none"]
+    description: >
+      <p>Lab participation is scored on honest effort and engagement.</p>
+      <p>Note: because this course involves a great deal of work in teams, your classmates are depending you and unexcused absences hurt the whole group. If you are between 10-20 minutes late to your lab, you will receive a penalty on the lab participation. If you arrive more than 20 minutes late, you will not be able to complete that lab and receive a zero for participation and for any other work completed that week.</p>
+
+  # =========================================================================
+  # Reflection Questions (Canvas quizzes)
+  # =========================================================================
+  # Created as graded surveys via --quizzes.
+  # Question content loaded from config/quizzes/ YAML files.
+  - name: "Reflection Questions: Week 2"
+    group: "Reflection Questions"
+    points: 5
+    submission_types: ["online_quiz"]
+    due_date: "2026-01-19T23:00:00-07:00"
+    description: >
+      <p>Please reflect on the course this week and answer the following questions.</p>
+    quiz_settings:
+      quiz_type: "graded_survey"
+      shuffle_answers: false
+      time_limit: null
+      allowed_attempts: 1
+      show_correct_answers: false
+      one_question_at_a_time: false
+
+  - name: "Reflection Questions: Week 3"
+    group: "Reflection Questions"
+    points: 5
+    submission_types: ["online_quiz"]
+    due_date: "2026-01-26T23:00:00-07:00"
+    description: >
+      <p>Please reflect on the course this week and answer the following questions.</p>
+    quiz_settings:
+      quiz_type: "graded_survey"
+      shuffle_answers: false
+      time_limit: null
+      allowed_attempts: 1
+      show_correct_answers: false
+
+  - name: "Reflection Questions: Week 4"
+    group: "Reflection Questions"
+    points: 5
+    submission_types: ["online_quiz"]
+    due_date: "2026-02-02T23:00:00-07:00"
+    description: >
+      <p>Please reflect on the course this week and answer the following questions.</p>
+    quiz_settings:
+      quiz_type: "graded_survey"
+      shuffle_answers: false
+      time_limit: null
+      allowed_attempts: 1
+      show_correct_answers: false
+
+  - name: "Reflection Questions: Week 5"
+    group: "Reflection Questions"
+    points: 5
+    submission_types: ["online_quiz"]
+    due_date: "2026-02-09T23:00:00-07:00"
+    description: >
+      <p>Please reflect on the course this week and answer the following questions.</p>
+    quiz_settings:
+      quiz_type: "graded_survey"
+      shuffle_answers: false
+      time_limit: null
+      allowed_attempts: 1
+      show_correct_answers: false
+
+  - name: "Reflection Questions: Week 6"
+    group: "Reflection Questions"
+    points: 5
+    submission_types: ["online_quiz"]
+    due_date: "2026-02-16T23:00:00-07:00"
+    description: >
+      <p>Please reflect on the course this week and answer the following questions.</p>
+    quiz_settings:
+      quiz_type: "graded_survey"
+      shuffle_answers: false
+      time_limit: null
+      allowed_attempts: 1
+      show_correct_answers: false
+
+  - name: "Reflection Questions: Week 7"
+    group: "Reflection Questions"
+    points: 5
+    submission_types: ["online_quiz"]
+    due_date: "2026-02-23T23:59:00-07:00"
+    description: >
+      <p>Please reflect on the course this week and answer the following questions.</p>
+    quiz_settings:
+      quiz_type: "graded_survey"
+      shuffle_answers: false
+      time_limit: null
+      allowed_attempts: 1
+      show_correct_answers: false
+
+  - name: "Reflection Questions: Week 8"
+    group: "Reflection Questions"
+    points: 5
+    submission_types: ["online_quiz"]
+    due_date: "2026-03-02T23:00:00-07:00"
+    description: >
+      <p>Please reflect on the course this week and answer the following questions.</p>
+    quiz_settings:
+      quiz_type: "graded_survey"
+      shuffle_answers: false
+      time_limit: null
+      allowed_attempts: 1
+      show_correct_answers: false
+
+  - name: "Reflection Questions: Week 9"
+    group: "Reflection Questions"
+    points: 5
+    submission_types: ["online_quiz"]
+    due_date: "2026-03-09T23:00:00-06:00"
+    description: >
+      <p>Please reflect on the course this week and answer the following questions.</p>
+    quiz_settings:
+      quiz_type: "graded_survey"
+      shuffle_answers: false
+      time_limit: null
+      allowed_attempts: 1
+      show_correct_answers: false
+
+  - name: "Reflection Questions: Week 10"
+    group: "Reflection Questions"
+    points: 5
+    submission_types: ["online_quiz"]
+    description: >
+      <p>Please reflect on the course this week and answer the following questions.</p>
+    quiz_settings:
+      quiz_type: "graded_survey"
+      shuffle_answers: false
+      time_limit: null
+      allowed_attempts: 1
+      show_correct_answers: false
+
+  - name: "Reflection Questions: Week 11"
+    group: "Reflection Questions"
+    points: 5
+    submission_types: ["online_quiz"]
+    description: >
+      <p>Please reflect on the course this week and answer the following questions.</p>
+    quiz_settings:
+      quiz_type: "graded_survey"
+      shuffle_answers: false
+      time_limit: null
+      allowed_attempts: 1
+      show_correct_answers: false
+
+  - name: "Reflection Questions: Week 12"
+    group: "Reflection Questions"
+    points: 5
+    submission_types: ["online_quiz"]
+    description: >
+      <p>Please reflect on the course this week and answer the following questions.</p>
+    quiz_settings:
+      quiz_type: "graded_survey"
+      shuffle_answers: false
+      time_limit: null
+      allowed_attempts: 1
+      show_correct_answers: false
+
+  - name: "Reflection Questions: Week 13"
+    group: "Reflection Questions"
+    points: 5
+    submission_types: ["online_quiz"]
+    description: >
+      <p>Please reflect on the course this week and answer the following questions.</p>
+    quiz_settings:
+      quiz_type: "graded_survey"
+      shuffle_answers: false
+      time_limit: null
+      allowed_attempts: 1
+      show_correct_answers: false
+
+  - name: "Reflection Questions: Week 14"
+    group: "Reflection Questions"
+    points: 5
+    submission_types: ["online_quiz"]
+    description: >
+      <p>Please reflect on the course this week and answer the following questions.</p>
+    quiz_settings:
+      quiz_type: "graded_survey"
+      shuffle_answers: false
+      time_limit: null
+      allowed_attempts: 1
+      show_correct_answers: false
+
+  - name: "Week 15 - Reflection Questions"
+    group: "Reflection Questions"
+    points: 10
+    submission_types: ["online_quiz"]
+    description: >
+      <p>Please reflect on the course this week and answer the following questions.</p>
+    quiz_settings:
+      quiz_type: "graded_survey"
+      shuffle_answers: false
+      time_limit: null
+      allowed_attempts: 1
+      show_correct_answers: false
+
+  # --- Clicker Points (in Assignments group) ---
+  - name: "Clicker Points"
+    group: "Assignments"
+    points: 40
+    submission_types: ["none"]
+    description: >
+      <p>This is the sum of your clicker points for the entire semester.</p>
+
+# =============================================================================
+# Weekly Schedule
+# =============================================================================
+# PHYS 2150 uses a research-experience structure rather than structured labs.
+# Each week has a custom checklist and assignment set.
+#
+# Fields per entry:
+#   week        (int, required)  — 1-based week number
+#   title       (str, optional)  — page title
+#   note        (str, optional)  — note shown on week page
+#   assignments (list, optional) — assignment names for the schedule page
+#   checklist   (list, optional) — bullet items for checklist section
+#   reminders   (list, optional) — bullet items for reminders section
+#   lab_guide   (str, optional)  — lab guide filename or URL for this week
+#   phase       (str, optional)  — research phase label (for display)
+#
+# Link placeholders (resolved at render time):
+#   {{assignment:Name}}         — links to a Canvas assignment/quiz
+#   {{page:Title}}              — links to a Canvas wiki page
+#   {{page:Title|display text}} — links with custom display text
+# =============================================================================
+
+schedule:
+  - week: 1
+    title: "Welcome to PHYS 2150"
+    note: "There are no lab sessions this week."
+    phase: "Introduction"
+    checklist:
+      - "Read the syllabus."
+      - "Attend the first lecture &mdash; Duane, Room G1B20. <strong>Bring your iClicker.</strong>"
+      - "Familiarize yourself with the course Canvas page."
+      - "Complete the {{assignment:Pre-Course Survey}}."
+
+  - week: 2
+    title: "Teamwork & Lab Orientation"
+    phase: "Introduction"
+    lab_guide: "LabGuide-Week2.pdf"
+    checklist:
+      - "Read through the Lab Guide before the lab session."
+      - "Attend your assigned lab section."
+      - "Attend lecture."
+      - "Submit {{assignment:Teamwork Strategies}} assignment."
+      - "Complete the {{assignment:Pre-Course Survey}}, {{assignment:Assessment Survey 1 (Pre)}}, and {{assignment:Assessment Survey 2 (Pre)}}."
+      - "Complete {{assignment:Reflection Questions: Week 2}}."
+      - "Complete the reading assignments in preparation for Week 3."
+    assignments:
+      - "Teamwork Strategies"
+      - "Pre-Course Survey"
+      - "Assessment Survey 1 (Pre)"
+      - "Assessment Survey 2 (Pre)"
+      - "Reflection Questions: Week 2"
+
+  - week: 3
+    title: "Apparatus Introduction"
+    phase: "Introduction"
+    lab_guide: "LabGuide-Week3.pdf"
+    checklist:
+      - "Read through the Lab Guide before the lab session."
+      - "Attend your assigned lab section."
+      - "Attend lecture."
+      - "Submit {{assignment:Questions for PI}}."
+      - "Submit {{assignment:Colab Tutorial Notebook}} (.ipynb and PDF)."
+      - "Complete {{assignment:Reflection Questions: Week 3}}."
+    assignments:
+      - "Questions for PI"
+      - "Colab Tutorial Notebook"
+      - "Reflection Questions: Week 3"
+
+  - week: 4
+    title: "Apparatus Training"
+    phase: "Training"
+    lab_guide: "LabGuide-Week4.pdf"
+    checklist:
+      - "Read through the Lab Guide before the lab session."
+      - "Attend your assigned lab section."
+      - "Attend lecture."
+      - "Complete {{assignment:Apparatus Walkthrough}}."
+      - "Submit {{assignment:Data Management Plan}}."
+      - "Submit {{assignment:Baseline Measurement Colab Notebook 1}} (.ipynb and PDF)."
+      - "Complete {{assignment:Reflection Questions: Week 4}}."
+    assignments:
+      - "Apparatus Walkthrough"
+      - "Data Management Plan"
+      - "Baseline Measurement Colab Notebook 1"
+      - "Reflection Questions: Week 4"
+
+  - week: 5
+    title: "Baseline Measurements"
+    phase: "Baseline"
+    lab_guide: "LabGuide-Week5.pdf"
+    checklist:
+      - "Read through the Lab Guide before going to lab."
+      - "Attend your assigned lab section."
+      - "Attend the lecture."
+      - "Submit {{assignment:Baseline Measurement Colab Notebook 2}} (.ipynb and PDF)."
+      - "<strong>If you worked with the J-V apparatus this week</strong>, submit {{assignment:Stressor LED Spectrum Colab Notebook}} (.ipynb and PDF)."
+      - "Complete {{assignment:Reflection Questions: Week 5}}."
+    assignments:
+      - "Baseline Measurement Colab Notebook 2"
+      - "Stressor LED Spectrum Colab Notebook"
+      - "Reflection Questions: Week 5"
+
+  - week: 6
+    title: "Data Collection 1"
+    phase: "Data Collection"
+    lab_guide: "LabGuide-Week6.pdf"
+    checklist:
+      - "Read through the Lab Guide before going to lab."
+      - "Attend your assigned lab section."
+      - "Attend the lecture."
+      - "Submit {{assignment:Data Collection 1 Colab Notebook}} (.ipynb and PDF)."
+      - "Complete {{assignment:Reflection Questions: Week 6}}."
+    assignments:
+      - "Data Collection 1 Colab Notebook"
+      - "Reflection Questions: Week 6"
+
+  - week: 7
+    title: "Data Collection 2"
+    phase: "Data Collection"
+    lab_guide: "LabGuide-Week7.pdf"
+    checklist:
+      - "Read through the Lab Guide before going to lab."
+      - "Attend your assigned lab section."
+      - "Attend the lecture."
+      - "Submit {{assignment:Data Collection Colab Notebook 2}} (.ipynb and PDF)."
+      - "Complete {{assignment:Reflection Questions: Week 7}}."
+    assignments:
+      - "Data Collection Colab Notebook 2"
+      - "Reflection Questions: Week 7"
+
+  - week: 8
+    title: "Data Collection 3 & Research Proposals"
+    phase: "Data Collection"
+    note: "There are no lab sessions this week."
+    lab_guide: "LabGuide-Week8.pdf"
+    checklist:
+      - "Read through the Lab Guide before going to lab."
+      - "Attend your assigned lab section."
+      - "Attend the lecture."
+      - "Complete {{assignment:Reflection Questions: Week 8}}."
+    assignments:
+      - "Reflection Questions: Week 8"
+
+  - week: 9
+    title: "Data Collection 4"
+    phase: "Data Collection"
+    lab_guide: "LabGuide-Week9.pdf"
+    checklist:
+      - "Read through the Lab Guide before going to lab."
+      - "Attend your assigned lab section."
+      - "Submit {{assignment:Data Collection Colab Notebook 3}} (.ipynb and PDF)."
+      - "Submit {{assignment:Team Research Proposal (Version 1)}}."
+      - "Complete {{assignment:Reflection Questions: Week 9}}."
+    assignments:
+      - "Data Collection Colab Notebook 3"
+      - "Team Research Proposal (Version 1)"
+      - "Reflection Questions: Week 9"
+
+  - week: 10
+    title: "Data Collection 5"
+    phase: "Data Collection"
+    lab_guide: "LabGuide-Week10.pdf"
+    checklist:
+      - "Read through the Lab Guide before going to lab."
+      - "Attend your assigned lab section."
+      - "Submit {{assignment:Data Collection Colab Notebook 4}} (.ipynb and PDF)."
+      - "Submit {{assignment:Team Research Proposal (Version 2)}}."
+      - "Complete {{assignment:Reflection Questions: Week 10}}."
+    assignments:
+      - "Data Collection Colab Notebook 4"
+      - "Team Research Proposal (Version 2)"
+      - "Reflection Questions: Week 10"
+
+  - week: 11
+    title: "Final Data Collection"
+    phase: "Data Collection"
+    lab_guide: "LabGuide-Week11.pdf"
+    checklist:
+      - "Read through the Lab Guide before going to lab."
+      - "Attend your assigned lab section."
+      - "Submit {{assignment:Data Collection Colab Notebook 5}} (.ipynb and PDF)."
+      - "Complete {{assignment:Reflection Questions: Week 11}}."
+    assignments:
+      - "Data Collection Colab Notebook 5"
+      - "Reflection Questions: Week 11"
+
+  # Weeks 12-16 use a single combined page (like SP26).
+  # Individual entries kept for schedule table but point to the combined page.
+  - week: 12
+    title: "Team Project"
+    phase: "Team Project"
+    combined_page: "Weeks 12 - 16"
+    assignments:
+      - "Reflection Questions: Week 12"
+
+  - week: 13
+    title: "Team Project"
+    phase: "Team Project"
+    combined_page: "Weeks 12 - 16"
+    assignments:
+      - "Reflection Questions: Week 13"
+
+  - week: 14
+    title: "Team Project"
+    phase: "Team Project"
+    combined_page: "Weeks 12 - 16"
+    assignments:
+      - "Team Project Summary Slide"
+      - "Assessment Survey 1 (Post)"
+      - "Reflection Questions: Week 14"
+
+  - week: 15
+    title: "Spring Break"
+    note: "No classes or labs this week &mdash; enjoy the break!"
+    combined_page: "Weeks 12 - 16"
+    assignments:
+      - "Week 15 - Reflection Questions"
+
+  - week: 16
+    title: "Final Week"
+    phase: "Team Project"
+    combined_page: "Weeks 12 - 16"
+    assignments:
+      - "Team Project Colab Notebook"
+      - "Team Project Memo"
+      - "Report to Future Researchers"
+      - "Assessment Survey 2 (Post)"
+      - "Post Course Survey"
+      - "Final Lab Meeting"
+
+# =============================================================================
+# Combined Page: Weeks 12-16
+# =============================================================================
+# Content for the single combined "Weeks 12 - 16" page.
+# Replaces individual week pages for the team project phase.
+
+weeks_12_16:
+  lab_guide: "LabGuide-Week12-16.pdf"
+  checklist:
+    - "<strong>Attend your assigned lab section for the remainder of the semester. This is still required and the best way to get help from your TA on your project.</strong>"
+    - "Attend Final Lecture Meeting."
+    - "Download and read through the Lab Guide."
+    - "Download Team Project Colab notebook and h5 file."
+    - "Remember there are TA Help Sessions in the lab room every week for you to get help with your analysis."
+    - "Complete all remaining Group and Individual assignments."
+    - "Download Team Project Summary slide guide and template."
+    - "Download Team Project Memo guide."
+    - "Download Report to Future Researchers guide."
+  team_assignments:
+    - name: "Team Project Summary Slide"
+      description: "Your team will create one slide (in Google Slides format only) to share the main takeaways from your team project. Download as PDF to submit."
+    - name: "Team Project Memo"
+      description: "Your team will write a Research Memo summarizing your analysis and results for your team research project."
+    - name: "Team Project Colab Notebook"
+      description: "Submit .ipynb and PDF files of your team project notebook."
+  individual_assignments:
+    reflections:
+      - { week: 12, note: "Becomes available before your Week 12 lab session" }
+      - { week: 13, note: "Becomes available before your Week 13 lab session" }
+      - { week: 14, note: "Becomes available before your Week 14 lab session" }
+      - { week: 15, note: "No reflection due (Spring Break)" }
+    assessments:
+      - { name: "Assessment Survey 1 (Post)", note: "Becomes available before your Week 14 lab session" }
+      - { name: "Assessment Survey 2 (Post)", note: "Becomes available before your Week 16 lab session" }
+      - { name: "Post Course Survey", note: "Becomes available before your Week 16 lab session" }
+    other:
+      - { name: "Report to Future Researchers", note: "Becomes available before your Week 16 lab session" }
+      - { name: "Final Lab Meeting", note: "Attend the live Zoom meeting or watch the recording" }

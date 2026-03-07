@@ -1,0 +1,76 @@
+description: Physics 2150 is an research experience where you will get to learn about experimental physics by engaging in
+  actual experimental physics research! This semester, we'll be working with perovskite solar cells fab ricated at the National
+  Laboratory of the Rockies (NLR). We will study the impact of environmental stressors on the external quantum efficiency
+  of the solar cells to produce research results that will add to the scientific community's knowledge of perovskite solar
+  cells. You will work collaboratively with your classmates, instructors, TAs, technical staff, and an outside science mentor
+  to study a new class of photovoltaics (solar cells). You will participate in hands on work with the solar cells. Your group
+  will be responsible for collecting and analyzing data to quantify the impact of the stressors on your solar cell using python
+  and Google Colab. Please answer the questions below so we can make sure to get you what you need to be successful in this
+  course.
+questions:
+- text: While it is not necessary to have prior computer programming experience for this class, we realize that some students
+    may have experience programming previously. Have you taken a computer programming class before?
+  type: multiple_choice
+  answers:
+  - 3+ classes
+  - 2 classes
+  - 1 class
+  - Not a formal computer programming class, but I have some experience coding
+  - 'No'
+- text: What is your level of experience with following programming environments? Python [pyexp], Jupyter Notebook [jptrexp],
+    Google Colab [colabexp]
+  type: multiple_choice
+  answers:
+  - No experience
+  - Some experience
+  - Lots of experience
+  - No experience
+  - Some experience
+  - Lots of  experience
+  - No experience
+  - Some experience
+  - Lots of experience
+- text: 'If you have other programming experience, please explain below:'
+  type: text_only
+- text: How confident are you with coding/programming?
+  type: multiple_choice
+  answers:
+  - Very confident
+  - Confident
+  - Somewhat confident
+  - Not confident
+- text: What are your goals for this class? What are you hoping to learn from this course?
+  type: essay
+- text: Research has its own unique advantages and challenges. Our goal is to help you learn as much as possible in this class.
+    How can we help you be successful in a research environment?
+  type: text_only
+- text: 'Amount of time as a student at CU:'
+  type: multiple_choice
+  answers:
+  - First year
+  - Second year
+  - Third year
+  - Fourth or beyond years
+  - Other
+- text: 'If you selected ''Other'' for the amount of time you have been a student at CU, please explain below:'
+  type: text_only
+- text: What is your current declared major?
+  type: multiple_choice
+  answers:
+  - Physics
+  - Chemistry
+  - Biochemistry
+  - Biology
+  - Engineering
+  - Engineering Physics
+  - Astronomy
+  - Astrophysics
+  - Geology/Geophysics
+  - Math/Applied Math
+  - Computer Science
+  - Physiology
+  - Other
+- text: 'If you selected ''Other'' as your current declared major, please list it below:'
+  type: essay
+- text: Thank you for filling out this survey! If you have any other thoughts or concerns, please share them here.
+  type: essay

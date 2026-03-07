@@ -1,0 +1,40 @@
+description: Please reflect on the course this week and answer the following questions.
+questions:
+- text: 'In your work with the apparatus over the past three weeks, each person may have taken on different roles (for example:
+    directing the experiment, collecting data, or coding). Please reflect on your experience by responding to the following
+    statements:'
+  type: text_only
+- text: My team divided roles in a way that felt fair.
+  type: multiple_choice
+  answers:
+  - Strongly agree
+  - Slightly agree
+  - Neither agree or disagree
+  - Slightly disagree
+  - Strongly disagree
+- text: I was satisfied with the role I had this week.
+  type: multiple_choice
+  answers:
+  - Strongly agree
+  - Slightly agree
+  - Neither agree or disagree
+  - Slightly disagree
+  - Strongly disagree
+- text: I had the opportunity to take on a role I was comfortable with.
+  type: multiple_choice
+  answers:
+  - Strongly agree
+  - Slightly agree
+  - Neither agree or disagree
+  - Slightly disagree
+  - Strongly disagree
+- text: I had the opportunity to take on a role outside of my comfort zone.
+  type: multiple_choice
+  answers:
+  - Strongly agree
+  - Slightly agree
+  - Neither agree or disagree
+  - Slightly disagree
+  - Strongly disagree
+- text: Going forward, how do you think your team should handle role assignment and why?
+  type: essay

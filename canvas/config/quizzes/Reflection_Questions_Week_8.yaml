@@ -1,0 +1,34 @@
+description: Please reflect on the course this week and answer the following questions.
+questions:
+- text: 'You will be finalizing the first draft of your team research proposal over the next week. Please reflect on your
+    workshop experience by responding to the following statements. When working on the research plan with my team, I found
+    that developing this plan was helpful for us to:'
+  type: text_only
+- text: Feel we are making personal contributions to the overall research project.
+  type: multiple_choice
+  answers:
+  - Strongly agree
+  - Sightly agree
+  - Neither agree nor disagree
+  - Slightly disagree
+  - Strongly disagree
+- text: Use the teamwork skills we have been building over the semester to brainstorm ideas for the plan.
+  type: multiple_choice
+  answers:
+  - Strongly agree
+  - Slightly Agree
+  - Neither agree nor disagree
+  - Slightly disagree
+  - Strongly disagree
+- text: Agree on the steps we need to take in order to complete the analysis.
+  type: multiple_choice
+  answers:
+  - Strongly agree
+  - Slightly agree
+  - Neither agree nor disagree
+  - Slightly disagree
+  - Strongly disagree
+- text: What did you enjoy about developing your research plan?
+  type: essay
+- text: What was the most challenging part of developing your research plan?
+  type: essay
